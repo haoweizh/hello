@@ -540,16 +540,17 @@ func holdPage(c *gin.Context) {
 	}
 	orders := make([][]string, 0)
 	location, _ := time.LoadLocation("Asia/Shanghai")
-	carryRows, _ = model.AppDB.Model(model.Order{}).Select(`order_id,market,symbol,order_time,order_side,price,amount,price*abs(amount),refresh_type,err_code`).
-		Where(`account_index=? and (err_code!=? or status=?)`, indexStr, ``, `fail`).Order(`order_time desc`).Limit(100).Rows()
+	carryRows, _ = model.AppDB.Model(model.Order{}).Select(`order_id,market,symbol,order_time,order_side,price,amount,price*abs(amount),refresh_type,err_code,status`).
+		Where(`account_index=? and (err_code!=? or status=? or (order_side=? and fee/price>?) or (order_side=? and price/fee>?))`,
+			indexStr, ``, `fail`, model.OrderSideBuy, 1.2, model.OrderSideSell, 1.2).Order(`order_time desc`).Limit(100).Rows()
 	if carryRows != nil {
 		for carryRows.Next() {
-			var orderId, market, symbol, orderSide, refreshType, errCode string
+			var orderId, market, symbol, orderSide, refreshType, errCode, status string
 			var orderTime time.Time
 			var price, amount, money float64
-			_ = carryRows.Scan(&orderId, &market, &symbol, &orderTime, &orderSide, &price, &amount, &money, &refreshType, &errCode)
+			_ = carryRows.Scan(&orderId, &market, &symbol, &orderTime, &orderSide, &price, &amount, &money, &refreshType, &errCode, &status)
 			orders = append(orders, []string{orderId, market, symbol, orderTime.In(location).Format(time.DateTime), orderSide,
-				fmt.Sprintf(`%f`, price), fmt.Sprintf(`%e`, amount), fmt.Sprintf(`%.0f`, money), refreshType, errCode})
+				fmt.Sprintf(`%f`, price), fmt.Sprintf(`%e`, amount), fmt.Sprintf(`%.0f`, money), refreshType, errCode, status})
 		}
 	}
 	carryRows, _ = model.AppDB.Model(model.Order{}).Select(`market,order_side,sum(price*abs(amount)),date(order_time),refresh_type,count(*)`).

@@ -737,6 +737,7 @@ func inFundingTime() (in bool) {
 // setting.SymbolRelated 用作不同名称的搬砖时，对应交易所市场内现货的symbol，用户更新holding
 // setting.GridAmount 用作不同名称的搬砖时，symbol的交易量对应的coin的交易量
 // setting.PriceX 用作不同名称的搬砖时，symbol的交易价格对应的coin的交易价格
+// Order.Fee 记录了原始下单的价格，用以判断最终comp成功时损失了多少
 var ProcessCross = func(setting *model.Setting, tick *model.BidAsk) {
 	coinSettings := api.GetCoinSettings(setting.Function)
 	var settings []*model.Setting
@@ -1079,6 +1080,7 @@ func ContinueComp() {
 					orderComp := api.PlaceOrder(account.Key, account.Secret, order.OrderSide, model.OrderTypeLimit, order.Market, order.Symbol, ``,
 						order.RefreshType, price, price, leftAmt, false, nil)
 					if orderComp != nil && orderComp.Status != model.CarryStatusFail {
+						orderComp.Fee = order.Fee
 						compOrders.Store(orderComp.OrderId, orderComp)
 					}
 					model.AppDB.Save(orderComp)
@@ -1158,6 +1160,7 @@ var PostOrderCross = func(order *model.Order) {
 	}
 }
 
+// Order.Fee 记录了原始下单的价格，用以判断最终comp成功时损失了多少
 func compOrder(account *model.Account, order *model.Order, leftAmt float64) {
 	if !model.AppEnvironment.CrossEqualing {
 		price := order.Price
