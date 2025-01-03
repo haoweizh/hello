@@ -1176,6 +1176,7 @@ func compOrder(account *model.Account, order *model.Order, leftAmt float64) {
 		}
 		comp := api.PlaceOrder(account.Key, account.Secret, order.OrderSide, model.OrderTypeLimit, order.Market, order.Symbol,
 			``, model.FunctionComplement, price, price, leftAmt, false, nil)
+		comp.Fee = order.Price
 		compOrders.Store(comp.OrderId, comp)
 		model.AppDB.Save(comp)
 		util.Log(util.LogLevelInfo, fmt.Sprintf(`post comp from %#v %#v not deal %f 百分之%f`,

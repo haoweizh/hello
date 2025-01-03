@@ -541,7 +541,7 @@ func holdPage(c *gin.Context) {
 	orders := make([][]string, 0)
 	location, _ := time.LoadLocation("Asia/Shanghai")
 	carryRows, _ = model.AppDB.Model(model.Order{}).Select(`order_id,market,symbol,order_time,order_side,price,amount,price*abs(amount),refresh_type,err_code,status`).
-		Where(`account_index=? and (err_code!=? or status=? or (order_side=? and fee/price>?) or (order_side=? and price/fee>?))`,
+		Where(`account_index=? and (err_code!=? or status=? or (order_side=? and price/fee>?) or (order_side=? and fee/price>?))`,
 			indexStr, ``, `fail`, model.OrderSideBuy, 1.2, model.OrderSideSell, 1.2).Order(`order_time desc`).Limit(100).Rows()
 	if carryRows != nil {
 		for carryRows.Next() {
