@@ -57,12 +57,17 @@ func maintainConnsOKEX(accounts []*model.Account) {
 				continue
 			}
 			success := true
-			value, ok := util.LoadSyncMap(&model.AppEnvironment.ConnOrder, model.OKEX, account.Key)
-			if ok && value != nil {
-				if err := SendToConnection(model.OKEX, value.(*model.WSConn), []byte(`ping`)); err != nil {
-					util.Log(util.LogLevelError, "-test ok ws-okex server ping client error "+err.Error())
+			value, ConnOrderOk := util.LoadSyncMap(&model.AppEnvironment.ConnOrder, model.OKEX, account.Key)
+			if ConnOrderOk {
+				if value != nil {
+					if err := SendToConnection(model.OKEX, value.(*model.WSConn), []byte(`ping`)); err != nil {
+						util.Log(util.LogLevelError, "-test ok ws-okex server ping client error "+err.Error())
+						success = false
+						value.(*model.WSConn).Close()
+					}
+				} else {
+					util.Log(util.LogLevelError, "Okex ws connection is nil  ")
 					success = false
-					value.(*model.WSConn).Close()
 				}
 			} else {
 				success = false
