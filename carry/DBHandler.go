@@ -164,6 +164,7 @@ func Maintain() {
 	_ = model.AppDB.AutoMigrate(&model.Balance{})
 	_ = model.AppDB.AutoMigrate(&model.Candle{})
 	_ = model.AppDB.AutoMigrate(&model.SettingMonitor{})
+	_ = model.AppDB.AutoMigrate(&cross.CarryCoin{})
 	//go CheckPastRefresh()
 	//go util.StartMidNightTimer(CancelAllOrders)
 	//go MaintainBalance()
@@ -179,7 +180,6 @@ func Maintain() {
 	if initCross && model.AppConfig.Handle == `1` {
 		go cross.ClearCross()
 		go cross.ContinueComp()
-		go cross.FailOrdersReconnect()
 	}
 	for {
 		for _, market := range model.AppEnvironment.Markets {

@@ -349,33 +349,30 @@ func initTradeLine(account *model.Account, setting *model.Setting, status *Carry
 
 // FailOrdersReconnect 用于处理ws下单，但没有返回orderId的情况，此时有可能有成交
 func FailOrdersReconnect() {
-	for {
-		ts := time.Now().Unix()
-		failOrders := make(map[int]map[string]*model.Order)
-		model.AppEnvironment.ReqIdOrders.Range(func(requestId, value interface{}) bool {
-			if value == nil {
-				return true
-			}
-			orderTs := value.(*model.Order).OrderTime.Unix()
-			if ts-orderTs > 180 && ts-orderTs < 86400 && value.(*model.Order).OrderId == value.(*model.Order).ClientOrdId {
-				order := value.(*model.Order)
-				if failOrders[order.AccountIndex] == nil {
-					failOrders[order.AccountIndex] = make(map[string]*model.Order)
-				}
-				failOrders[order.AccountIndex][order.Market] = order
-				util.Log(util.LogLevelInfo, fmt.Sprintf(`get old and del %s %s req %s %#v`,
-					value.(*model.Order).Market, value.(*model.Order).Symbol, requestId, value))
-				model.AppEnvironment.ReqIdOrders.Delete(requestId)
-			}
+	ts := time.Now().Unix()
+	failOrders := make(map[int]map[string]*model.Order)
+	model.AppEnvironment.ReqIdOrders.Range(func(requestId, value interface{}) bool {
+		if value == nil {
 			return true
-		})
-		for index, marketMap := range failOrders {
-			accounts := model.GetAccounts(index)
-			for market, order := range marketMap {
-				api.HandleWsOrderConnFail(accounts[market], market, order)
-			}
 		}
-		time.Sleep(time.Minute * 2)
+		orderTs := value.(*model.Order).OrderTime.Unix()
+		if ts-orderTs > 180 && ts-orderTs < 86400 && value.(*model.Order).OrderId == value.(*model.Order).ClientOrdId {
+			order := value.(*model.Order)
+			if failOrders[order.AccountIndex] == nil {
+				failOrders[order.AccountIndex] = make(map[string]*model.Order)
+			}
+			failOrders[order.AccountIndex][order.Market] = order
+			util.Log(util.LogLevelInfo, fmt.Sprintf(`get old and del %s %s req %s %#v`,
+				value.(*model.Order).Market, value.(*model.Order).Symbol, requestId, value))
+			model.AppEnvironment.ReqIdOrders.Delete(requestId)
+		}
+		return true
+	})
+	for index, marketMap := range failOrders {
+		accounts := model.GetAccounts(index)
+		for market, order := range marketMap {
+			api.HandleWsOrderConnFail(accounts[market], market, order)
+		}
 	}
 }
 
@@ -389,6 +386,7 @@ func ClearCross() {
 		}
 		util.Log(util.LogLevelInfo, fmt.Sprintf("begin to clearing cross get set %s %v do equal %v",
 			model.FunctionCross, model.AppEnvironment.CrossEqualing, doEqual))
+		FailOrdersReconnect()
 		compOrders.Clear()
 		carryStatusMap.Clear()
 		spotMarkets.Clear()
