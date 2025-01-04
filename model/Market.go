@@ -75,29 +75,6 @@ type MarkPriceInfo struct {
 	Ts        int // time in unix epoch millionSeconds
 }
 
-// HandleOldWSResp 用于处理ws下单，但没有返回orderId的情况，此时有可能有成交
-func (environment *Environment) HandleOldWSResp() {
-	for {
-		ts := time.Now().Unix()
-		environment.ReqIdOrders.Range(func(requestId, value interface{}) bool {
-			if value == nil {
-				return true
-			}
-			orderTs := value.(*Order).OrderTime.Unix()
-			if ts-orderTs > 300 && ts-orderTs < 86400 && !value.(*Order).HaveId() {
-				util.Log(util.LogLevelInfo, fmt.Sprintf(`try to handle old and del %s %s req %s %#v`,
-					value.(*Order).Market, value.(*Order).Symbol, requestId, value))
-				environment.ReqIdOrders.Delete(requestId)
-				if AccountHandlerMap[value.(*Order).RefreshType] != nil {
-					AccountHandlerMap[value.(*Order).RefreshType](value.(*Order))
-				}
-			}
-			return true
-		})
-		time.Sleep(time.Second * 10)
-	}
-}
-
 func (environment *Environment) HandleWSResp() {
 	for {
 		wsResp := <-environment.WSRespChan
