@@ -39,12 +39,15 @@ func maintainConnsOKEX(accounts []*model.Account) {
 	//		reSubscribe(subscribes)
 	//	}
 	//}()
+	if len(accounts) == 0 {
+		return
+	}
 	for _, account := range accounts {
 		model.AppEnvironment.PriConnecting.Store(model.OKEX+account.Key, false)
 	}
 	for {
-		connTick, _ := model.AppEnvironment.ConnTick.Load(model.OKEX)
-		if connTick != nil {
+		connTick, ok := model.AppEnvironment.ConnTick.Load(model.OKEX)
+		if ok && connTick != nil {
 			if err := SendToConnections(model.OKEX, connTick.(map[*model.WSConn]bool), []byte(`ping`)); err != nil {
 				util.Log(util.LogLevelError, fmt.Sprintf("tick conn maintain error %s %s", model.OKEX, err.Error()))
 			}
@@ -54,8 +57,8 @@ func maintainConnsOKEX(accounts []*model.Account) {
 				continue
 			}
 			success := true
-			value, _ := util.LoadSyncMap(&model.AppEnvironment.ConnOrder, model.OKEX, account.Key)
-			if value != nil {
+			value, ok := util.LoadSyncMap(&model.AppEnvironment.ConnOrder, model.OKEX, account.Key)
+			if ok && value != nil {
 				if err := SendToConnection(model.OKEX, value.(*model.WSConn), []byte(`ping`)); err != nil {
 					util.Log(util.LogLevelError, "-test ok ws-okex server ping client error "+err.Error())
 					success = false
@@ -70,7 +73,11 @@ func maintainConnsOKEX(accounts []*model.Account) {
 				WsOrderServeOKEX(account)
 			}
 		}
-		time.Sleep(time.Second * 20)
+		// 在循环中使用，可能会导致长时间占用 CPU 资源，尤其是在高并发场景下
+		//time.Sleep(time.Second * 20)
+		select {
+		case <-time.After(time.Second * 20):
+		}
 	}
 }
 
