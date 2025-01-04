@@ -84,21 +84,56 @@ type CarryStatus struct {
 }
 
 type CarryCoin struct {
-	Coin         string
+	AccountIndex int     `gorm:"index:account_coin,unique"`
+	Coin         string  `gorm:"index:account_coin,unique"`
 	CurrentStep  int     // 网格搬砖中表示当前持仓所属的n值
 	Holding      float64 // 当前持仓数量
 	MoneyPerStep float64 // 网格搬砖中每一档位以定价币为单位的金额
 	MoneyCurStep float64 // 当前档位已开仓金额
+	ID           uint    `gorm:"primary_key"`
+	CreatedAt    time.Time
+	UpdatedAt    time.Time
 }
 
 func (carryCoin *CarryCoin) AddTrade(statusBuy, statusSell *CarryStatus, priceBuy, priceSell, amountBuy float64) {
+	change := false
 	if statusBuy.Holding*priceBuy >= -smallHolding && statusSell.Holding*priceSell <= smallHolding { // 加仓
+		change = true
 		carryCoin.MoneyCurStep += amountBuy * priceBuy
+		carryCoin.Holding += amountBuy * statusBuy.setting.GridAmount
+		if carryCoin.MoneyCurStep > carryCoin.MoneyPerStep {
+			carryCoin.CurrentStep++
+			carryCoin.MoneyCurStep -= carryCoin.MoneyPerStep
+		}
+		util.Log(util.LogLevelInfo, fmt.Sprintf(`add trade deal open %#v amount %f price %f`, carryCoin, amountBuy, priceBuy))
 	} else if statusBuy.Holding*priceBuy < -smallHolding && statusSell.Holding*priceSell > smallHolding {
-		carryCoin.MoneyCurStep -= amountBuy * priceBuy
+		carryCoin.Holding -= amountBuy * statusBuy.setting.GridAmount
+		if carryCoin.Holding*priceBuy/statusBuy.setting.GridAmount >= smallHolding {
+			if carryCoin.MoneyCurStep > 0 || carryCoin.CurrentStep >= 1 {
+				change = true
+				carryCoin.MoneyCurStep -= amountBuy * priceBuy
+				if carryCoin.MoneyCurStep < 0 {
+					if carryCoin.CurrentStep >= 1 {
+						carryCoin.CurrentStep--
+						carryCoin.MoneyCurStep += carryCoin.MoneyPerStep
+					} else {
+						carryCoin.MoneyCurStep = 0
+					}
+				}
+			}
+			util.Log(util.LogLevelInfo, fmt.Sprintf(`add trade deal close %#v amount %f price %f`, carryCoin, amountBuy, priceBuy))
+		} else {
+			if carryCoin.CurrentStep >= 1 || carryCoin.MoneyCurStep > 0 {
+				change = true
+				carryCoin.MoneyCurStep = 0
+				carryCoin.CurrentStep = 0
+				util.Log(util.LogLevelInfo, fmt.Sprintf(`add trade deal close no holding %#v amount %f price %f`, carryCoin, amountBuy, priceBuy))
+			}
+		}
 	}
-	if carryCoin.MoneyCurStep > carryCoin.MoneyPerStep {
-
+	if change {
+		model.AppDB.Model(carryCoin).Where(`coin=? and account_index=?`, carryCoin.Coin, carryCoin.AccountIndex).Updates(
+			map[string]interface{}{`current_step`: carryCoin.CurrentStep, `money_cur_step`: carryCoin.MoneyCurStep, `holding`: carryCoin.Holding})
 	}
 }
 

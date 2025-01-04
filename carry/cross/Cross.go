@@ -810,7 +810,7 @@ var ProcessCross = func(setting *model.Setting, tick *model.BidAsk) {
 			}
 			if amount > 0 {
 				nowTs := time.Now().UnixMilli()
-				placeCross(statusBuy, statusSell, priceBuy, priceSell, amount)
+				placeCross(carryCoin.(*CarryCoin), statusBuy, statusSell, priceBuy, priceSell, amount)
 				util.Log(util.LogLevelInfo, fmt.Sprintf(`time mark %s amt %e status %s %s tick %s %e = %e %e %d <- status %s %s tick %s %e = %e %e %d`,
 					time.Now().String(), amount,
 					statusBuy.symbol, statusBuy.market, tickBuy.Asks[0].Market, tickBuy.Asks[0].Price, priceBuy, tickBuy.Asks[0].Amount, nowTs-int64(tickBuy.Ts),
@@ -862,7 +862,7 @@ func breakMarkPrice(account *model.Account, setting *model.Setting, price float6
 	return false
 }
 
-func placeCross(statusBuy, statusSell *CarryStatus, priceBuy, priceSell, amount float64) {
+func placeCross(carryCoin *CarryCoin, statusBuy, statusSell *CarryStatus, priceBuy, priceSell, amount float64) {
 	_, marketType, _, _ := model.GetFromStandard(statusBuy.market, statusBuy.symbol)
 	if marketType == model.MarketTypeSpot {
 		priceBuy = priceBuy * (1 + crossSpotBuySlide)
@@ -917,6 +917,9 @@ func placeCross(statusBuy, statusSell *CarryStatus, priceBuy, priceSell, amount 
 	// 买入现货时要交手续费，故而实际到手少于下单量，校准以免未来买单时数量不足
 	if marketType == model.MarketTypeSpot {
 		amountBuy = amountBuy * 0.9992
+	}
+	if carryCoin != nil && model.AppConfig.Cross == crossGrid {
+		carryCoin.AddTrade(statusBuy, statusSell, priceBuy, priceSell, amountBuy)
 	}
 	placeStatus(statusBuy, priceBuy, amountBuy)
 	placeStatus(statusSell, priceSell, -1*amountSell)
