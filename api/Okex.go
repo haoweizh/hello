@@ -66,7 +66,7 @@ func maintainConnsOKEX(accounts []*model.Account) {
 						value.(*model.WSConn).Close()
 					}
 				} else {
-					util.Log(util.LogLevelError, "Okex ws connection is nil  ")
+					util.Log(util.LogLevelError, "okex ws connection is nil  ")
 					success = false
 				}
 			} else {
@@ -74,14 +74,12 @@ func maintainConnsOKEX(accounts []*model.Account) {
 			}
 			if !success {
 				util.Log(util.LogLevelError, fmt.Sprintf(`-test ok ws- no private connection %s`, account.Key))
-				util.DelSyncMap(&model.AppEnvironment.ConnOrder, model.OKEX, account.Key)
 				WsOrderServeOKEX(account)
 			}
 		}
 		// 在循环中使用，可能会导致长时间占用 CPU 资源，尤其是在高并发场景下
-		//time.Sleep(time.Second * 20)
 		select {
-		case <-time.After(time.Second * 20):
+		case <-time.After(time.Second * 10):
 		}
 	}
 }

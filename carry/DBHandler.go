@@ -180,6 +180,7 @@ func Maintain() {
 	if initCross && model.AppConfig.Handle == `1` {
 		go cross.ClearCross()
 		go cross.ContinueComp()
+		go cross.FailOrdersReconnect()
 	}
 	for {
 		for _, market := range model.AppEnvironment.Markets {

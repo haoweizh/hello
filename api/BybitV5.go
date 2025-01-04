@@ -119,8 +119,6 @@ func maintainConnsBybit(accounts []*model.Account) {
 					connOrder.(*model.WSConn).Close()
 				}
 				util.Log(util.LogLevelError, "fail to ping ws bybit "+errMsg)
-				util.DelSyncMap(&model.AppEnvironment.ConnOrder, model.Bybit, account.Key)
-				util.DelSyncMap(&model.AppEnvironment.ConnOrderUpdate, model.Bybit, account.Key)
 				WsOrderServeBybit(account)
 			}
 		}

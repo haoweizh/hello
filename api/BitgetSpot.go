@@ -43,7 +43,6 @@ func maintainConnsBitget(market string, accounts []*model.Account) {
 				}
 			}
 			if !success {
-				util.DelSyncMap(&model.AppEnvironment.ConnOrderUpdate, market, account.Key)
 				WsOrderServeBitget(market, account)
 			}
 		}

@@ -544,7 +544,6 @@ func maintainConnsGate(accounts []*model.Account) {
 				successSpot = false
 			}
 			if !successSpot {
-				util.DelSyncMap(&model.AppEnvironment.ConnOrder, model.Gate, model.MarketTypeSpot, account.Key)
 				WSOrderServeGate(account, model.MarketTypeSpot)
 			}
 			successPerp := true
@@ -559,7 +558,6 @@ func maintainConnsGate(accounts []*model.Account) {
 				successPerp = false
 			}
 			if !successPerp {
-				util.DelSyncMap(&model.AppEnvironment.ConnOrder, model.Gate, model.MarketTypePerp, account.Key)
 				WSOrderServeGate(account, model.MarketTypePerp)
 			}
 		}
