@@ -166,6 +166,7 @@ func HandleWsOrderConnFail(account *model.Account, market string, order *model.O
 		WsOrderServeBitget(market, account)
 	}
 }
+
 func MaintainConns(market string) {
 	accounts := model.AppConfig.GetAccounts(market)
 	switch market {

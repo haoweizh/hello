@@ -806,7 +806,7 @@ var ProcessCross = func(setting *model.Setting, tick *model.BidAsk) {
 	case model.OKEX:
 		tickLimit = 60
 	case model.Bybit:
-		tickLimit = 80
+		tickLimit = 60
 	}
 	if int(ts1)-tick.Ts > tickLimit {
 		//util.LogLess(util.LogLevelError, fmt.Sprintf(`abandon tick limit %s %s %s limit %d %v`,
