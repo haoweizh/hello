@@ -33,9 +33,6 @@ var wsOrdUdtHandlerBybit = func(market, key string, msg []byte) {
 	if err != nil || responseJson == nil {
 		return
 	}
-	if responseJson.Get(`op`).MustString() == `pong` {
-		util.Log(util.LogLevelInfo, fmt.Sprintf("pong %s %s %s", market, key, string(msg)))
-	}
 	if responseJson.Get(`op`).MustString() == `auth` && responseJson.Get(`success`).MustBool() {
 		err := SendToConnection(model.Bybit, value.(*model.WSConn), []byte(`{"op":"subscribe","args": ["order"]}`))
 		if err != nil {
@@ -60,9 +57,6 @@ var wsOrderHandlerBybit = func(market, key string, event []byte) {
 	responseJson, err := util.NewJSON(event)
 	if err != nil || responseJson == nil {
 		return
-	}
-	if responseJson.Get(`op`).MustString() == `pong` {
-		util.Log(util.LogLevelInfo, fmt.Sprintf("pong %s %s %s", market, key, string(event)))
 	}
 	if responseJson.Get(`op`).MustString() != `order.create` {
 		return
@@ -128,7 +122,9 @@ func maintainConnsBybit(accounts []*model.Account) {
 				WsOrderServeBybit(account)
 			}
 		}
-		time.Sleep(time.Second * 20)
+		select {
+		case <-time.After(time.Second * 15):
+		}
 	}
 }
 

@@ -357,7 +357,7 @@ func FailOrdersReconnect() {
 				return true
 			}
 			orderTs := value.(*model.Order).OrderTime.Unix()
-			if ts-orderTs > 180 && ts-orderTs < 86400 && value.(*model.Order).OrderId == value.(*model.Order).ClientOrdId {
+			if ts-orderTs > 300 && ts-orderTs < 86400 && value.(*model.Order).OrderId == value.(*model.Order).ClientOrdId {
 				order := value.(*model.Order)
 				if failOrders[order.AccountIndex] == nil {
 					failOrders[order.AccountIndex] = make(map[string]*model.Order)
@@ -376,7 +376,7 @@ func FailOrdersReconnect() {
 			}
 		}
 		select {
-		case <-time.After(time.Minute * 2):
+		case <-time.After(time.Minute * 3):
 		}
 	}
 }
