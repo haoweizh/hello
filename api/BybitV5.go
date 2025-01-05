@@ -20,7 +20,7 @@ import (
 
 const bybitRestUrl = "https://api.bybit.com"
 const bybitStreamUrl = "wss://stream.bybit.com"
-const bybitTradeWsUrl = "wss://stream.bybit.com/v5/trade?max_active_time=10m"
+const bybitTradeWsUrl = "wss://stream.bybit.com/v5/trade"
 
 const wsStepBybit = 10
 
@@ -32,6 +32,9 @@ var wsOrdUdtHandlerBybit = func(market, key string, msg []byte) {
 	responseJson, err := util.NewJSON(msg)
 	if err != nil || responseJson == nil {
 		return
+	}
+	if responseJson.Get(`op`).MustString() == `pong` {
+		util.Log(util.LogLevelInfo, fmt.Sprintf("pong %s %s %s", market, key, string(msg)))
 	}
 	if responseJson.Get(`op`).MustString() == `auth` && responseJson.Get(`success`).MustBool() {
 		err := SendToConnection(model.Bybit, value.(*model.WSConn), []byte(`{"op":"subscribe","args": ["order"]}`))
@@ -58,6 +61,9 @@ var wsOrderHandlerBybit = func(market, key string, event []byte) {
 	if err != nil || responseJson == nil {
 		return
 	}
+	if responseJson.Get(`op`).MustString() == `pong` {
+		util.Log(util.LogLevelInfo, fmt.Sprintf("pong %s %s %s", market, key, string(event)))
+	}
 	if responseJson.Get(`op`).MustString() != `order.create` {
 		return
 	}
@@ -78,7 +84,7 @@ func maintainConnsBybit(accounts []*model.Account) {
 		model.AppEnvironment.PriConnecting.Store(model.Bybit+account.Key, false)
 	}
 	for {
-		pingMsg := []byte(fmt.Sprintf(`{ "req_id": "maintain %d","op": "ping"}`, time.Now().UnixMilli()))
+		pingMsg := []byte(fmt.Sprintf(`{ "req_id": "%d","op": "ping"}`, time.Now().Unix()))
 		connTick, _ := model.AppEnvironment.ConnTick.Load(model.Bybit)
 		if connTick != nil {
 			if err := SendToConnections(model.Bybit, connTick.(map[*model.WSConn]bool), pingMsg); err != nil {
