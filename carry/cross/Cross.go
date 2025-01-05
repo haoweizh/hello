@@ -499,13 +499,11 @@ func createCarryCoin(accounts map[string]*model.Account, coin string, settings [
 
 func equalAccount(i int, equalChan chan int, accounts map[string]*model.Account, doEqual bool) {
 	util.Log(util.LogLevelInfo, fmt.Sprintf(`begin to clearing cross %d `, i))
-	if accounts[model.BitgetPerp] != nil {
-		liquidateSmallContracts(accounts[model.BitgetPerp])
-	}
 	for market, account := range accounts {
 		if account.Index != i {
 			continue
 		}
+		liquidateSmallContracts(account, market)
 		api.CancelAll(account.Key, account.Secret, market)
 	}
 	value := api.GetCoinSettings(model.FunctionCross)

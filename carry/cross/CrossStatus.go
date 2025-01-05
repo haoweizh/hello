@@ -481,8 +481,8 @@ func _(order *model.Order, setting *model.Setting) {
 	//util.Notice(`---- add done %s`, setting.Symbol)
 }
 
-func liquidateSmallContracts(account *model.Account) {
-	success, positions, _, _, _ := api.GetPositions(account.Key, account.Secret, model.BitgetPerp)
+func liquidateSmallContracts(account *model.Account, market string) {
+	success, positions, _, _, _ := api.GetPositions(account.Key, account.Secret, market)
 	if success {
 		for _, position := range positions {
 			holding := math.Abs(position.Holding)
@@ -491,10 +491,10 @@ func liquidateSmallContracts(account *model.Account) {
 				if position.Holding > 0 {
 					orderSide = model.OrderSideSell
 				}
-				util.Log(util.LogLevelInfo, fmt.Sprintf(`do liquidate bitgetperp %s %s price %f hold %f`,
-					position.Currency, orderSide, position.EntryPrice, position.Holding))
-				order := api.PlaceOrder(account.Key, account.Secret, orderSide, model.OrderTypeMarket, model.BitgetPerp,
-					position.Currency, model.ReduceOnly, model.FunctionBitgetLiq, position.EntryPrice, position.EntryPrice, holding, false, nil)
+				util.Log(util.LogLevelInfo, fmt.Sprintf(`do liquidate market %s %s %s price %f hold %f`,
+					market, position.Currency, orderSide, position.EntryPrice, position.Holding))
+				order := api.PlaceOrder(account.Key, account.Secret, orderSide, model.OrderTypeMarket, market,
+					position.Currency, model.ReduceOnly, model.FunctionLiq, position.EntryPrice, position.EntryPrice, holding, false, nil)
 				saveCross(order, 0, 0, position.Holding)
 			} else {
 				util.Log(util.LogLevelInfo, fmt.Sprintf(`not liquidate bitgetperp for big perp %s %f %f value %f`,
