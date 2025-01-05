@@ -89,7 +89,7 @@ func generateMonitorMsg(index int, coin string, score, scoreRelate float64, carr
 func checkTradeLine(statusBuy, statusSell *CarryStatus, carryCoin *CarryCoin, priceBuy, priceSell, score float64) (valid bool, limit float64) {
 	crossLimit := openValueLimit / priceBuy * statusBuy.setting.GridAmount
 	if statusBuy.Holding*priceBuy >= -1*smallHolding && statusSell.Holding*priceSell <= smallHolding { // 开仓
-		if model.AppConfig.Cross == crossGrid {
+		if statusBuy.account.CrossStyle == crossGrid {
 			if carryCoin == nil {
 				return
 			}
@@ -106,7 +106,7 @@ func checkTradeLine(statusBuy, statusSell *CarryStatus, carryCoin *CarryCoin, pr
 			return score > statusBuy.TradeLineBuy && score > statusSell.TradeLineSell, crossLimit
 		}
 	} else if statusBuy.Holding*priceBuy < -1*smallHolding && statusSell.Holding*priceSell > smallHolding { // 平仓
-		if model.AppConfig.Cross == crossGrid {
+		if statusBuy.account.CrossStyle == crossGrid {
 			if carryCoin == nil {
 				return
 			}
@@ -137,7 +137,7 @@ func checkTradeLine(statusBuy, statusSell *CarryStatus, carryCoin *CarryCoin, pr
 		} else if statusSell.Holding*priceSell > smallHolding {
 			limit = statusSell.Holding * statusSell.setting.GridAmount
 		}
-		if model.AppConfig.Cross == crossGrid {
+		if statusBuy.account.CrossStyle == crossGrid {
 			if carryCoin == nil {
 				return
 			}

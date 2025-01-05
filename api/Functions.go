@@ -358,8 +358,6 @@ func GetMultiCandle(account *model.Account, market string, slotSeconds int, begi
 		limit = 480
 	} else if market == model.OKEX {
 		limit = 300
-	} else if market == model.GXZQ {
-		limit = 10000
 	}
 	if int(count) > limit {
 		duration, _ := time.ParseDuration(fmt.Sprintf(`%ds`, limit*slotSeconds))
@@ -380,8 +378,6 @@ func GetMultiCandle(account *model.Account, market string, slotSeconds int, begi
 				temp, isCache = getCandlesOKEX(account, symbol, begin, end, int(count), slotSeconds)
 			case model.BinancePerp, model.BinanceSpot:
 				temp, isCache = getCandlesBinance(account, market, symbol, begin, end, int(count), slotSeconds)
-				//case model.GXZQ:
-				//	temp, isCache = deprecated.getCandlesGXZQDB(symbol, begin, end, slotSeconds)
 			}
 			for j := 0; temp != nil && j < temp.Len(); j++ {
 				candles[j*len(settings)+i] = temp[j]

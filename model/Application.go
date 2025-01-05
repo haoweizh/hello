@@ -33,7 +33,6 @@ const Gate = `gate`
 const Mexc = `mexc`
 const DFuture = `dfuture`
 const Bybit = `bybit`
-const GXZQ = `GXZQ`
 const OKEX = "okex"
 const BinanceSpot = "binancespot"
 const BinanceMargin = `binancemargin`
