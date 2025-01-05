@@ -599,12 +599,16 @@ func PlacePairOKEX(account *model.Account, requestId, symbolBuy, symbolSell, ord
 // 不能使用 strconv.FormatFloat 因为有 2.00000001问题
 // priceStr := strconv.FormatFloat(order.Price, 'f', -1, 64)
 // triggerPriceStr := strconv.FormatFloat(order.TriggerPrice, 'f', -1, 64)
-func placeOrderOKEX(account *model.Account, isWs bool, order *model.Order) {
+func placeOrderOKEX(account *model.Account, isWs bool, order *model.Order, orderParam string) {
+	reduceOnly := false
+	if orderParam == model.ReduceOnly {
+		reduceOnly = true
+	}
 	price, decimal := model.FormatPrice(model.OKEX, order.Symbol, order.Price)
 	priceStr := util.CutTailZero(strconv.FormatFloat(price, 'f', decimal, 64))
 	priceTrigger, decimalTrigger := model.FormatPrice(model.OKEX, order.Symbol, order.TriggerPrice)
 	triggerPriceStr := util.CutTailZero(strconv.FormatFloat(priceTrigger, 'f', decimalTrigger, 64))
-	formattedAmount := model.GetAmountInMarket(model.OKEX, order.Symbol, order.Amount, price, false)
+	formattedAmount := model.GetAmountInMarket(model.OKEX, order.Symbol, order.Amount, price, reduceOnly)
 	amount := util.CutTailZero(fmt.Sprintf(`%f`, formattedAmount))
 	order.Price = price
 	order.TriggerPrice = priceTrigger
@@ -634,6 +638,7 @@ func placeOrderOKEX(account *model.Account, isWs bool, order *model.Order) {
 	} else {
 		postData[`clOrdId`] = order.ClientOrdId
 		postData[`px`] = priceStr
+		postData[`reduceOnly`] = reduceOnly
 		_, marketType, _, _ := model.GetFromStandard(order.Market, order.Symbol)
 		if order.OrderType == model.OrderTypeMarket && marketType == model.MarketTypeSpot {
 			postData[`tgtCcy`] = `base_ccy`

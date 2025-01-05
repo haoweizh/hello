@@ -77,6 +77,7 @@ const WSTypeTicker = `ticker`
 const Open = `open`
 const Close = `close`
 const ReduceOnly = `reduceOnly`
+const CloseContract = `closeContract`
 
 var AppDB *gorm.DB
 var AppRedis *redis.Client

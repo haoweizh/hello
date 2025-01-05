@@ -733,7 +733,6 @@ func setBybitPerpLeverage(key, secret string) {
 }
 
 func placeOrderBybit(account *model.Account, isWs bool, order *model.Order, orderParam string) {
-	//}, orderSide, orderType, orderParam, symbol string, price, amount float64) {
 	reduceOnly := false
 	if orderParam == model.ReduceOnly {
 		reduceOnly = true
@@ -760,7 +759,8 @@ func placeOrderBybit(account *model.Account, isWs bool, order *model.Order, orde
 		"qty":         amountStr,
 		"price":       priceStr,
 		`marketUnit`:  `baseCoin`,
-		`orderLinkId`: order.ClientOrdId}
+		`orderLinkId`: order.ClientOrdId,
+		`reduceOnly`:  reduceOnly}
 	if marketType == model.MarketTypePerp {
 		param["category"] = "linear"
 	} else {

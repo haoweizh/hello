@@ -1069,7 +1069,7 @@ func cancelOrdersGate(key string, secret string, symbol string) (result bool) {
 	return false
 }
 
-func placeOrderGate(account *model.Account, isWs bool, order *model.Order, orderSide, orderType, symbol string, price, amount float64) {
+func placeOrderGate(account *model.Account, isWs bool, order *model.Order, orderSide, orderType, orderParam, symbol string, price, amount float64) {
 	client, ctx := getClientGate(account.Key, account.Secret)
 	orderPrice, decimal := model.FormatPrice(model.Gate, symbol, price)
 	orderPriceStr := util.CutTailZero(strconv.FormatFloat(orderPrice, 'f', decimal, 64))
@@ -1143,10 +1143,17 @@ func placeOrderGate(account *model.Account, isWs bool, order *model.Order, order
 		if orderSide == model.OrderSideSell {
 			futuresOrder.Size = -1 * futuresOrder.Size
 		}
+		if orderParam == model.CloseContract {
+			futuresOrder.Size = 0
+			futuresOrder.Close = true
+		}
+		if orderParam == model.ReduceOnly {
+			futuresOrder.ReduceOnly = true
+		}
 		util.Log(util.LogLevelInfo, fmt.Sprintf(`create future order request: %#v`, futuresOrder))
 		if isWs {
-			param := map[string]interface{}{`contract`: dialectSymbol, `size`: futuresOrder.Size,
-				`price`: orderPriceStr, `tif`: tif, `text`: `t-` + order.ClientOrdId}
+			param := map[string]interface{}{`contract`: dialectSymbol, `size`: futuresOrder.Size, `price`: orderPriceStr,
+				`tif`: tif, `text`: `t-` + order.ClientOrdId, `reduce_only`: futuresOrder.ReduceOnly, `close`: futuresOrder.Close}
 			reqMap := map[string]interface{}{`time`: ts, `channel`: `futures.order_place`, `event`: `api`,
 				`payload`: map[string]interface{}{`req_id`: order.ClientOrdId, `req_param`: param}}
 			wsOrderMsg := util.JsonEncodeToByte(reqMap)

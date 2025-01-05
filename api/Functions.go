@@ -840,13 +840,13 @@ func PlaceOrder(key, secret, orderSide, orderType, market, symbol, orderParam, f
 		isWs = false
 		placeOrderBitgetSpot(key, secret, order, orderSide, orderType, symbol, price, amount)
 	case model.Gate:
-		placeOrderGate(account, isWs, order, orderSide, orderType, symbol, price, amount)
+		placeOrderGate(account, isWs, order, orderSide, orderType, orderParam, symbol, price, amount)
 	case model.OKEX:
-		placeOrderOKEX(account, isWs, order)
+		placeOrderOKEX(account, isWs, order, orderParam)
 	case model.BinanceSpot:
 		placeOrderBinanceSpot(account, isWs, order, orderSide, orderType, symbol, price, amount)
 	case model.BinancePerp:
-		placeOrderBinancePerp(account, isWs, order, orderSide, orderType, symbol, price, triggerPrice, amount)
+		placeOrderBinancePerp(account, isWs, order, orderSide, orderType, orderParam, symbol, price, triggerPrice, amount)
 	case model.Bybit:
 		placeOrderBybit(account, isWs, order, orderParam)
 	}

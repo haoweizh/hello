@@ -305,9 +305,14 @@ func getMarkPriceBinancePerp(account *model.Account, symbol string) (markPrice f
 // "autoclose-"开头的字符串: 系统强平订单
 // "adl_autoclose": ADL自动减仓订单
 // "settlement_autoclose-": 下架或交割的结算订单
-func placeOrderBinancePerp(account *model.Account, isWS bool, order *model.Order, orderSide, orderType, symbol string, oriPrice, triggerPrice, amount float64) {
+func placeOrderBinancePerp(account *model.Account, isWS bool, order *model.Order, orderSide, orderType, orderParam,
+	symbol string, oriPrice, triggerPrice, amount float64) {
 	price, decimal := model.FormatPrice(model.BinancePerp, symbol, oriPrice)
 	priceStr := util.CutTailZero(strconv.FormatFloat(price, 'f', decimal, 64))
+	reduceOnly := false
+	if orderParam == model.ReduceOnly {
+		reduceOnly = true
+	}
 	formattedAmount := model.GetAmountInMarket(model.BinancePerp, symbol, amount, price, false)
 	amountStr := util.CutTailZero(fmt.Sprintf(`%f`, formattedAmount))
 	success, _, _, dialectSymbol := model.GetFromStandard(model.BinancePerp, symbol)
@@ -335,12 +340,13 @@ func placeOrderBinancePerp(account *model.Account, isWS bool, order *model.Order
 		param.Set(`apiKey`, account.Key)
 		param.Set(`newClientOrderId`, order.ClientOrdId)
 		param.Set(`timestamp`, fmt.Sprintf(`%d`, ts))
+		param.Set(`reduceOnly`, fmt.Sprintf("%v", reduceOnly))
 		hash := hmac.New(sha256.New, []byte(account.Secret))
 		hash.Write([]byte(param.Encode()))
-		msg := fmt.Sprintf(`{"id": "%s","method": "order.place","params":{"symbol": "%s","side": "%s","type": "%s",
-			"timeInForce": "GTC","price": "%s","quantity": "%s","apiKey": "%s","signature": "%s","timestamp": %d, "newClientOrderId":"%s"}}`,
+		msg := fmt.Sprintf(`{"id": "%s","method": "order.place","params":{"symbol": "%s","side": "%s","type": "%s","timeInForce": "GTC",
+			"price": "%s","quantity": "%s","apiKey": "%s","signature": "%s","timestamp": %d, "newClientOrderId":"%s","reduceOnly":"%s"}}`,
 			order.ClientOrdId, dialectSymbol, orderSide, strings.ToUpper(orderType), priceStr, amountStr, account.Key,
-			hex.EncodeToString(hash.Sum(nil)), ts, order.ClientOrdId)
+			hex.EncodeToString(hash.Sum(nil)), ts, order.ClientOrdId, fmt.Sprintf("%v", reduceOnly))
 		value, _ := util.LoadSyncMap(&model.AppEnvironment.ConnOrder, model.BinancePerp, account.Key)
 		if value == nil {
 			order.Status = model.CarryStatusFail
@@ -362,6 +368,7 @@ func placeOrderBinancePerp(account *model.Account, isWS bool, order *model.Order
 		} else if orderSide == model.OrderSideSell {
 			service.Side(futures.SideTypeSell)
 		}
+		service.ReduceOnly(reduceOnly)
 		switch orderType {
 		case model.OrderTypeMarket:
 			service.Type(futures.OrderTypeMarket)
