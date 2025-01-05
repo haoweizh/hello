@@ -271,7 +271,10 @@ func WsPrivateClient(market, key, url string, accountMsgHandler AccountMsgHandle
 				//_, message, readErr := connection.conn.Read(context.Background())
 				_, message, readErr := connection.conn.ReadMessage()
 				if readErr != nil {
-					util.DelSyncMap(&AppEnvironment.ConnOrder, market, key)
+					value, _ := util.LoadSyncMap(&AppEnvironment.ConnOrder, market, key)
+					if value != nil && value == connection.conn {
+						util.DelSyncMap(&AppEnvironment.ConnOrder, market, key)
+					}
 					util.Log(util.LogLevelError, fmt.Sprintf(`%s %s can not read from account ws: %s`, market, url, readErr.Error()))
 					return
 				}

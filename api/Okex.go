@@ -186,10 +186,6 @@ var wsHandlerOKEX = func(market string, conn *model.WSConn, event []byte) {
 }
 
 var wsAccountHandlerOKEX = func(market, key string, event []byte) {
-	if string(event) == `pong` {
-		util.Log(util.LogLevelInfo, "okex pong")
-		return
-	}
 	responseJson, err := util.NewJSON(event)
 	if err != nil || responseJson == nil {
 		return

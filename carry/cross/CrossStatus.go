@@ -24,7 +24,8 @@ const standardScoreOpen = 0.002 // 开仓标准利润,不得小于0
 const lastOrderLength = 8
 const compTooBig = 70000.0
 const InsufficientCodeBinance = `-2010`
-const SmallInU = 10
+const SmallInU = 20
+const CompLineInMoney = 50
 const BitgetPosLimit = 130 // 实测不能超过140
 const crossSlide = 0.0005
 const crossSpotBuySlide = 0.001
@@ -42,15 +43,14 @@ type TradeLineExtra struct {
 var InsufficientCodeOKEX = map[string]bool{`51008`: true, `51119`: true, `51120`: true, `51131`: true, `51502`: true,
 	`58350`: true, `59108`: true, `59200`: true}
 
-var liquidBitgetTime = &sync.Map{} // key - unix second int64
-var lastOrderIndex = &sync.Map{}   // market - symbol - index int
-var lastOrders = &sync.Map{}       // market - symbol - []*Order
-var compOrders = &sync.Map{}       // orderId - comp order
-var spotMarkets = &sync.Map{}      // key - spotMarket
-var contractMarkets = &sync.Map{}  // key - contractMarket
-var carryStatusMap = &sync.Map{}   // coin*market*symbol*key / CarryStatus
-var carryCoinMap = &sync.Map{}     // coin*accountIndex - *carryCoin
-var notifyTime = &sync.Map{}       // 1. market_symbol_market_symbol/time 2. funding_market_symbol/time
+var lastOrderIndex = &sync.Map{}  // market - symbol - index int
+var lastOrders = &sync.Map{}      // market - symbol - []*Order
+var compOrders = &sync.Map{}      // orderId - comp order
+var spotMarkets = &sync.Map{}     // key - spotMarket
+var contractMarkets = &sync.Map{} // key - contractMarket
+var carryStatusMap = &sync.Map{}  // coin*market*symbol*key / CarryStatus
+var carryCoinMap = &sync.Map{}    // coin*accountIndex - *carryCoin
+var notifyTime = &sync.Map{}      // 1. market_symbol_market_symbol/time 2. funding_market_symbol/time
 var coinCrossing = &sync.Map{}
 
 type contractMarket struct {
@@ -481,15 +481,9 @@ func _(order *model.Order, setting *model.Setting) {
 	//util.Notice(`---- add done %s`, setting.Symbol)
 }
 
-func liquidateBitgetPerp(account *model.Account) {
-	now := time.Now().Unix()
-	v, _ := liquidBitgetTime.Load(account.Key)
-	if v != nil && now-v.(int64) < 3600 {
-		return
-	}
+func liquidateSmallContracts(account *model.Account) {
 	success, positions, _, _, _ := api.GetPositions(account.Key, account.Secret, model.BitgetPerp)
 	if success {
-		liquidBitgetTime.Store(account.Key, now)
 		for _, position := range positions {
 			holding := math.Abs(position.Holding)
 			if position.EntryPrice*holding < SmallInU {

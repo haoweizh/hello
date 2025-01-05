@@ -500,7 +500,7 @@ func createCarryCoin(accounts map[string]*model.Account, coin string, settings [
 func equalAccount(i int, equalChan chan int, accounts map[string]*model.Account, doEqual bool) {
 	util.Log(util.LogLevelInfo, fmt.Sprintf(`begin to clearing cross %d `, i))
 	if accounts[model.BitgetPerp] != nil {
-		liquidateBitgetPerp(accounts[model.BitgetPerp])
+		liquidateSmallContracts(accounts[model.BitgetPerp])
 	}
 	for market, account := range accounts {
 		if account.Index != i {
@@ -621,7 +621,7 @@ func equalCoin(index int, coin string, statuses []*CarryStatus) (isEqual bool, h
 		}
 		api.SendMails(`too big to equal`, fmt.Sprintf(`%s holding in money %f`, coin, holding*holdingPrice))
 		return false, holding, fmt.Sprintf(`too big comp %s %f`, coin, holding)
-	} else if math.Abs(holding) < SmallInU/holdingPrice {
+	} else if math.Abs(holding) < CompLineInMoney/holdingPrice {
 		return true, holding, ``
 	}
 	var equalStatus *CarryStatus
@@ -632,7 +632,7 @@ func equalCoin(index int, coin string, statuses []*CarryStatus) (isEqual bool, h
 			continue
 		}
 		price := bidAsk.Bids[0].Price * (1 - compSlide)
-		if holding > SmallInU/holdingPrice {
+		if holding > CompLineInMoney/holdingPrice {
 			status := statusMap[fmt.Sprintf(`%s_%s`, bids[i].Market, bids[i].Symbol)]
 			if status == nil {
 				util.Log(util.LogLevelError, fmt.Sprintf(`no status when holding: %f %s %s`, holding, bids[i].Market, bids[i].Symbol))
@@ -672,7 +672,7 @@ func equalCoin(index int, coin string, statuses []*CarryStatus) (isEqual bool, h
 			continue
 		}
 		price := bidAsk.Asks[0].Price * (1 + compSlide)
-		if holding < -SmallInU/holdingPrice {
+		if holding < -CompLineInMoney/holdingPrice {
 			status := statusMap[fmt.Sprintf(`%s_%s`, asks[i].Market, asks[i].Symbol)]
 			if status == nil {
 				util.Log(util.LogLevelError, fmt.Sprintf(`no status when holding: %f %s %s`, holding, asks[i].Market, asks[i].Symbol))
@@ -707,7 +707,7 @@ func equalCoin(index int, coin string, statuses []*CarryStatus) (isEqual bool, h
 			equalStatus.Holding += dealAmount
 		}
 	}
-	if math.Abs(holding) > SmallInU/holdingPrice {
+	if math.Abs(holding) > CompLineInMoney/holdingPrice {
 		isEqual = false
 	} else {
 		isEqual = true
