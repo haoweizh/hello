@@ -496,9 +496,6 @@ func liquidateSmallContracts(account *model.Account, market string) {
 				order := api.PlaceOrder(account.Key, account.Secret, orderSide, model.OrderTypeMarket, market,
 					position.Currency, model.ReduceOnly, model.FunctionLiq, position.EntryPrice, position.EntryPrice, holding, false, nil)
 				saveCross(order, 0, 0, position.Holding)
-			} else {
-				util.Log(util.LogLevelInfo, fmt.Sprintf(`not liquidate bitgetperp for big perp %s %f %f value %f`,
-					position.Currency, position.EntryPrice, position.Holding, position.EntryPrice*position.Holding))
 			}
 		}
 	}
