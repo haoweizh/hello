@@ -35,7 +35,7 @@ var ProcessCollateral = func(collateral *model.Collateral) {
 			}
 			key := k.(string)
 			status := v.(*CarryStatus)
-			if strings.Contains(key, fmt.Sprintf("*%s%", cm.market)) && strings.Contains(key, collateral.AccountKey) {
+			if strings.Contains(key, fmt.Sprintf("*%s*", cm.market)) && strings.Contains(key, collateral.AccountKey) {
 				if status.Holding >= 0 {
 					status.TradeLineBuy = 1
 				}
