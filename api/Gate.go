@@ -22,6 +22,8 @@ import (
 var apiClientsGate = make(map[string]*gateApi.APIClient)
 var apiCtxGate = make(map[string]context.Context)
 
+const unifiedUrlGate = `wss://ws.gate.io/v4/ws/unified`
+
 const wsStepGate = 100
 
 func getClientGate(key, secret string) (apiClient *gateApi.APIClient, ctx context.Context) {
@@ -375,6 +377,21 @@ var markPriceHandler = gateWs.NewCallBack(func(msg *gateWs.UpdateMsg) {
 	return
 })
 
+var wsPriHandlerGateUnified = func(market, key string, msg []byte) {
+	responseJson, err := util.NewJSON(msg)
+	if err != nil || responseJson == nil {
+		return
+	}
+	if responseJson.Get(`channel`).MustString() != `unified.assets` {
+		return
+	}
+	collateral := &model.Collateral{AccountKey: key,
+		Available: responseJson.GetPath(`result`, `a`).MustFloat64(),
+		Rate:      responseJson.GetPath(`result`, `R`).MustFloat64()}
+	util.LogLess(util.LogLevelInfo, fmt.Sprintf("gate unified %s %f", collateral.AccountKey, collateral.Available))
+	model.CollateralHandler(collateral)
+}
+
 var wsPriHandlerGatePerp = func(market, key string, msg []byte) {
 	responseJson, err := util.NewJSON(msg)
 	if err != nil || responseJson == nil {
@@ -576,15 +593,20 @@ func WSOrderServeGate(account *model.Account, marketType string) {
 	defer model.AppEnvironment.PriConnecting.Store(model.Gate+marketType+account.Key, false)
 	ts := time.Now().Unix()
 	hash := hmac.New(sha512.New, []byte(account.Secret))
-	var conn *model.WSConn
-	var err error
+	var conn, connUpdate *model.WSConn
+	var err, errUpdate error
 	logInCode := ``
 	if marketType == model.MarketTypeSpot {
 		logInCode = `spot`
-		conn, err = model.WsPrivateClient(model.Gate, account.Key, gateWs.BaseUrl, wsPriHandlerGateSpot)
+		conn, err = model.WsPrivateClient(&model.AppEnvironment.ConnOrder, model.Gate, account.Key, gateWs.BaseUrl, wsPriHandlerGateSpot)
 	} else if marketType == model.MarketTypePerp {
 		logInCode = `futures`
-		conn, err = model.WsPrivateClient(model.Gate, account.Key, gateWs.FuturesUsdtUrl, wsPriHandlerGatePerp)
+		conn, err = model.WsPrivateClient(&model.AppEnvironment.ConnOrder, model.Gate, account.Key, gateWs.FuturesUsdtUrl, wsPriHandlerGatePerp)
+		connUpdate, errUpdate = model.WsPrivateClient(&model.AppEnvironment.ConnOrderUpdate, model.Gate, account.Key, unifiedUrlGate, wsPriHandlerGateUnified)
+		if errUpdate != nil {
+			util.Log(util.LogLevelError, fmt.Sprintf("gate wsAccount unified connect err: %s %s", errUpdate.Error(), account.Key))
+			return
+		}
 	}
 	if err != nil {
 		util.Log(util.LogLevelError, fmt.Sprintf("gate wsAccount connect errSpot: %s %s", err.Error(), account.Key))
@@ -599,10 +621,26 @@ func WSOrderServeGate(account *model.Account, marketType string) {
     		"signature": "%s","timestamp": "%d","req_id": "request%d"}}`, ts, logInCode, account.Key, sign, ts, ts)
 	if err = conn.WriteMsg([]byte(msg)); err != nil {
 		util.Log(util.LogLevelError, fmt.Sprintf("send account login message err: %s %s %s", model.Gate, marketType, err.Error()))
-	} else {
-		util.Log(util.LogLevelInfo, fmt.Sprintf("log in conn %s %s %s", model.Gate, marketType, msg))
-		util.StoreSyncMap(&model.AppEnvironment.ConnOrder, conn, model.Gate, marketType, account.Key)
+		return
 	}
+	util.Log(util.LogLevelInfo, fmt.Sprintf("log in conn %s %s %s", model.Gate, marketType, msg))
+	if marketType == model.MarketTypeSpot {
+		util.StoreSyncMap(&model.AppEnvironment.ConnOrder, conn, model.Gate, marketType, account.Key)
+	} else if connUpdate != nil {
+		hash = hmac.New(sha512.New, []byte(account.Secret))
+		ts = time.Now().Unix()
+		hash.Write([]byte(fmt.Sprintf(`channel=unified.assets&event=subscribe&time=%d`, ts)))
+		sign = hex.EncodeToString(hash.Sum(nil))
+		msg = fmt.Sprintf(`{"time":%d,"channel":"unified.assets","event":"subscribe","payload":[],"auth":
+			{"method":"api_key","KEY":"%s","SIGN": "%s"}}`, ts, account.Key, sign)
+		if err = connUpdate.WriteMsg([]byte(msg)); err != nil {
+			util.Log(util.LogLevelError, fmt.Sprintf("send account unified login message err: %s %s %s", model.Gate, marketType, err.Error()))
+			return
+		}
+		util.StoreSyncMap(&model.AppEnvironment.ConnOrder, conn, model.Gate, marketType, account.Key)
+		util.StoreSyncMap(&model.AppEnvironment.ConnOrderUpdate, connUpdate, model.Gate, marketType, account.Key)
+	}
+
 }
 
 func WsTickServeGateSpot(market string) (socketMap map[*model.WSConn]bool, msgChans []chan struct{}, connectErr error) {

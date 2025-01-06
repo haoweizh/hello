@@ -254,7 +254,7 @@ func publicHandler(market string, stopChan chan struct{}, connection *WSConn, ms
 	}
 }
 
-func WsPrivateClient(market, key, url string, accountMsgHandler AccountMsgHandler) (connection *WSConn, err error) {
+func WsPrivateClient(connMap *sync.Map, market, key, url string, accountMsgHandler AccountMsgHandler) (connection *WSConn, err error) {
 	util.Log(util.LogLevelInfo, market+` create account channel `+url)
 	connection, err = initChannel(url, market, ChanTypeOrder)
 	if err != nil {
@@ -271,10 +271,10 @@ func WsPrivateClient(market, key, url string, accountMsgHandler AccountMsgHandle
 				//_, message, readErr := connection.conn.Read(context.Background())
 				_, message, readErr := connection.conn.ReadMessage()
 				if readErr != nil {
-					value, _ := util.LoadSyncMap(&AppEnvironment.ConnOrder, market, key)
+					value, _ := util.LoadSyncMap(connMap, market, key)
 					if value != nil && value == connection.conn {
 						util.Log(util.LogLevelError, fmt.Sprintf(`delete connect %s %s %v`, market, key, value))
-						util.DelSyncMap(&AppEnvironment.ConnOrder, market, key)
+						util.DelSyncMap(connMap, market, key)
 					}
 					util.Log(util.LogLevelError, fmt.Sprintf(`%s %s can not read from account ws: %s`, market, url, readErr.Error()))
 					return

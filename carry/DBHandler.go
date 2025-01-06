@@ -159,6 +159,7 @@ func Maintain() {
 	model.TickHandlers[model.FunctionCombineTurtle] = Turtle.ProcessCombineTurtle
 	model.AccountHandlerMap[model.FunctionCross] = cross.PostOrderCross
 	model.CandleHandlers[model.FunctionMonitorKLine] = monitor.ProcessMonitor
+	model.CollateralHandler = cross.ProcessCollateral
 	_ = model.AppDB.AutoMigrate(&model.Setting{})
 	_ = model.AppDB.AutoMigrate(&model.Order{})
 	_ = model.AppDB.AutoMigrate(&model.Balance{})

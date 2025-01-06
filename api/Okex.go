@@ -204,7 +204,7 @@ var wsAccountHandlerOKEX = func(market, key string, event []byte) {
 		err = value.(*model.WSConn).WriteJson(map[string]interface{}{"op": "subscribe", "args": []interface{}{map[string]string{"channel": "orders", "instType": "SWAP"}}})
 		if err != nil {
 			util.Log(util.LogLevelError, fmt.Sprintf(`fail to sub %s swap order update`, market))
-			util.DelSyncMap(&model.AppEnvironment.ConnOrderUpdate, market, key)
+			util.DelSyncMap(&model.AppEnvironment.ConnOrder, market, key)
 			return
 		}
 	}
@@ -286,7 +286,7 @@ func WsOrderServeOKEX(account *model.Account) {
 		return
 	}
 	defer model.AppEnvironment.PriConnecting.Store(model.OKEX+account.Key, false)
-	conn, err := model.WsPrivateClient(model.OKEX, account.Key, wsPrivateOKEX, wsAccountHandlerOKEX)
+	conn, err := model.WsPrivateClient(&model.AppEnvironment.ConnOrder, model.OKEX, account.Key, wsPrivateOKEX, wsAccountHandlerOKEX)
 	if err != nil {
 		util.Log(util.LogLevelError, "can not create web socket "+err.Error())
 	} else if conn != nil {

@@ -60,6 +60,7 @@ type contractMarket struct {
 	contractValueInU     float64                    // 当前价格下开仓总额，以U计算
 	accountValueInU      float64                    // 期货权益InU
 	mmr                  float64                    // 维持保证金率
+	reduceOnly           bool                       // 只减仓模式
 	positions            map[string]*model.Position // symbol/position
 }
 
@@ -69,6 +70,7 @@ type spotMarket struct {
 	accountValueInU float64
 	balances        map[string]*model.Balance // symbol/balance
 	collateral      *model.Collateral
+	reduceOnly      bool // 只减仓模式
 }
 
 type CarryStatus struct {

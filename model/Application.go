@@ -15,6 +15,7 @@ type PostOrder func(order *Order) // 处理下单后的函数
 var TickHandlers = make(map[string]CarryHandler)
 var AccountHandlerMap = make(map[string]WsOrderHandler)
 var CandleHandlers = make(map[string]CandleHandler)
+var CollateralHandler WsCollateralHandler
 
 var CarryInfo sync.Map        // userKey - function - msg
 var monitorInfo = &sync.Map{} // userIndex - table - syncMap[string -array[]string]

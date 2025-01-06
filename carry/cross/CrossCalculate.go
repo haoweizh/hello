@@ -6,6 +6,7 @@ import (
 	"hello/util"
 	"math"
 	"strconv"
+	"strings"
 	"time"
 )
 
@@ -16,6 +17,38 @@ var stepScores = []float64{0, 0.001, 0.0021, 0.0033, 0.0046, 0.006, 0.0075, 0.00
 const smallHolding = 20  // 设定以money计20位较少持仓，可以归入下一等级
 const swapScore = 0.0015 // 换仓要求的利润金额
 const crossGrid = `grid`
+
+var ProcessCollateral = func(collateral *model.Collateral) {
+	value, _ := contractMarkets.Load(collateral.AccountKey)
+	if value == nil {
+		return
+	}
+	cm := value.(*contractMarket)
+	cm.collateralsAvailable = collateral.Available
+	if cm.collateralsAvailable < MarginULowLimit && cm.collateralsAvailable/cm.accountValueInU < 0.05 && cm.reduceOnly == false {
+		cm.reduceOnly = true
+		util.Log(util.LogLevelInfo, fmt.Sprintf(`set contract market reduce only %s %s %f %f`,
+			cm.market, collateral.AccountKey, cm.collateralsAvailable, cm.accountValueInU))
+		carryStatusMap.Range(func(k, v interface{}) bool {
+			if v == nil {
+				return true
+			}
+			key := k.(string)
+			status := v.(*CarryStatus)
+			if strings.Contains(key, fmt.Sprintf("*%s%", cm.market)) && strings.Contains(key, collateral.AccountKey) {
+				if status.Holding >= 0 {
+					status.TradeLineBuy = 1
+				}
+				if status.Holding <= 0 {
+					status.TradeLineBuy = 1
+				}
+				util.Log(util.LogLevelInfo, fmt.Sprintf(`set contract market reduce only %s %s holding %f lines %f %f`,
+					cm.market, collateral.AccountKey, status.Holding, status.TradeLineBuy, status.TradeLineSell))
+			}
+			return true
+		})
+	}
+}
 
 func generateMonitorMsg(index int, coin string, score, scoreRelate float64, carryStatus, carryStatusRelate *CarryStatus,
 	marketInfo, marketInfoRelate *model.MarketInfo, fundingRate, fundingRateRelate *model.FundingRate, valid bool) {

@@ -439,7 +439,7 @@ func WsOrderServeBinance(account *model.Account, market string) {
 		apiUrl = wsBinancePerpApi
 		streamUrl = wsBinancePerp
 	}
-	conn, err := model.WsPrivateClient(market, account.Key, apiUrl, wsActHandlerBinance)
+	conn, err := model.WsPrivateClient(&model.AppEnvironment.ConnOrder, market, account.Key, apiUrl, wsActHandlerBinance)
 	if err != nil {
 		util.Log(util.LogLevelError, fmt.Sprintf(`fail to create account ws %s %s`, market, err.Error()))
 	} else {
@@ -447,7 +447,7 @@ func WsOrderServeBinance(account *model.Account, market string) {
 	}
 	_, listenKey := RenewListenKeyBinance(account, market)
 	msg := fmt.Sprintf(`%s/ws/%s`, streamUrl, listenKey)
-	connUpdate, errUpdate := model.WsPrivateClient(market, account.Key, msg, wsOrderUpdateBinance)
+	connUpdate, errUpdate := model.WsPrivateClient(&model.AppEnvironment.ConnOrderUpdate, market, account.Key, msg, wsOrderUpdateBinance)
 	if errUpdate != nil {
 		util.Log(util.LogLevelError, fmt.Sprintf(`fail to create order update ws %s %s`, market, errUpdate.Error()))
 	} else {

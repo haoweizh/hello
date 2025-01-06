@@ -203,27 +203,14 @@ func Test_Redis(t *testing.T) {
 }
 
 func Test_Sync(t *testing.T) {
-	testMap := sync.Map{}
-	order := &model.Order{}
-	util.StoreSyncMap(&testMap, order, `key`)
-	value, _ := util.LoadSyncMap(&testMap, `key`)
-	fmt.Println(value)
-	fmt.Println(order)
-	if order == value {
-		fmt.Println("ok")
+	model.NewConfig()
+	account := model.AppConfig.GetAccounts(model.Gate)[0]
+	model.AppEnvironment.PriConnecting.Store(model.Gate+model.MarketTypePerp+account.Key, false)
+	api.WSOrderServeGate(account, model.MarketTypePerp)
+	select {
+	case <-time.After(time.Second * 100):
+
 	}
-	if order == value.(*model.Order) {
-		fmt.Println("convert ok")
-	}
-	//replaced := testMap.CompareAndSwap(`1`, false, true)
-	//fmt.Println(replaced)
-	//replaced = testMap.CompareAndSwap(`1`, true, true)
-	//fmt.Println(replaced)
-	//testMap.Store(`1`, false)
-	//replaced = testMap.CompareAndSwap(`1`, false, true)
-	//fmt.Println(replaced)
-	//value, _ := testMap.Load(`1`)
-	//fmt.Println(value)
 }
 
 func Test_BalAndPos(t *testing.T) {
