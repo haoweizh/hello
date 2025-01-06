@@ -29,6 +29,7 @@ var ProcessCollateral = func(collateral *model.Collateral) {
 		cm.reduceOnly = true
 		util.Log(util.LogLevelInfo, fmt.Sprintf(`set contract market reduce only %s %s %f %f`,
 			cm.market, collateral.AccountKey, cm.collateralsAvailable, cm.accountValueInU))
+		num := 0
 		carryStatusMap.Range(func(k, v interface{}) bool {
 			if v == nil {
 				return true
@@ -42,8 +43,9 @@ var ProcessCollateral = func(collateral *model.Collateral) {
 				if status.Holding <= 0 {
 					status.TradeLineBuy = 1
 				}
-				util.Log(util.LogLevelInfo, fmt.Sprintf(`set contract market reduce only %s %s holding %f lines %f %f`,
-					cm.market, collateral.AccountKey, status.Holding, status.TradeLineBuy, status.TradeLineSell))
+				num++
+				util.Log(util.LogLevelInfo, fmt.Sprintf(`set contract market reduce only %s %s %s holding %f lines %f %f %d`,
+					cm.market, status.symbol, collateral.AccountKey, status.Holding, status.TradeLineBuy, status.TradeLineSell, num))
 			}
 			return true
 		})
