@@ -385,9 +385,17 @@ var wsPriHandlerGateUnified = func(market, key string, msg []byte) {
 	if responseJson.Get(`channel`).MustString() != `unified.assets` {
 		return
 	}
-	collateral := &model.Collateral{AccountKey: key,
-		Available: responseJson.GetPath(`result`, `a`).MustFloat64(),
-		Rate:      responseJson.GetPath(`result`, `R`).MustFloat64()}
+	value := responseJson.GetPath(`result`).MustMap()
+	if value[`e`] == nil {
+		return
+	}
+	collateral := &model.Collateral{AccountKey: key}
+	if value[`a`] != nil {
+		collateral.Available, _ = strconv.ParseFloat(value[`a`].(string), 64)
+	}
+	if value[`R`] != nil {
+		collateral.Rate, _ = strconv.ParseFloat(value[`R`].(string), 64)
+	}
 	util.LogLess(util.LogLevelInfo, fmt.Sprintf("gate unified %s %f", collateral.AccountKey, collateral.Available))
 	model.CollateralHandler(collateral)
 }

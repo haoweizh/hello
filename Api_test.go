@@ -208,7 +208,7 @@ func Test_Sync(t *testing.T) {
 	model.AppEnvironment.PriConnecting.Store(model.Gate+model.MarketTypePerp+account.Key, false)
 	api.WSOrderServeGate(account, model.MarketTypePerp)
 	select {
-	case <-time.After(time.Second * 100):
+	case <-time.After(time.Second * 40):
 
 	}
 }
