@@ -47,7 +47,6 @@ func createContractMarket(key, secret, market string) (cm *contractMarket) {
 }
 
 func createSpotMarket(key, secret, market string) (sm *spotMarket) {
-	//util.Info(fmt.Sprintf(`create sm %s %s`, key[:5], market))
 	success, balances, totalInUsd, collateral := api.GetBalances(key, secret, market)
 	util.Log(util.LogLevelInfo, fmt.Sprintf(`create spot market %s %#v`, market, balances))
 	if success {
@@ -389,8 +388,9 @@ func ClearCross() {
 			doEqual = true
 			model.AppEnvironment.CrossEqualTime = time.Now()
 		}
-		util.Log(util.LogLevelInfo, fmt.Sprintf("begin to clearing cross get set %s %v do equal %v",
-			model.FunctionCross, model.AppEnvironment.CrossEqualing, doEqual))
+		traceId := time.Now().Unix()
+		util.Log(util.LogLevelInfo, fmt.Sprintf("begin to clearing cross get set %s %v do equal %v %d",
+			model.FunctionCross, model.AppEnvironment.CrossEqualing, doEqual, traceId))
 		compOrders.Clear()
 		carryStatusMap.Clear()
 		spotMarkets.Clear()
@@ -434,16 +434,16 @@ func ClearCross() {
 		msg := fmt.Sprintf(`comp compare cross %f %f`, compInU, crossInU)
 		util.Log(util.LogLevelInfo, msg)
 		if model.AppConfig.Handle == `1` {
-			equalAccounts(doEqual)
+			equalAccounts(doEqual, traceId)
 		}
 		model.AppEnvironment.CrossEqualing = false
-		util.Log(util.LogLevelInfo, fmt.Sprintf("end to clearing cross get set %v", model.AppEnvironment.CrossEqualing))
+		util.Log(util.LogLevelInfo, fmt.Sprintf("end to clearing cross get set %v %d", model.AppEnvironment.CrossEqualing, traceId))
 		time.Sleep(time.Minute * 30)
 	}
 }
 
-func equalAccounts(doEqual bool) {
-	util.Log(util.LogLevelInfo, `...... enter clearing cross all`)
+func equalAccounts(doEqual bool, traceId int64) {
+	util.Log(util.LogLevelInfo, fmt.Sprintf(`enter clearing cross all %d`, traceId))
 	waitEqual := make(map[int]bool)
 	equalChannel := make(chan int, 1)
 	api.InitCrossMarketInfos(model.AppEnvironment.Markets)
@@ -456,7 +456,7 @@ func equalAccounts(doEqual bool) {
 			accounts[market] = indexAccounts[market]
 		}
 		waitEqual[i] = true
-		go equalAccount(i, equalChannel, accounts, doEqual)
+		go equalAccount(i, equalChannel, accounts, doEqual, traceId)
 	}
 	for {
 		index := <-equalChannel
@@ -471,7 +471,7 @@ func equalAccounts(doEqual bool) {
 			break
 		}
 	}
-	util.Log(util.LogLevelInfo, `...... exit clearing cross all`)
+	util.Log(util.LogLevelInfo, fmt.Sprintf(`exit clearing cross all %d`, traceId))
 }
 
 func createCarryCoin(accounts map[string]*model.Account, coin string, settings []*model.Setting) (carryCoin *CarryCoin) {
@@ -497,8 +497,8 @@ func createCarryCoin(accounts map[string]*model.Account, coin string, settings [
 	return
 }
 
-func equalAccount(i int, equalChan chan int, accounts map[string]*model.Account, doEqual bool) {
-	util.Log(util.LogLevelInfo, fmt.Sprintf(`begin to clearing cross %d `, i))
+func equalAccount(i int, equalChan chan int, accounts map[string]*model.Account, doEqual bool, traceId int64) {
+	util.Log(util.LogLevelInfo, fmt.Sprintf(`begin to clearing cross %d trace %d`, i, traceId))
 	for market, account := range accounts {
 		if account.Index != i {
 			continue
@@ -544,7 +544,7 @@ func equalAccount(i int, equalChan chan int, accounts map[string]*model.Account,
 		})
 	}
 	equalChan <- i
-	util.Log(util.LogLevelInfo, fmt.Sprintf(`...... exit clearing cross %d`, i))
+	util.Log(util.LogLevelInfo, fmt.Sprintf(`exit clearing cross account index %d trace %d`, i, traceId))
 }
 
 // getHolding

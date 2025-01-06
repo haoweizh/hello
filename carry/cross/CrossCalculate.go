@@ -18,7 +18,7 @@ const swapScore = 0.0015 // 换仓要求的利润金额
 const crossGrid = `grid`
 
 func generateMonitorMsg(index int, coin string, score, scoreRelate float64, carryStatus, carryStatusRelate *CarryStatus,
-	marketInfo, marketInfoRelate *model.MarketInfo, fundingRate, fundingRateRelate *model.FundingRate) {
+	marketInfo, marketInfoRelate *model.MarketInfo, fundingRate, fundingRateRelate *model.FundingRate, valid bool) {
 	// 为了同一对交易对冲不出现两次，对前后进行排序
 	mark := fmt.Sprintf(`%s-%s`, carryStatus.market, carryStatus.symbol)
 	markRelate := fmt.Sprintf(`%s-%s`, carryStatusRelate.market, carryStatusRelate.symbol)
@@ -30,10 +30,10 @@ func generateMonitorMsg(index int, coin string, score, scoreRelate float64, carr
 	if !carryStatusRelate.isSpot {
 		coinValueRelate += `永`
 	}
-	green := false
-	if math.Abs(fundingRateRelate.Rate) > 0.001 || math.Abs(fundingRate.Rate) > 0.001 {
-		green = true
-	}
+	//green := false
+	//if math.Abs(fundingRateRelate.Rate) > 0.001 || math.Abs(fundingRate.Rate) > 0.001 {
+	//	green = true
+	//}
 	loc, _ := time.LoadLocation("Asia/Shanghai")
 	fundingStr, fundingStrRelate := ``, ``
 	if !carryStatus.isSpot {
@@ -65,7 +65,7 @@ func generateMonitorMsg(index int, coin string, score, scoreRelate float64, carr
 			fmt.Sprintf(`%.0e`, carryStatusRelate.LimitSell),
 			fmt.Sprintf(`%.1f`, 100*scoreRelate),
 			fmt.Sprintf(`%.1f`, 100*score),
-			fmt.Sprintf(`%v`, green)}
+			fmt.Sprintf(`%v`, valid)}
 	} else {
 		mark = fmt.Sprintf(`%s|%s`, markRelate, mark)
 		infoValue = []string{coin, carryStatusRelate.market, coinValueRelate, fundingStrRelate,
@@ -80,7 +80,7 @@ func generateMonitorMsg(index int, coin string, score, scoreRelate float64, carr
 			fmt.Sprintf(`%.0e`, carryStatus.LimitSell),
 			fmt.Sprintf(`%.1f`, 100*score),
 			fmt.Sprintf(`%.1f`, 100*scoreRelate),
-			fmt.Sprintf(`%v`, green)}
+			fmt.Sprintf(`%v`, valid)}
 	}
 	go model.SetMonitorInfo(strconv.Itoa(index), model.FunctionCross, mark, infoValue)
 }
@@ -172,11 +172,10 @@ func calcAmount(index int, coin string, carryStatus, carryStatusRelate *CarrySta
 	priceXRelate := carryStatusRelate.setting.PriceX
 	score := (priceBid/priceX - priceAskRelate/priceXRelate) / math.Max(priceBid/priceX, priceAskRelate/priceXRelate)
 	scoreRelate := (priceBidRelate/priceXRelate - priceAsk/priceX) / math.Max(priceAsk/priceX, priceBidRelate/priceXRelate)
-	generateMonitorMsg(index, coin, score, scoreRelate, carryStatus, carryStatusRelate, marketInfo, marketInfoRelate, fundingRate, fundingRateRelate)
-	mark := fmt.Sprintf(`%s_%s|%s_%s`, carryStatus.market, carryStatus.symbol, carryStatusRelate.market, carryStatusRelate.symbol)
-	if score > 0.01 && util.DoDebug {
-		model.AppMetric.AddCarry(mark, score, 0)
-	}
+	//mark := fmt.Sprintf(`%s_%s|%s_%s`, carryStatus.market, carryStatus.symbol, carryStatusRelate.market, carryStatusRelate.symbol)
+	//if score > 0.01 && util.DoDebug {
+	//	model.AppMetric.AddCarry(mark, score, 0)
+	//}
 	valid, amountLimit := checkTradeLine(carryStatusRelate, carryStatus, carryCoin, tickRelate.Asks[0].Price, tick.Bids[0].Price, score)
 	if valid {
 		statusSell = carryStatus
@@ -200,6 +199,7 @@ func calcAmount(index int, coin string, carryStatus, carryStatusRelate *CarrySta
 			bidAmount = tick.Asks[0].Amount
 		}
 	}
+	generateMonitorMsg(index, coin, score, scoreRelate, carryStatus, carryStatusRelate, marketInfo, marketInfoRelate, fundingRate, fundingRateRelate, valid)
 	if statusBuy == nil {
 		return false, nil, nil, 0, 0, 0, nil, nil
 	}
