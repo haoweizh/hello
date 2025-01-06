@@ -12,7 +12,7 @@ type Config struct {
 	Delay                         float64
 	Debug, KucoinSpot, MetricTick bool
 	// SpecialChan 1 代表使用特殊通道
-	SpecialChan, Cross                                                                               string
+	SpecialChan, CrossStyle                                                                          string
 	KucoinRelatedKey, KucoinRelatedSecret, KucoinFutureKey, KucoinFutureSecret                       string
 	KucoinCarryClose, KucoinCarryRate, Simulation, Equal, Log                                        string
 	GateKey, GateSecret, GateCarryClose, GateCarryRate, GateLeverMax, GateLeverMin, GateRiskLimit    string
@@ -30,7 +30,7 @@ type Config struct {
 
 type Account struct {
 	Index                                                int // 账户索引
-	Market, Key, Secret, FtxSubAccount                   string
+	Market, Key, Secret, FtxSubAccount, CrossStyle       string
 	CarryClose, IsUnified                                bool
 	CarryRate, GateLeverMax, GateLeverMin, GateRiskLimit float64
 }
@@ -58,30 +58,19 @@ func (config *Config) GetAccountFromKeyIndex(market, key string, index int) (acc
 }
 
 func (config *Config) GetAccounts(market string) []*Account {
+	if market != Gate && market != BinanceSpot && market != BinancePerp && market != BinanceMargin && market != BitgetSpot &&
+		market != BitgetPerp && market != OKEX && market != Bybit {
+		return nil
+	}
 	value, ok := marketAccounts.Load(market)
 	if ok && value != nil {
 		return value.([]*Account)
 	}
 	isUnified := false
-	var rateValues, closeValues, keys, secrets, ftxSubAccounts, gateLeverMax, gateLeverMin, gateRiskLimit []string
+	var rateValues, closeValues, keys, secrets, gateLeverMax, gateLeverMin, gateRiskLimit []string
+	// ftxSubAccounts
+	crossStyles := strings.Split(config.CrossStyle, `,`)
 	switch market {
-	case GXZQ:
-		keys = []string{``}
-		secrets = []string{``}
-		closeValues = []string{`false`}
-		rateValues = []string{`1`}
-	//case Kucoin, DFuture:
-	//	return false, 1
-	case KucoinSpot:
-		keys = strings.Split(config.KucoinRelatedKey, `,`)
-		secrets = strings.Split(config.KucoinRelatedSecret, `,`)
-		closeValues = strings.Split(config.KucoinCarryClose, `,`)
-		rateValues = strings.Split(config.KucoinCarryRate, `,`)
-	case KucoinPerp:
-		keys = strings.Split(config.KucoinFutureKey, `,`)
-		secrets = strings.Split(config.KucoinFutureSecret, `,`)
-		closeValues = strings.Split(config.KucoinCarryClose, `,`)
-		rateValues = strings.Split(config.KucoinCarryRate, `,`)
 	case Gate:
 		isUnified = true
 		keys = strings.Split(config.GateKey, `,`)
@@ -96,13 +85,6 @@ func (config *Config) GetAccounts(market string) []*Account {
 				market, len(keys), len(gateLeverMin), len(gateLeverMax), len(gateRiskLimit)))
 			os.Exit(1)
 		}
-	case Ftx:
-		isUnified = true
-		keys = strings.Split(config.FtxKey, `,`)
-		secrets = strings.Split(config.FtxSecret, `,`)
-		closeValues = strings.Split(config.FtxCarryClose, `,`)
-		rateValues = strings.Split(config.FtxCarryRate, `,`)
-		ftxSubAccounts = strings.Split(config.FtxSubAccount, `,`)
 	case BitgetSpot, BitgetPerp:
 		keys = strings.Split(config.BitgetKey, `,`)
 		secrets = strings.Split(config.BitgetSecret, `,`)
@@ -114,39 +96,29 @@ func (config *Config) GetAccounts(market string) []*Account {
 		secrets = strings.Split(config.OkexSecret, `,`)
 		closeValues = strings.Split(config.OkexCarryClose, `,`)
 		rateValues = strings.Split(config.OkexCarryRate, `,`)
-	case BinanceSpot, BinancePerp, BinanceMargin:
-		keys = strings.Split(config.BinanceKey, `,`)
-		secrets = strings.Split(config.BinanceSecret, `,`)
-		closeValues = strings.Split(config.BinanceCarryClose, `,`)
-		rateValues = strings.Split(config.BinanceCarryRate, `,`)
-	case Bitmex:
-		keys = strings.Split(config.BitmexKey, `,`)
-		secrets = strings.Split(config.BitmexSecret, `,`)
-		closeValues = strings.Split(config.BitmexCarryClose, `,`)
-		rateValues = strings.Split(config.BitmexCarryRate, `,`)
 	case Bybit:
 		isUnified = true
 		keys = strings.Split(config.BybitKey, `,`)
 		secrets = strings.Split(config.BybitSecret, `,`)
 		closeValues = strings.Split(config.BybitCarryClose, `,`)
 		rateValues = strings.Split(config.BybitCarryRate, `,`)
-	case Mexc:
-		keys = strings.Split(config.MexcKey, `,`)
-		secrets = strings.Split(config.MexcSecret, `,`)
-		closeValues = strings.Split(config.MexcCarryClose, `,`)
-		rateValues = strings.Split(config.MexcCarryRate, `,`)
+	case BinanceSpot, BinancePerp:
+		keys = strings.Split(config.BinanceKey, `,`)
+		secrets = strings.Split(config.BinanceSecret, `,`)
+		closeValues = strings.Split(config.BinanceCarryClose, `,`)
+		rateValues = strings.Split(config.BinanceCarryRate, `,`)
 	}
-	if len(keys) != len(secrets) || len(keys) != len(closeValues) || len(keys) != len(rateValues) {
-		fmt.Println(fmt.Sprintf(`wrong config format %s keys:%d secrets:%d close:%d rate:%d`,
-			market, len(keys), len(secrets), len(closeValues), len(rateValues)))
+	if len(keys) != len(secrets) || len(keys) != len(closeValues) || len(keys) != len(rateValues) || len(rateValues) != len(crossStyles) {
+		fmt.Println(fmt.Sprintf(`wrong config format %s keys:%d secrets:%d close:%d rate:%d crossStyle:%d`,
+			market, len(keys), len(secrets), len(closeValues), len(rateValues), len(crossStyles)))
 		os.Exit(1)
 	}
 	accounts := make([]*Account, len(keys))
 	for i := 0; i < len(keys); i++ {
-		account := &Account{Key: keys[i], Secret: secrets[i], Index: i, Market: market, IsUnified: isUnified}
-		if market == Ftx {
-			account.FtxSubAccount = ftxSubAccounts[i]
-		}
+		account := &Account{Key: keys[i], Secret: secrets[i], Index: i, Market: market, IsUnified: isUnified, CrossStyle: crossStyles[i]}
+		//if market == Ftx {
+		//	account.FtxSubAccount = ftxSubAccounts[i]
+		//}
 		if market == Gate {
 			account.GateLeverMax, _ = strconv.ParseFloat(gateLeverMax[i], 64)
 			account.GateLeverMin, _ = strconv.ParseFloat(gateLeverMin[i], 64)
@@ -154,7 +126,7 @@ func (config *Config) GetAccounts(market string) []*Account {
 		}
 		account.CarryClose, _ = strconv.ParseBool(closeValues[i])
 		account.CarryRate, _ = strconv.ParseFloat(rateValues[i], 64)
-		if len(strings.TrimSpace(account.Key)) > 0 || market == GXZQ {
+		if len(strings.TrimSpace(account.Key)) > 0 {
 			accounts[i] = account
 		} else {
 			accounts[i] = nil

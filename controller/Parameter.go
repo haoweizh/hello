@@ -53,7 +53,6 @@ func ParameterServe() {
 	router.GET(`tick`, tickPage)
 	router.GET(`cross_refresh`, crossRefresh)
 	router.GET(`debug`, debug)
-	router.GET(`gxzq`, simulateGXZQ)
 	router.GET(`candles`, getCandles)
 	router.GET(`mine`, mindZeroAddr)
 	router.GET(`monitor`, MonitorTrade)
@@ -183,35 +182,6 @@ func simulateGrid(c *gin.Context) {
 	c.String(http.StatusOK, `done`)
 }
 
-func simulateGXZQ(c *gin.Context) {
-	session := sessions.Default(c)
-	sessionValue := session.Get(`user`)
-	if sessionValue != `haoweizh@qq.com` {
-		c.String(http.StatusForbidden, `no right`)
-		return
-	}
-	market := c.Query(`market`)
-	if market == `` {
-		market = model.GXZQ
-	}
-	strBegin := `2021-01-01T00:00:00+00:00`
-	strEnd := `2023-01-01T00:00:00+00:00`
-	//coins := `CZCE.FG,DCE.jm,DCE.eb,CZCE.TA,SHFE.fu,DCE.p,CZCE.SF,SHFE.hc,DCE.v,DCE.y`
-	coins := `DOGE,SOL,MATIC,CHZ,LINK,ADA,BNB,FIL,SUSHI,AXS,ATOM,WAVES`
-	for i := 3; i <= 21; i++ {
-		sign := fmt.Sprintf(`market%s,coins%s,seconds86400,%s~%s,far%d,near%d,limit%d,allLimit%d,useNear%v`,
-			market, coins, strBegin, strEnd, i*2, i, 3, -1, true)
-		regret.CutTail(market, coins, sign)
-		util.Log(util.LogLevelInfo, fmt.Sprintf(`done cut tail %s %s %s`, market, coins, sign))
-		sign = fmt.Sprintf(`market%s,coins%s,seconds86400,%s~%s,far%d,near%d,limit%d,allLimit%d,useNear%v`,
-			market, coins, strBegin, strEnd, i*2, i, 3, -1, false)
-		regret.CutTail(market, coins, sign)
-		util.Log(util.LogLevelInfo, fmt.Sprintf(`done cut tail %s %s %s`, market, coins, sign))
-	}
-	util.Log(util.LogLevelInfo, `done cut tail all`)
-	c.String(http.StatusOK, `done`)
-}
-
 func mindZeroAddr(c *gin.Context) {
 	session := sessions.Default(c)
 	sessionValue := session.Get(`user`)
@@ -282,9 +252,6 @@ func simulate(c *gin.Context) {
 	}
 	auto := c.Query(`auto`)
 	market := c.Query(`market`)
-	if strings.Trim(market, ` `) == `` {
-		market = model.GXZQ
-	}
 	useMStr := c.Query(`useM`)
 	nearStr := c.Query(`near`)
 	near, nearErr := strconv.ParseInt(nearStr, 10, 64)

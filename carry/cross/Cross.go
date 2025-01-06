@@ -944,24 +944,16 @@ func placeCross(carryCoin *CarryCoin, statusBuy, statusSell *CarryStatus, priceB
 			orderBuy.ErrCode, orderSell.ErrCode = msg, msg
 		}
 	} else {
-		orderParamBuy := ``
-		orderParamSell := ``
-		if statusBuy.Holding < -amountBuy {
-			orderParamBuy = model.ReduceOnly
-		}
-		if statusSell.Holding > amountSell {
-			orderParamSell = model.ReduceOnly
-		}
 		go api.PlaceOrder(statusBuy.account.Key, statusBuy.account.Secret, model.OrderSideBuy, model.OrderTypeLimit, statusBuy.market,
-			statusBuy.symbol, orderParamBuy, model.FunctionCross, priceBuy, priceBuy, amountBuy, true, PostOrderCross)
+			statusBuy.symbol, ``, model.FunctionCross, priceBuy, priceBuy, amountBuy, true, PostOrderCross)
 		go api.PlaceOrder(statusSell.account.Key, statusSell.account.Secret, model.OrderSideSell, model.OrderTypeLimit, statusSell.market,
-			statusSell.symbol, orderParamSell, model.FunctionCross, priceSell, priceSell, amountSell, true, PostOrderCross)
+			statusSell.symbol, ``, model.FunctionCross, priceSell, priceSell, amountSell, true, PostOrderCross)
 	}
 	// 买入现货时要交手续费，故而实际到手少于下单量，校准以免未来买单时数量不足
 	if marketType == model.MarketTypeSpot {
 		amountBuy = amountBuy * 0.9992
 	}
-	if carryCoin != nil && model.AppConfig.Cross == crossGrid {
+	if carryCoin != nil && statusBuy.account.CrossStyle == crossGrid {
 		carryCoin.AddTrade(statusBuy, statusSell, priceBuy, priceSell, amountBuy)
 	}
 	placeStatus(statusBuy, priceBuy, amountBuy)

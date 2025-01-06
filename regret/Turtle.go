@@ -287,11 +287,6 @@ func ProcessCandles(start, end time.Time, far, allLimit int, useNear, useM bool,
 			continue
 		}
 		turtleTime := sortedCandles[i].Begin
-		if market == model.GXZQ { // 因为有夜盘的存在，所以算作前一天的
-			if turtleTime.Hour() < 5 {
-				turtleTime = turtleTime.Add(time.Second * -1 * 86400)
-			}
-		}
 		turtleKey := getTurtleKey(sortedCandles[i], slotSeconds)
 		if turtleDataMap[turtleKey] != nil {
 			handlePrice(turtleDataMap[turtleKey], sortedCandles[i], settings, allLimit, sign, useM)
