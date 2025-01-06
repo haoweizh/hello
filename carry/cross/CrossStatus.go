@@ -14,6 +14,7 @@ import (
 const holdingLimitInU = 100000.0
 const openValueLimit = 2000.0
 const compLimitInU = 3000.0
+const MarginULowLimit = 10000
 
 // const holdingLimitInU = 500000.0
 // const openValueLimit = 2000

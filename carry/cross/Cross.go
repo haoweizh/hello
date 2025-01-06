@@ -164,10 +164,10 @@ func createFromPosition(account *model.Account, setting *model.Setting, valueLim
 		}
 	}
 	if cm.contractValueInU/cm.accountValueInU > rateLimitPosition || valueInUsd > valueLimit ||
-		valueInUsd/cm.accountValueInU > rateLimitHolding ||
+		valueInUsd/cm.accountValueInU > rateLimitHolding || (cm.collateralsAvailable < MarginULowLimit && cm.collateralsAvailable/cm.accountValueInU < 0.1) ||
 		(setting.Market == model.BitgetPerp && (len(cm.positions) > BitgetPosLimit && carryStatus.Holding == 0)) {
-		util.Log(util.LogLevelError, fmt.Sprintf(`do revert true %s %s value big %f %f %f %f %f %f pos len %d`,
-			setting.Market, setting.Symbol, cm.contractValueInU, cm.accountValueInU, rateLimitPosition, valueInUsd, valueLimit, rateLimitHolding, len(cm.positions)))
+		util.Log(util.LogLevelError, fmt.Sprintf(`do revert true %s %s value big %f %f %f %f %f %f margin u %f pos len %d`,
+			setting.Market, setting.Symbol, cm.contractValueInU, cm.accountValueInU, rateLimitPosition, valueInUsd, valueLimit, rateLimitHolding, cm.contractValueInU, len(cm.positions)))
 		doRevert = true
 	}
 	return carryStatus, doRevert
