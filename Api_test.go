@@ -204,9 +204,9 @@ func Test_Redis(t *testing.T) {
 
 func Test_Sync(t *testing.T) {
 	model.NewConfig()
-	account := model.AppConfig.GetAccounts(model.Gate)[0]
-	model.AppEnvironment.PriConnecting.Store(model.Gate+model.MarketTypePerp+account.Key, false)
-	api.WSOrderServeGate(account, model.MarketTypePerp)
+	account := model.AppConfig.GetAccounts(model.Bybit)[0]
+	model.AppEnvironment.PriConnecting.Store(model.Bybit+account.Key, false)
+	api.WsOrderServeBybit(account)
 	select {
 	case <-time.After(time.Second * 40):
 
