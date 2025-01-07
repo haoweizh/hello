@@ -304,6 +304,48 @@ type BybitOrderUpdateResp struct {
 	} `json:"data"`
 }
 
+// BybitWalletUpdateResp wallet,wallet返回参数如下
+/*
+	{"id":"391069461_wallet_1736233939823","topic":"wallet","creationTime":1736233939822,"data":[{"accountIMRate":"0.194","accountMMRate":"0.0144","totalEquity":"295036.40744634","totalWalletBalance":"220600.94635771","totalMarginBalance":"220376.47958508","totalAvailableBalance":"177603.70201284","totalPerpUPL":"-224.46677263","totalInitialMargin":"42772.77757223","totalMaintenanceMargin":"3182.2248072","coin":[{"coin":"USDT","equity":"220333.51454974","usdValue":"220376.47958508","walletBalance":"220557.93755989","availableToWithdraw":"177569.07604301","availableToBorrow":"","borrowAmount":"0","accruedInterest":"0","totalOrderIM":"4.47293364","totalPositionIM":"42759.96557309","totalPositionMM":"3181.32448747","unrealisedPnl":"-224.42301015","cumRealisedPnl":"-7049.92028135","bonus":"0","collateralSwitch":true,"marginCollateral":true,"locked":"0","spotHedgingQty":"0"}],"accountLTV":"0","accountType":"UNIFIED"}]}
+*/
+type BybitWalletUpdateResp struct {
+	ID           string `json:"id"`
+	Topic        string `json:"topic"`
+	CreationTime int64  `json:"creationTime"`
+	Data         []struct {
+		AccountIMRate          string `json:"accountIMRate"`
+		AccountMMRate          string `json:"accountMMRate"`
+		TotalEquity            string `json:"totalEquity"`
+		TotalWalletBalance     string `json:"totalWalletBalance"`
+		TotalMarginBalance     string `json:"totalMarginBalance"`
+		TotalAvailableBalance  string `json:"totalAvailableBalance"`
+		TotalPerpUPL           string `json:"totalPerpUPL"`
+		TotalInitialMargin     string `json:"totalInitialMargin"`
+		TotalMaintenanceMargin string `json:"totalMaintenanceMargin"`
+		Coin                   []struct {
+			Coin                string `json:"coin"`
+			Equity              string `json:"equity"`
+			UsdValue            string `json:"usdValue"`
+			WalletBalance       string `json:"walletBalance"`
+			AvailableToWithdraw string `json:"availableToWithdraw"`
+			AvailableToBorrow   string `json:"availableToBorrow"`
+			BorrowAmount        string `json:"borrowAmount"`
+			AccruedInterest     string `json:"accruedInterest"`
+			TotalOrderIM        string `json:"totalOrderIM"`
+			TotalPositionIM     string `json:"totalPositionIM"`
+			TotalPositionMM     string `json:"totalPositionMM"`
+			UnrealisedPnl       string `json:"unrealisedPnl"`
+			CumRealisedPnl      string `json:"cumRealisedPnl"`
+			Bonus               string `json:"bonus"`
+			CollateralSwitch    bool   `json:"collateralSwitch"`
+			MarginCollateral    bool   `json:"marginCollateral"`
+			Locked              string `json:"locked"`
+			SpotHedgingQty      string `json:"spotHedgingQty"`
+		} `json:"coin"`
+		AccountLTV  string `json:"accountLTV"`
+		AccountType string `json:"accountType"`
+	} `json:"data"`
+}
 type BybitOrderResp struct {
 	RetCode int    `json:"retCode"`
 	RetMsg  string `json:"retMsg"`

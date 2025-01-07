@@ -34,23 +34,38 @@ var wsOrdUdtHandlerBybit = func(market, key string, msg []byte) {
 		return
 	}
 	if responseJson.Get(`op`).MustString() == `auth` && responseJson.Get(`success`).MustBool() {
-		err := SendToConnection(model.Bybit, value.(*model.WSConn), []byte(`{"op":"subscribe","args": ["order"]}`))
+		//新增wallet通道
+		err := SendToConnection(model.Bybit, value.(*model.WSConn), []byte(`{"op":"subscribe","args": ["order","wallet"]}`))
 		if err != nil {
 			util.DelSyncMap(&model.AppEnvironment.ConnOrderUpdate, market, key)
 		}
 	}
-	orderResp := &dtos.BybitOrderUpdateResp{}
-	jsonErr := json.Unmarshal(msg, orderResp)
-	if jsonErr == nil {
-		for _, data := range orderResp.Data {
-			status := model.CarryStatusWorking
-			if data.OrderStatus == `Filled` {
-				status = model.CarryStatusSuccess
+	if responseJson.Get(`topic`).MustString() == `order` {
+		orderResp := &dtos.BybitOrderUpdateResp{}
+		jsonErr := json.Unmarshal(msg, orderResp)
+		if jsonErr == nil {
+			for _, data := range orderResp.Data {
+				status := model.CarryStatusWorking
+				if data.OrderStatus == `Filled` {
+					status = model.CarryStatusSuccess
+				}
+				dealAmount, _ := strconv.ParseFloat(data.CumExecQty, 64)
+				UpdateOrderDeal(market, data.OrderId, status, string(msg), dealAmount)
 			}
-			dealAmount, _ := strconv.ParseFloat(data.CumExecQty, 64)
-			UpdateOrderDeal(market, data.OrderId, status, string(msg), dealAmount)
 		}
 	}
+	if responseJson.Get(`topic`).MustString() == `wallet` {
+		walletResp := &dtos.BybitWalletUpdateResp{}
+		jsonErr := json.Unmarshal(msg, walletResp)
+		if jsonErr == nil {
+			collateral := &model.Collateral{AccountKey: key}
+			collateral.Available, _ = strconv.ParseFloat(walletResp.Data[0].TotalAvailableBalance, 64)
+			collateral.Rate, _ = strconv.ParseFloat(walletResp.Data[0].AccountMMRate, 64)
+			util.Log(util.LogLevelInfo, fmt.Sprintf("bybit unified %s %f", collateral.AccountKey, collateral.Available))
+			model.CollateralHandler(collateral)
+		}
+	}
+
 }
 
 var wsOrderHandlerBybit = func(market, key string, event []byte) {
