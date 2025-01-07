@@ -99,7 +99,12 @@ var wsOrderConnHandlerBitget = func(market, key string, event []byte) {
 		} else if strings.Contains(string(jsonString), `"channel":"account"`) {
 			dataArray := resJson.Get(`data`).MustArray()
 			collateral := &model.Collateral{AccountKey: key}
-			collateral.Available, _ = strconv.ParseFloat(dataArray[0].(map[string]interface{})[`available`].(string), 64)
+			var usdtEquity float64
+			for _, data := range dataArray {
+				usdtEquityTemp, _ := strconv.ParseFloat(data.(map[string]interface{})[`usdtEquity`].(string), 64)
+				usdtEquity = usdtEquity + usdtEquityTemp
+			}
+			collateral.Available = usdtEquity
 			util.Log(util.LogLevelInfo, fmt.Sprintf("bitget unified %s %f", collateral.AccountKey, collateral.Available))
 			model.CollateralHandler(collateral)
 		}
