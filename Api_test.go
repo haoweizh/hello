@@ -208,7 +208,7 @@ func Test_Sync(t *testing.T) {
 	model.AppEnvironment.PriConnecting.Store(model.Bybit+account.Key, false)
 	api.WsOrderServeBybit(account)
 	select {
-	case <-time.After(time.Second * 40):
+	case <-time.After(time.Second * 160):
 
 	}
 }
