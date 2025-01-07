@@ -51,6 +51,7 @@ func maintainConnsBitget(market string, accounts []*model.Account) {
 }
 
 var wsOrderConnHandlerBitget = func(market, key string, event []byte) {
+	util.Log(util.LogLevelInfo, fmt.Sprintf("bitget get json : %s ", string(event)))
 	value, _ := util.LoadSyncMap(&model.AppEnvironment.ConnOrderUpdate, market, key)
 	if value == nil {
 		return
@@ -78,8 +79,13 @@ var wsOrderConnHandlerBitget = func(market, key string, event []byte) {
 
 	}
 	//判断事件是snapshot
-	if resJson.Get(`snapshot`).MustString() == `snapshot` {
-		if strings.Contains(resJson.Get(`arg`).MustString(), `"channel":"orders"`) {
+	if resJson.Get(`action`).MustString() == `snapshot` {
+		jsonString, err := json.Marshal(resJson)
+		if err != nil {
+			fmt.Println("Error marshaling JSON:", err)
+			return
+		}
+		if strings.Contains(string(jsonString), `"channel":"orders"`) {
 			dataArray := resJson.Get(`data`).MustArray()
 			for _, data := range dataArray {
 				orderId := data.(map[string]interface{})[`orderId`].(string)
@@ -90,7 +96,7 @@ var wsOrderConnHandlerBitget = func(market, key string, event []byte) {
 				}
 				UpdateOrderDeal(market, orderId, status, string(event), dealAmount)
 			}
-		} else if strings.Contains(resJson.Get(`arg`).MustString(), `"channel":"account"`) {
+		} else if strings.Contains(string(jsonString), `"channel":"account"`) {
 			dataArray := resJson.Get(`data`).MustArray()
 			collateral := &model.Collateral{AccountKey: key}
 			collateral.Available, _ = strconv.ParseFloat(dataArray[0].(map[string]interface{})[`available`].(string), 64)
@@ -117,11 +123,11 @@ func WsOrderServeBitget(market string, account *model.Account) {
 	if account == nil {
 		return
 	}
-	replaced := model.AppEnvironment.PriConnecting.CompareAndSwap(market+account.Key, false, true)
-	if !replaced {
-		return
-	}
-	defer model.AppEnvironment.PriConnecting.Store(market+account.Key, false)
+	//replaced := model.AppEnvironment.PriConnecting.CompareAndSwap(market+account.Key, false, true)
+	//if !replaced {
+	//	return
+	//}
+	//defer model.AppEnvironment.PriConnecting.Store(market+account.Key, false)
 	conn, err := model.WsPrivateClient(&model.AppEnvironment.ConnOrderUpdate, market, account.Key, bitgetPrivate, wsOrderConnHandlerBitget)
 	if err != nil {
 		util.Log(util.LogLevelError, "can not create web socket "+err.Error())
