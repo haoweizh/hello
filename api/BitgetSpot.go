@@ -66,22 +66,39 @@ var wsOrderConnHandlerBitget = func(market, key string, event []byte) {
 		instType = `USDT-FUTURES`
 	}
 	if resJson.Get(`event`).MustString() == `login` && resJson.Get(`code`).MustInt() == 0 {
-		err := SendToConnection(market, value.(*model.WSConn), []byte(
-			fmt.Sprintf(`{"op":"subscribe","args":[{"instType": "%s","channel":"orders","instId":"default"}]}`, instType)))
+		subStr := fmt.Sprintf(`{"op":"subscribe","args":[{"instType": "%s","channel":"orders","instId":"default"}]}`, instType)
+		//登录成功后新增账户订阅
+		if market == model.BitgetPerp {
+			subStr = fmt.Sprintf(`{"op":"subscribe","args":[{"instType": "%s","channel":"orders","instId":"default"},{"instType":"%s","channel":"account","coin":"default"}]}`, instType, instType)
+		}
+		err := SendToConnection(market, value.(*model.WSConn), []byte(subStr))
 		if err != nil {
 			util.DelSyncMap(&model.AppEnvironment.ConnOrderUpdate, market, key)
 		}
+
 	}
-	dataArray := resJson.Get(`data`).MustArray()
-	for _, data := range dataArray {
-		orderId := data.(map[string]interface{})[`orderId`].(string)
-		dealAmount, _ := strconv.ParseFloat(data.(map[string]interface{})[`accBaseVolume`].(string), 64)
-		status := model.CarryStatusWorking
-		if data.(map[string]interface{})[`status`].(string) == `filled` {
-			status = model.CarryStatusSuccess
+	//判断事件是snapshot
+	if resJson.Get(`snapshot`).MustString() == `snapshot` {
+		if strings.Contains(resJson.Get(`arg`).MustString(), `"channel":"orders"`) {
+			dataArray := resJson.Get(`data`).MustArray()
+			for _, data := range dataArray {
+				orderId := data.(map[string]interface{})[`orderId`].(string)
+				dealAmount, _ := strconv.ParseFloat(data.(map[string]interface{})[`accBaseVolume`].(string), 64)
+				status := model.CarryStatusWorking
+				if data.(map[string]interface{})[`status`].(string) == `filled` {
+					status = model.CarryStatusSuccess
+				}
+				UpdateOrderDeal(market, orderId, status, string(event), dealAmount)
+			}
+		} else if strings.Contains(resJson.Get(`arg`).MustString(), `"channel":"account"`) {
+			dataArray := resJson.Get(`data`).MustArray()
+			collateral := &model.Collateral{AccountKey: key}
+			collateral.Available, _ = strconv.ParseFloat(dataArray[0].(map[string]interface{})[`available`].(string), 64)
+			util.Log(util.LogLevelInfo, fmt.Sprintf("bitget unified %s %f", collateral.AccountKey, collateral.Available))
+			model.CollateralHandler(collateral)
 		}
-		UpdateOrderDeal(market, orderId, status, string(event), dealAmount)
 	}
+
 }
 
 func wsLoginBitget(account *model.Account, conn *model.WSConn) (success bool) {

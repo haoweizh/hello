@@ -61,6 +61,27 @@ type BitgetPerpMarketResp struct {
 	RequestTime int64  `json:"requestTime"`
 }
 
+// BitgetAccountWsResp 获取account信息
+/**{"action":"snapshot","arg":{"instType":"USDT-FUTURES","channel":"account","coin":"default"},"data":[{"marginCoin":"USDT","frozen":"0.00000000","available":"145295.10780686","maxOpenPosAvailable":"131088.13361227","maxTransferOut":"130007.85784246","equity":"146375.38357668","usdtEquity":"146375.383576683061"}],"ts":1736249589396}
+**/
+type BitgetAccountWsResp struct {
+	Action string `json:"action"`
+	Arg    struct {
+		InstType string `json:"instType"`
+		Channel  string `json:"channel"`
+		Coin     string `json:"coin"`
+	} `json:"arg"`
+	Data []struct {
+		MarginCoin          string `json:"marginCoin"`
+		Frozen              string `json:"frozen"`
+		Available           string `json:"available"`
+		MaxOpenPosAvailable string `json:"maxOpenPosAvailable"`
+		MaxTransferOut      string `json:"maxTransferOut"`
+		Equity              string `json:"equity"`
+		UsdtEquity          string `json:"usdtEquity"`
+	} `json:"data"`
+	Ts int64 `json:"ts"`
+}
 type BitgetBoosWsResp struct {
 	Action string `json:"action"`
 	Arg    struct {
