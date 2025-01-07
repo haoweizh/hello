@@ -881,7 +881,7 @@ var ProcessCross = func(setting *model.Setting, tick *model.BidAsk) {
 					time.Now().String(), amount,
 					statusBuy.Symbol, statusBuy.Market, tickBuy.Asks[0].Market, tickBuy.Asks[0].Price, priceBuy, tickBuy.Asks[0].Amount, nowTs-int64(tickBuy.Ts),
 					statusSell.Symbol, statusSell.Market, tickSell.Bids[0].Market, tickSell.Bids[0].Price, priceSell, tickSell.Bids[0].Amount, nowTs-int64(tickSell.Ts)))
-				time.Sleep(time.Millisecond * 100)
+				time.Sleep(time.Millisecond * 200)
 				return
 			}
 		}

@@ -76,7 +76,6 @@ var wsOrderConnHandlerBitget = func(market, key string, event []byte) {
 		if err != nil {
 			util.DelSyncMap(&model.AppEnvironment.ConnOrderUpdate, market, key)
 		}
-
 	}
 	//判断事件是snapshot
 	if resJson.Get(`action`).MustString() == `snapshot` {
@@ -106,10 +105,9 @@ var wsOrderConnHandlerBitget = func(market, key string, event []byte) {
 			}
 			collateral.Available = usdtEquity
 			util.Log(util.LogLevelInfo, fmt.Sprintf("bitget unified %s %f", collateral.AccountKey, collateral.Available))
-			model.CollateralHandler(collateral)
+			//model.CollateralHandler(collateral)
 		}
 	}
-
 }
 
 func wsLoginBitget(account *model.Account, conn *model.WSConn) (success bool) {
