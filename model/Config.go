@@ -12,7 +12,7 @@ type Config struct {
 	Delay                         float64
 	Debug, KucoinSpot, MetricTick bool
 	// SpecialChan 1 代表使用特殊通道
-	SpecialChan, CrossStyle                                                                          string
+	SpecialChan, CrossStyle, MoneyPerStep                                                            string
 	KucoinRelatedKey, KucoinRelatedSecret, KucoinFutureKey, KucoinFutureSecret                       string
 	KucoinCarryClose, KucoinCarryRate, Simulation, Equal, Log                                        string
 	GateKey, GateSecret, GateCarryClose, GateCarryRate, GateLeverMax, GateLeverMin, GateRiskLimit    string
@@ -29,10 +29,10 @@ type Config struct {
 }
 
 type Account struct {
-	Index                                                int // 账户索引
-	Market, Key, Secret, FtxSubAccount, CrossStyle       string
-	CarryClose, IsUnified                                bool
-	CarryRate, GateLeverMax, GateLeverMin, GateRiskLimit float64
+	Index                                                              int // 账户索引
+	Market, Key, Secret, FtxSubAccount, CrossStyle                     string
+	CarryClose, IsUnified                                              bool
+	CarryRate, GateLeverMax, GateLeverMin, GateRiskLimit, MoneyPerStep float64
 }
 
 var appAccounts []map[string]*Account // account index/map/account
@@ -69,6 +69,7 @@ func (config *Config) GetAccounts(market string) []*Account {
 	isUnified := false
 	var rateValues, closeValues, keys, secrets, gateLeverMax, gateLeverMin, gateRiskLimit []string
 	// ftxSubAccounts
+	moneyPerSteps := strings.Split(config.MoneyPerStep, ",")
 	crossStyles := strings.Split(config.CrossStyle, `,`)
 	switch market {
 	case Gate:
@@ -108,14 +109,16 @@ func (config *Config) GetAccounts(market string) []*Account {
 		closeValues = strings.Split(config.BinanceCarryClose, `,`)
 		rateValues = strings.Split(config.BinanceCarryRate, `,`)
 	}
-	if len(keys) != len(secrets) || len(keys) != len(closeValues) || len(keys) != len(rateValues) || len(rateValues) != len(crossStyles) {
-		fmt.Println(fmt.Sprintf(`wrong config format %s keys:%d secrets:%d close:%d rate:%d crossStyle:%d`,
-			market, len(keys), len(secrets), len(closeValues), len(rateValues), len(crossStyles)))
+	if len(keys) != len(secrets) || len(keys) != len(closeValues) || len(keys) != len(rateValues) ||
+		len(rateValues) != len(crossStyles) || len(crossStyles) != len(moneyPerSteps) {
+		fmt.Println(fmt.Sprintf(`wrong config format %s keys:%d secrets:%d close:%d rate:%d crossStyle:%d moneyPerSteps:%d`,
+			market, len(keys), len(secrets), len(closeValues), len(rateValues), len(crossStyles), len(moneyPerSteps)))
 		os.Exit(1)
 	}
 	accounts := make([]*Account, len(keys))
 	for i := 0; i < len(keys); i++ {
 		account := &Account{Key: keys[i], Secret: secrets[i], Index: i, Market: market, IsUnified: isUnified, CrossStyle: crossStyles[i]}
+		account.MoneyPerStep, _ = strconv.ParseFloat(moneyPerSteps[i], 64)
 		//if market == Ftx {
 		//	account.FtxSubAccount = ftxSubAccounts[i]
 		//}

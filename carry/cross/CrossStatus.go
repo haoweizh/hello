@@ -187,9 +187,10 @@ func GetHoldings(accounts map[string]*model.Account) (holding [][]interface{}) {
 					usdValue := 0.0
 					if balance != nil {
 						amount = balance.Amount
-						usdValue = balance.UsdValue
-						if usdValue == 0 && amount > 0 {
+						if price > 0 {
 							usdValue = price * amount
+						} else {
+							usdValue = balance.UsdValue
 						}
 					}
 					holding = append(holding, []interface{}{setting.Market, coin.(string), setting.Symbol,

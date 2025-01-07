@@ -396,7 +396,6 @@ func ClearCross() {
 		spotMarkets.Clear()
 		contractMarkets.Clear()
 		coinCrossing.Clear()
-		carryCoinMap.Clear()
 		model.AppEnvironment.ReqIdOrders.Clear()
 		for {
 			leftOrders := 0
@@ -476,16 +475,30 @@ func equalAccounts(doEqual bool, traceId int64) {
 	util.Log(util.LogLevelInfo, fmt.Sprintf(`exit clearing cross all %d`, traceId))
 }
 
-func createCarryCoin(accounts map[string]*model.Account, coin string, settings []*model.Setting) (carryCoin *model.CarryCoin) {
+func createCarryCoin(accounts map[string]*model.Account, index int, coin string, settings []*model.Setting) (carryCoin *model.CarryCoin) {
 	carryCoin = &model.CarryCoin{
+		AccountIndex: index,
 		Coin:         coin,
 		CurrentStep:  0,
-		Holding:      0,
-		MoneyPerStep: 0,
-	}
+		Holding:      0}
 	bidHolding := 0.0
+	price := 0.0
+	var priceSetting *model.Setting
 	for _, setting := range settings {
-		value, get := util.LoadSyncMap(carryStatusMap, setting.Coin, setting.Market, setting.Symbol, accounts[setting.Market].Key)
+		if price == 0 {
+			_, price = api.GetPriceForce(setting.Symbol, setting.Market)
+			if price > 0 {
+				priceSetting = setting
+			}
+		}
+		account := accounts[setting.Market]
+		if account == nil {
+			continue
+		}
+		if carryCoin.MoneyPerStep == 0 {
+			carryCoin.MoneyPerStep = account.MoneyPerStep
+		}
+		value, get := util.LoadSyncMap(carryStatusMap, setting.Coin, setting.Market, setting.Symbol, account.Key)
 		if value == nil || !get {
 			util.Log(util.LogLevelError, fmt.Sprintf(`store carry nil coin %s %s %s %s`, setting.Coin, setting.Market, setting.Symbol, accounts[setting.Market].Key))
 			return nil
@@ -496,6 +509,12 @@ func createCarryCoin(accounts map[string]*model.Account, coin string, settings [
 		}
 	}
 	carryCoin.Holding = bidHolding
+	if priceSetting != nil {
+		moneyInAll := bidHolding * price / priceSetting.GridAmount
+		carryCoin.CurrentStep = int(math.Floor(moneyInAll / carryCoin.MoneyPerStep))
+		carryCoin.MoneyCurStep = moneyInAll - float64(carryCoin.CurrentStep)*carryCoin.MoneyPerStep
+	}
+	util.Log(util.LogLevelInfo, fmt.Sprintf(`create carry coin account index %d %#v`, index, carryCoin))
 	return
 }
 
@@ -538,9 +557,19 @@ func equalAccount(i int, equalChan chan int, accounts map[string]*model.Account,
 						fmt.Sprintf(`%s holding %f`, coin, leftHolding))
 				}
 			}
-			coinCarry := createCarryCoin(accounts, coin.(string), settings.([]*model.Setting))
-			if coinCarry != nil {
-				util.StoreSyncMap(carryCoinMap, coinCarry, coin.(string), strconv.Itoa(i))
+			valueCarryCoin, ok := util.LoadSyncMap(carryCoinMap, coin.(string), strconv.Itoa(i))
+			if !ok || valueCarryCoin == nil {
+				carryCoin := api.GetCarryCoin(coin.(string))
+				if carryCoin == nil {
+					carryCoin = createCarryCoin(accounts, i, coin.(string), settings.([]*model.Setting))
+					if carryCoin != nil {
+						util.StoreSyncMap(carryCoinMap, carryCoin, coin.(string), strconv.Itoa(i))
+					} else {
+						util.Log(util.LogLevelError, fmt.Sprintf(`fail to create carry coin %v`, coin))
+					}
+				} else {
+					util.Log(util.LogLevelInfo, fmt.Sprintf(`get a carry coin from db %v`, coin))
+				}
 			}
 			return true
 		})
