@@ -405,14 +405,14 @@ var wsPriHandlerGatePerp = func(market, key string, msg []byte) {
 	if err != nil || responseJson == nil {
 		return
 	}
-	valueFuture, _ := util.LoadSyncMap(&model.AppEnvironment.ConnOrder, model.Gate, model.MarketTypePerp, key)
-	if valueFuture == nil {
-		return
-	}
 	channel := responseJson.Get(`channel`).MustString()
 	ts := responseJson.Get(`time_ms`).MustInt64()
 	result := responseJson.GetPath(`header`, `status`).MustString()
 	if channel == `futures.ping` {
+		valueFuture, _ := util.LoadSyncMap(&model.AppEnvironment.ConnOrder, model.Gate, model.MarketTypePerp, key)
+		if valueFuture == nil {
+			return
+		}
 		err := valueFuture.(*model.WSConn).WriteMsg([]byte(fmt.Sprintf(
 			`{"time" : %d, "channel" : "futures.pong"}`, time.Now().Unix())))
 		if err != nil {
@@ -442,6 +442,7 @@ var wsPriHandlerGatePerp = func(market, key string, msg []byte) {
 	} else {
 		channel = responseJson.GetPath(`header`, `channel`).MustString()
 		if channel == `futures.order_place` && !responseJson.Get(`ack`).MustBool() {
+			util.Log(util.LogLevelInfo, string(msg))
 			requestId := responseJson.Get(`request_id`).MustString()
 			idJson := responseJson.GetPath(`data`, `result`, `id`).MustInt()
 			wsResp := model.WSResp{RequestId: requestId, OrderId: strconv.Itoa(idJson)}
@@ -467,6 +468,10 @@ var wsPriHandlerGatePerp = func(market, key string, msg []byte) {
 				sign := hex.EncodeToString(hashFuture.Sum(nil))
 				msgSend := fmt.Sprintf(`{"time":%d,"channel":"futures.orders","event":"subscribe","payload":["!all"],
 					"auth":{"method":"api_key","KEY":"%s","SIGN":"%s"}}`, ts, key, sign)
+				valueFuture, _ := util.LoadSyncMap(&model.AppEnvironment.ConnOrder, model.Gate, model.MarketTypePerp, key)
+				if valueFuture == nil {
+					return
+				}
 				err := SendToConnection(model.Gate, valueFuture.(*model.WSConn), []byte(msgSend))
 				if err != nil {
 					util.DelSyncMap(&model.AppEnvironment.ConnOrder, model.Gate, model.MarketTypePerp, key, channel)
@@ -481,10 +486,6 @@ var wsPriHandlerGateSpot = func(market, key string, msg []byte) {
 	if err != nil || responseJson == nil {
 		return
 	}
-	valueSpot, _ := util.LoadSyncMap(&model.AppEnvironment.ConnOrder, model.Gate, model.MarketTypeSpot, key)
-	if valueSpot == nil {
-		return
-	}
 	if responseJson.Get(`ack`).MustBool() {
 		return
 	}
@@ -492,6 +493,10 @@ var wsPriHandlerGateSpot = func(market, key string, msg []byte) {
 	//ts := responseJson.Get(`time_ms`).MustInt64()
 	result := responseJson.GetPath(`header`, `status`).MustString()
 	if channel == `spot.ping` {
+		valueSpot, _ := util.LoadSyncMap(&model.AppEnvironment.ConnOrder, model.Gate, model.MarketTypeSpot, key)
+		if valueSpot == nil {
+			return
+		}
 		err := valueSpot.(*model.WSConn).WriteMsg([]byte(fmt.Sprintf(
 			`{"time" : %d, "channel" : "spot.pong"}`, time.Now().Unix())))
 		if err != nil {
@@ -515,6 +520,7 @@ var wsPriHandlerGateSpot = func(market, key string, msg []byte) {
 	} else {
 		channel = responseJson.GetPath(`header`, `channel`).MustString()
 		if channel == `spot.order_place` && !responseJson.Get(`ack`).MustBool() {
+			util.Log(util.LogLevelInfo, string(msg))
 			requestId := responseJson.Get(`request_id`).MustString()
 			wsResp := model.WSResp{RequestId: requestId, OrderId: responseJson.GetPath(`data`, `result`, `id`).MustString()}
 			if result == `200` {
@@ -526,6 +532,10 @@ var wsPriHandlerGateSpot = func(market, key string, msg []byte) {
 			model.AppEnvironment.WSRespChan <- wsResp
 		} else if channel == `spot.login` {
 			if result == `200` {
+				valueSpot, _ := util.LoadSyncMap(&model.AppEnvironment.ConnOrder, model.Gate, model.MarketTypeSpot, key)
+				if valueSpot == nil {
+					return
+				}
 				msgSend := fmt.Sprintf(`{"time":%d,"channel":"spot.orders","event":"subscribe","payload":["!all"]}`, time.Now().Unix())
 				err := SendToConnection(model.Gate, valueSpot.(*model.WSConn), []byte(msgSend))
 				if err != nil {
