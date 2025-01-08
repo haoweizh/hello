@@ -207,6 +207,10 @@ var wsAccountHandlerOKEX = func(market, key string, event []byte) {
 			util.DelSyncMap(&model.AppEnvironment.ConnOrder, market, key)
 			return
 		}
+		err = value.(*model.WSConn).WriteJson(map[string]interface{}{"op": "subscribe", "args": []interface{}{map[string]string{"channel": "account", "ccy": "USDT"}}})
+		if err != nil {
+			util.Log(util.LogLevelError, fmt.Sprintf(`fail to sub %s  account channel ccy USDT update`, market))
+		}
 	}
 	if responseJson.GetPath(`arg`, `channel`).MustString() == `orders` {
 		data := responseJson.Get(`data`).MustArray()
@@ -252,6 +256,17 @@ var wsAccountHandlerOKEX = func(market, key string, event []byte) {
 		}
 		model.AppEnvironment.WSRespChan <- wsRespBuy
 		model.AppEnvironment.WSRespChan <- wsRespSell
+	}
+	if responseJson.GetPath(`arg`, `channel`).MustString() == `account` {
+		dataArray := responseJson.Get(`data`).MustArray()
+		if dataArray != nil {
+			collateral := &model.Collateral{AccountKey: key}
+			collateral.Occupied, _ = strconv.ParseFloat(dataArray[0].(map[string]interface{})[`imr`].(string), 64) // 被占用保证金
+			collateral.Rate, _ = strconv.ParseFloat(dataArray[0].(map[string]interface{})[`mgnRatio`].(string), 64)
+			collateral.Available, _ = strconv.ParseFloat(dataArray[0].(map[string]interface{})[`adjEq`].(string), 64)
+			util.Log(util.LogLevelInfo, fmt.Sprintf("okex unified %s %f", collateral.AccountKey, collateral.Available))
+			model.CollateralHandler(collateral)
+		}
 	}
 }
 

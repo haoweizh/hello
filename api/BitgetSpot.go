@@ -123,11 +123,11 @@ func WsOrderServeBitget(market string, account *model.Account) {
 	if account == nil {
 		return
 	}
-	//replaced := model.AppEnvironment.PriConnecting.CompareAndSwap(market+account.Key, false, true)
-	//if !replaced {
-	//	return
-	//}
-	//defer model.AppEnvironment.PriConnecting.Store(market+account.Key, false)
+	replaced := model.AppEnvironment.PriConnecting.CompareAndSwap(market+account.Key, false, true)
+	if !replaced {
+		return
+	}
+	defer model.AppEnvironment.PriConnecting.Store(market+account.Key, false)
 	conn, err := model.WsPrivateClient(&model.AppEnvironment.ConnOrderUpdate, market, account.Key, bitgetPrivate, wsOrderConnHandlerBitget)
 	if err != nil {
 		util.Log(util.LogLevelError, "can not create web socket "+err.Error())
