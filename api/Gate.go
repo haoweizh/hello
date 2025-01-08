@@ -442,7 +442,7 @@ var wsPriHandlerGatePerp = func(market, key string, msg []byte) {
 	} else {
 		channel = responseJson.GetPath(`header`, `channel`).MustString()
 		if channel == `futures.order_place` && !responseJson.Get(`ack`).MustBool() {
-			util.Log(util.LogLevelInfo, string(msg))
+			//util.Log(util.LogLevelInfo, string(msg))
 			requestId := responseJson.Get(`request_id`).MustString()
 			idJson := responseJson.GetPath(`data`, `result`, `id`).MustInt()
 			wsResp := model.WSResp{RequestId: requestId, OrderId: strconv.Itoa(idJson)}
@@ -520,7 +520,7 @@ var wsPriHandlerGateSpot = func(market, key string, msg []byte) {
 	} else {
 		channel = responseJson.GetPath(`header`, `channel`).MustString()
 		if channel == `spot.order_place` && !responseJson.Get(`ack`).MustBool() {
-			util.Log(util.LogLevelInfo, string(msg))
+			//util.Log(util.LogLevelInfo, string(msg))
 			requestId := responseJson.Get(`request_id`).MustString()
 			wsResp := model.WSResp{RequestId: requestId, OrderId: responseJson.GetPath(`data`, `result`, `id`).MustString()}
 			if result == `200` {
