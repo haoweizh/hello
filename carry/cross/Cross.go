@@ -472,6 +472,12 @@ func equalAccounts(doEqual bool, traceId int64) {
 			break
 		}
 	}
+	for i := 0; i < api.GetCrossLen(); i++ {
+		indexAccounts := model.GetAccounts(i)
+		for _, market := range model.AppEnvironment.Markets {
+			liquidateSmallContracts(indexAccounts[market], market)
+		}
+	}
 	util.Log(util.LogLevelInfo, fmt.Sprintf(`exit clearing cross all %d`, traceId))
 }
 
@@ -524,7 +530,6 @@ func equalAccount(i int, equalChan chan int, accounts map[string]*model.Account,
 		if account.Index != i {
 			continue
 		}
-		liquidateSmallContracts(account, market)
 		api.CancelAll(account.Key, account.Secret, market)
 	}
 	value := api.GetCoinSettings(model.FunctionCross)
@@ -999,7 +1004,7 @@ func placeCross(carryCoin *model.CarryCoin, statusBuy, statusSell *model.CarrySt
 	}
 	// 买入现货时要交手续费，故而实际到手少于下单量，校准以免未来买单时数量不足
 	if marketType == model.MarketTypeSpot {
-		amountBuy = amountBuy * 0.9992
+		amountBuy = amountBuy * 0.9995
 	}
 	if carryCoin != nil && statusBuy.Account.CrossStyle == crossGrid {
 		carryCoin.AddTrade(statusBuy, statusSell, priceBuy, priceSell, amountBuy)

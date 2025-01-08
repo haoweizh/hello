@@ -135,6 +135,7 @@ type Tier struct {
 }
 
 // setSymbolLeverageGate 设置杠杆率和risk limit
+// 需要先设置risk再更新杠杆率才能成功
 func setSymbolLeverageGate(account *model.Account, symbol string, leverMax, leverMin float64, limit float64) (success bool) {
 	_, _, _, dialectSymbol := model.GetFromStandard(model.Gate, symbol)
 	client, ctx := getClientGate(account.Key, account.Secret)
@@ -1043,10 +1044,9 @@ func getPositionsGate(key string, secret string) (success bool, positions []*mod
 		currentMargin, _ := strconv.ParseFloat(item.Margin, 64)        //当前保证金，盈亏也算在里面
 		initialMargin, _ := strconv.ParseFloat(item.InitialMargin, 64) //初始保证金
 		position.Margin = math.Max(currentMargin, initialMargin)
-		if position.Holding != 0 {
-			positions = append(positions, position)
-			//util.Log(util.LogLevelInfo, fmt.Sprintf(`get position gate %#v`, position))
-		}
+		position.RiskLimit, _ = strconv.ParseFloat(item.RiskLimit, 64)
+		// 由于需要获取某个币种的风险限额，所以无论是否有holding都要保存position
+		positions = append(positions, position)
 	}
 	return true, positions
 }
