@@ -173,25 +173,21 @@ func WsOrderServeBybit(account *model.Account) {
 		return
 	}
 	defer model.AppEnvironment.PriConnecting.Store(model.Bybit+account.Key, false)
-	valueOrder, _ := util.LoadSyncMap(&model.AppEnvironment.ConnOrder, model.Bybit, account.Key)
-	valueOrderUpdate, _ := util.LoadSyncMap(&model.AppEnvironment.ConnOrderUpdate, model.Bybit, account.Key)
-	if valueOrder == nil || valueOrderUpdate == nil {
-		connOrder, errOrder := model.WsPrivateClient(&model.AppEnvironment.ConnOrder, model.Bybit, account.Key, bybitTradeWsUrl, wsOrderHandlerBybit)
-		if errOrder != nil {
-			util.Log(util.LogLevelError, "bybit can not create ws order "+errOrder.Error())
-		} else if connOrder != nil {
-			if WsLogInBybit(account, connOrder) {
-				util.StoreSyncMap(&model.AppEnvironment.ConnOrder, connOrder, model.Bybit, account.Key)
-			}
+	connOrder, errOrder := model.WsPrivateClient(&model.AppEnvironment.ConnOrder, model.Bybit, account.Key, bybitTradeWsUrl, wsOrderHandlerBybit)
+	if errOrder != nil {
+		util.Log(util.LogLevelError, "bybit can not create ws order "+errOrder.Error())
+	} else if connOrder != nil {
+		if WsLogInBybit(account, connOrder) {
+			util.StoreSyncMap(&model.AppEnvironment.ConnOrder, connOrder, model.Bybit, account.Key)
 		}
-		connOrderUpdate, errOrderUpdate := model.WsPrivateClient(&model.AppEnvironment.ConnOrderUpdate, model.Bybit,
-			account.Key, bybitStreamUrl+`/v5/private`, wsOrdUdtHandlerBybit)
-		if errOrderUpdate != nil {
-			util.Log(util.LogLevelError, "bybit can not create ws order update"+errOrderUpdate.Error())
-		} else if connOrderUpdate != nil {
-			if WsLogInBybit(account, connOrderUpdate) {
-				util.StoreSyncMap(&model.AppEnvironment.ConnOrderUpdate, connOrderUpdate, model.Bybit, account.Key)
-			}
+	}
+	connOrderUpdate, errOrderUpdate := model.WsPrivateClient(&model.AppEnvironment.ConnOrderUpdate, model.Bybit,
+		account.Key, bybitStreamUrl+`/v5/private`, wsOrdUdtHandlerBybit)
+	if errOrderUpdate != nil {
+		util.Log(util.LogLevelError, "bybit can not create ws order update"+errOrderUpdate.Error())
+	} else if connOrderUpdate != nil {
+		if WsLogInBybit(account, connOrderUpdate) {
+			util.StoreSyncMap(&model.AppEnvironment.ConnOrderUpdate, connOrderUpdate, model.Bybit, account.Key)
 		}
 	}
 }
