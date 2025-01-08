@@ -51,7 +51,6 @@ func maintainConnsBitget(market string, accounts []*model.Account) {
 }
 
 var wsOrderConnHandlerBitget = func(market, key string, event []byte) {
-	util.Log(util.LogLevelInfo, fmt.Sprintf("bitget get json : %s ", string(event)))
 	value, _ := util.LoadSyncMap(&model.AppEnvironment.ConnOrderUpdate, market, key)
 	if value == nil {
 		return
@@ -70,7 +69,7 @@ var wsOrderConnHandlerBitget = func(market, key string, event []byte) {
 		subStr := fmt.Sprintf(`{"op":"subscribe","args":[{"instType": "%s","channel":"orders","instId":"default"}]}`, instType)
 		//登录成功后新增账户订阅
 		if market == model.BitgetPerp {
-			subStr = fmt.Sprintf(`{"op":"subscribe","args":[{"instType": "%s","channel":"orders","instId":"default"},{"instType":"%s","channel":"account","coin":"default"}]}`, instType, instType)
+			subStr = fmt.Sprintf(`{"op":"subscribe","args":[{"instType": "%s","channel":"orders","instId":"default"},{"instType":"%s","channel":"account","coin":"default"},{"instType":"%s","channel":"positions","instId":"default"}]}`, instType, instType, instType)
 		}
 		err := SendToConnection(market, value.(*model.WSConn), []byte(subStr))
 		if err != nil {
@@ -79,12 +78,7 @@ var wsOrderConnHandlerBitget = func(market, key string, event []byte) {
 	}
 	//判断事件是snapshot
 	if resJson.Get(`action`).MustString() == `snapshot` {
-		jsonString, err := json.Marshal(resJson)
-		if err != nil {
-			fmt.Println("Error marshaling JSON:", err)
-			return
-		}
-		if strings.Contains(string(jsonString), `"channel":"orders"`) {
+		if resJson.GetPath(`arg`, `channel`).MustString() == `orders` {
 			dataArray := resJson.Get(`data`).MustArray()
 			for _, data := range dataArray {
 				orderId := data.(map[string]interface{})[`orderId`].(string)
@@ -95,17 +89,20 @@ var wsOrderConnHandlerBitget = func(market, key string, event []byte) {
 				}
 				UpdateOrderDeal(market, orderId, status, string(event), dealAmount)
 			}
-		} else if strings.Contains(string(jsonString), `"channel":"account"`) {
+		} else if resJson.GetPath(`arg`, `channel`).MustString() == `account` {
 			dataArray := resJson.Get(`data`).MustArray()
 			collateral := &model.Collateral{AccountKey: key}
-			var usdtEquity float64
-			for _, data := range dataArray {
-				usdtEquityTemp, _ := strconv.ParseFloat(data.(map[string]interface{})[`usdtEquity`].(string), 64)
-				usdtEquity = usdtEquity + usdtEquityTemp
-			}
-			collateral.Available = usdtEquity
+			collateral.Available, _ = strconv.ParseFloat(dataArray[0].(map[string]interface{})[`maxTransferOut`].(string), 64)
 			util.Log(util.LogLevelInfo, fmt.Sprintf("bitget unified %s %f", collateral.AccountKey, collateral.Available))
 			//model.CollateralHandler(collateral)
+		} else if resJson.GetPath(`arg`, `channel`).MustString() == `positions` {
+			dataArray := resJson.Get(`data`).MustArray()
+			util.Log(util.LogLevelInfo, fmt.Sprintf("bitget positions num %d", len(dataArray)))
+			if dataArray != nil && len(dataArray) >= 140 {
+				collateral := &model.Collateral{AccountKey: key}
+				collateral.Available = 0
+				//model.CollateralHandler(collateral)
+			}
 		}
 	}
 }
