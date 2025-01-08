@@ -653,7 +653,6 @@ func WSOrderServeGate(account *model.Account, marketType string) {
 		util.StoreSyncMap(&model.AppEnvironment.ConnOrder, conn, model.Gate, marketType, account.Key)
 		util.StoreSyncMap(&model.AppEnvironment.ConnOrderUpdate, connUpdate, model.Gate, marketType, account.Key)
 	}
-
 }
 
 func WsTickServeGateSpot(market string) (socketMap map[*model.WSConn]bool, msgChans []chan struct{}, connectErr error) {

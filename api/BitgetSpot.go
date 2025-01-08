@@ -93,11 +93,11 @@ var wsOrderConnHandlerBitget = func(market, key string, event []byte) {
 			dataArray := resJson.Get(`data`).MustArray()
 			collateral := &model.Collateral{AccountKey: key}
 			collateral.Available, _ = strconv.ParseFloat(dataArray[0].(map[string]interface{})[`maxTransferOut`].(string), 64)
-			util.Log(util.LogLevelInfo, fmt.Sprintf("bitget unified %s %f", collateral.AccountKey, collateral.Available))
+			//util.Log(util.LogLevelInfo, fmt.Sprintf("bitget unified %s %f", collateral.AccountKey, collateral.Available))
 			model.CollateralHandler(collateral)
 		} else if resJson.GetPath(`arg`, `channel`).MustString() == `positions` {
 			dataArray := resJson.Get(`data`).MustArray()
-			util.Log(util.LogLevelInfo, fmt.Sprintf("bitget positions num %d", len(dataArray)))
+			//util.Log(util.LogLevelInfo, fmt.Sprintf("bitget positions num %d", len(dataArray)))
 			if dataArray != nil && len(dataArray) >= model.BitgetPosLimit {
 				collateral := &model.Collateral{AccountKey: key}
 				collateral.Available = 0

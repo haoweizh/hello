@@ -786,11 +786,25 @@ func placeEqual(status *model.CarryStatus, price, amount float64, orderSide stri
 	return dealAmount
 }
 
-func inFundingTime() (in bool) {
-	if time.Now().Hour()%4 == 0 && time.Now().Minute() <= 2 {
+func validFundingTime(account *model.Account, setting *model.Setting) (valid bool) {
+	_, marketType, _, _ := model.GetFromStandard(setting.Market, setting.Symbol)
+	if marketType == model.MarketTypeSpot {
 		return true
 	}
-	return false
+	marketInfo, _ := util.LoadSyncMap(model.MarketInfos, setting.Market, setting.Symbol)
+	if marketInfo == nil {
+		return false
+	}
+	_, delayed, fr := api.GetFundingRate(account.Key, account.Secret, setting.Market, setting.Symbol)
+	if delayed || fr == nil {
+		return false
+	}
+	if fr.ExpireTime-time.Now().Unix() > int64(marketInfo.(*model.MarketInfo).FundingRateInterval/1000-180) {
+		util.Log(util.LogLevelError, fmt.Sprintf(`ignore tick just funding rate done %s %s %d expire %d`,
+			marketInfo.(*model.MarketInfo).Market, marketInfo.(*model.MarketInfo).Symbol, marketInfo.(*model.MarketInfo).FundingRateInterval, fr.ExpireTime))
+		return false
+	}
+	return true
 }
 
 // ProcessCross setting.Chance<0时该币种只关仓
@@ -813,7 +827,7 @@ var ProcessCross = func(setting *model.Setting, tick *model.BidAsk) {
 	}
 	ts1 := time.Now().UnixMilli()
 	if tick == nil || tick.Asks == nil || tick.Bids == nil || setting == nil || setting.Valid == false || model.AppEnvironment.CrossEqualing ||
-		(model.AppConfig.Env != `test` && model.AppConfig.Handle != `1`) || settings == nil || len(settings) == 0 || inFundingTime() {
+		(model.AppConfig.Env != `test` && model.AppConfig.Handle != `1`) || settings == nil || len(settings) == 0 {
 		return
 	}
 	// 同一个coin cross之间互斥
@@ -863,6 +877,9 @@ var ProcessCross = func(setting *model.Setting, tick *model.BidAsk) {
 			statusRelate, getRelate := util.LoadSyncMap(carryStatusMap, settingRelate.Coin, settingRelate.Market, settingRelate.Symbol, accountRelate.Key)
 			carryCoin, getCoin := util.LoadSyncMap(carryCoinMap, setting.Coin, strconv.Itoa(i))
 			if status == nil || statusRelate == nil || status == statusRelate || carryCoin == nil || !getStatus || !getRelate || !getCoin {
+				continue
+			}
+			if !validFundingTime(account, setting) || !validFundingTime(accountRelate, settingRelate) {
 				continue
 			}
 			delay, statusBuy, statusSell, amount, priceBuy, priceSell, tickBuy, tickSell :=
