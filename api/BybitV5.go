@@ -172,7 +172,12 @@ func WsOrderServeBybit(account *model.Account) {
 	if !replaced {
 		return
 	}
-	defer model.AppEnvironment.PriConnecting.Store(model.Bybit+account.Key, false)
+	defer func() {
+		select {
+		case <-time.After(time.Second * 30):
+		}
+		model.AppEnvironment.PriConnecting.Store(model.Bybit+account.Key, false)
+	}()
 	connOrder, errOrder := model.WsPrivateClient(&model.AppEnvironment.ConnOrder, model.Bybit, account.Key, bybitTradeWsUrl, wsOrderHandlerBybit)
 	if errOrder != nil {
 		util.Log(util.LogLevelError, "bybit can not create ws order "+errOrder.Error())

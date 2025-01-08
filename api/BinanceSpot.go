@@ -429,7 +429,12 @@ func WsOrderServeBinance(account *model.Account, market string) {
 	if !replaced {
 		return
 	}
-	defer model.AppEnvironment.PriConnecting.Store(market+account.Key, false)
+	defer func() {
+		select {
+		case <-time.After(time.Second * 30):
+		}
+		model.AppEnvironment.PriConnecting.Store(market+account.Key, false)
+	}()
 	apiUrl := ``
 	streamUrl := ``
 	if market == model.BinanceSpot {

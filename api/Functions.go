@@ -846,7 +846,7 @@ func PlaceOrder(key, secret, orderSide, orderType, market, symbol, orderParam, f
 	case model.Bybit:
 		placeOrderBybit(account, isWs, order, orderParam)
 	}
-	if !isWs {
+	if !isWs || order.Status != model.CarryStatusWorking {
 		if order.OrderId == "0" || strings.Trim(order.OrderId, ` `) == "" {
 			order.Status = model.CarryStatusFail
 			order.OrderId = fmt.Sprintf(`%s_error_%d`, order.ErrCode, time.Now().UnixNano())

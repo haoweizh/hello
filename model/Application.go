@@ -24,6 +24,7 @@ var IgnoreFunctions = map[string]bool{FunctionDynamicTurtle: true, FunctionTurtl
 	FunctionDynamicCombine: true, FunctionDynamicBoost: true}
 var NonRTTicker = map[string]bool{Bybit: true, BitgetSpot: true, BitgetPerp: true}
 
+const BitgetPosLimit = 140 // 不能超过150
 const DefaultLeverage = 3
 const BitgetSpot = `bitgetspot`
 const BitgetPerp = `bitgetperp`
