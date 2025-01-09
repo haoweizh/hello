@@ -26,6 +26,14 @@ const wsBinance = "wss://stream.binance.com:9443"
 const wsBinanceSpotApi = `wss://ws-api.binance.com:443/ws-api/v3`
 const wsStepBinance = 30
 
+// 用于wss api调用,实际值为method
+const wsAccountStatusV2 = "account-status-v2-"
+
+// 定义键值对
+var accountMethodMap = map[string]string{
+	wsAccountStatusV2: "v2/account.status",
+}
+
 func GetMarketsBinance(account *model.Account, market string) (marketInfos map[string]*model.MarketInfo) {
 	marketInfos = make(map[string]*model.MarketInfo)
 	client := binance.NewClient(account.Key, account.Secret)
@@ -386,7 +394,6 @@ func parseOrderBinanceSpot(market string, orderJson *simplejson.Json) (order *mo
 }
 
 var wsOrderUpdateBinance = func(market, key string, msg []byte) {
-	util.Log(util.LogLevelInfo, fmt.Sprintf(" %s msg: %s", market, string(msg)))
 	resJson, _ := util.NewJSON(msg)
 	if resJson == nil {
 		return
@@ -419,17 +426,32 @@ var wsOrderUpdateBinance = func(market, key string, msg []byte) {
 var wsActHandlerBinance = func(market, key string, event []byte) {
 	responseJson, err := util.NewJSON(event)
 	if err == nil && responseJson != nil {
-		idInt := responseJson.GetPath(`result`, `orderId`).MustInt()
-		wsResp := model.WSResp{RequestId: responseJson.Get(`id`).MustString(), OrderId: strconv.Itoa(idInt)}
+		//返回状态，statu=200则为正确
 		status := responseJson.Get(`status`).MustInt()
-		if status == 200 {
-			wsResp.Success = true
+		requestId := responseJson.Get(`id`).MustString()
+		//基于ID类型判断是否为wsAccountStatusV2=v2/account.status
+		if strings.HasPrefix(requestId, wsAccountStatusV2) {
+			if status == 200 {
+				collateral := &model.Collateral{AccountKey: key}
+				collateral.Available, _ = strconv.ParseFloat(responseJson.GetPath(`result`, `totalMarginBalance`).MustString(), 64)
+				util.Log(util.LogLevelInfo, fmt.Sprintf("binance unified %s %f", collateral.AccountKey, collateral.Available))
+				model.CollateralHandler(collateral)
+			} else {
+				code := responseJson.GetPath(`error`, `code`).MustInt()
+				util.Log(util.LogLevelError, fmt.Sprintf("binance unified code %d msg： %s", requestId, code, responseJson.GetPath(`error`, `msg`)))
+			}
 		} else {
-			wsResp.Success = false
-			code := responseJson.GetPath(`error`, `code`).MustInt()
-			wsResp.Msg = fmt.Sprintf(`%d%s`, code, responseJson.GetPath(`error`, `msg`))
+			idInt := responseJson.GetPath(`result`, `orderId`).MustInt()
+			wsResp := model.WSResp{RequestId: responseJson.Get(`id`).MustString(), OrderId: strconv.Itoa(idInt)}
+			if status == 200 {
+				wsResp.Success = true
+			} else {
+				wsResp.Success = false
+				code := responseJson.GetPath(`error`, `code`).MustInt()
+				wsResp.Msg = fmt.Sprintf(`%d%s`, code, responseJson.GetPath(`error`, `msg`))
+			}
+			model.AppEnvironment.WSRespChan <- wsResp
 		}
-		model.AppEnvironment.WSRespChan <- wsResp
 	}
 }
 
@@ -740,4 +762,38 @@ func GetWithdrawInfo(market, key, secret string) (balances []*model.Balance) {
 		}
 	}
 	return balances
+}
+
+// GetAccountFromWsAPI 尝试从WebSocket API获取账户信息。
+// 该函数根据提供的账户信息、方法名和市场标识来建立请求，并发送给对应的WebSocket连接。
+// 参数:
+//
+//	account - 指向账户信息的指针，包含访问API所需的密钥和秘密。
+//	method - 要调用的API方法的名称。 比如v2/account.status
+//	market - 市场标识，用于识别特定的WebSocket连接。
+func GetAccountFromWsAPI(account *model.Account, method, market string) {
+	if market != model.BinancePerp {
+		return
+	}
+	ts := time.Now().UnixMilli()
+	requestId := fmt.Sprintf(`%s%d`, method, ts)
+	param := url.Values{}
+	param.Set(`apiKey`, account.Key)
+	param.Set(`timestamp`, fmt.Sprintf(`%d`, ts))
+	hash := hmac.New(sha256.New, []byte(account.Secret))
+	hash.Write([]byte(param.Encode()))
+	msg := fmt.Sprintf(`{"id": "%s","method": "%s","params":{"apiKey": "%s","signature": "%s","timestamp": %d}}`, requestId, accountMethodMap[method], account.Key, hex.EncodeToString(hash.Sum(nil)), ts)
+	value, _ := util.LoadSyncMap(&model.AppEnvironment.ConnOrder, market, account.Key)
+	Status := "true"
+	if value == nil {
+		Status = model.CarryStatusFail
+	} else {
+		if err := value.(*model.WSConn).WriteMsg([]byte(msg)); err != nil {
+			Status = model.CarryStatusFail
+			util.Log(util.LogLevelError, fmt.Sprintf(`fail to get account status return: %s`, err.Error()))
+		}
+	}
+	if Status == model.CarryStatusFail {
+		HandleWsOrderConnFail(account, market, nil)
+	}
 }

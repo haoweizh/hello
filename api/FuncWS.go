@@ -149,10 +149,13 @@ func CreateWSTick(environment *model.Environment, market string) (
 }
 
 func HandleWsOrderConnFail(account *model.Account, market string, order *model.Order) {
-	wsResp := model.WSResp{RequestId: order.ClientOrdId, Msg: fmt.Sprintf(`connection error and reconnect market %s order %#v`,
-		market, order), Success: false}
-	util.Log(util.LogLevelInfo, fmt.Sprintf(`handle fail order and reconnect %s %s %s`, account.Key, market, order.ClientOrdId))
-	model.AppEnvironment.WSRespChan <- wsResp
+	//兼容非order通道
+	if order != nil {
+		wsResp := model.WSResp{RequestId: order.ClientOrdId, Msg: fmt.Sprintf(`connection error and reconnect market %s order %#v`,
+			market, order), Success: false}
+		util.Log(util.LogLevelInfo, fmt.Sprintf(`handle fail order and reconnect %s %s %s`, account.Key, market, order.ClientOrdId))
+		model.AppEnvironment.WSRespChan <- wsResp
+	}
 	switch market {
 	case model.Gate:
 		_, marketType, _, _ := model.GetFromStandard(market, order.Symbol)
