@@ -204,13 +204,15 @@ func Test_Redis(t *testing.T) {
 
 func Test_Sync(t *testing.T) {
 	model.NewConfig()
-	account := model.AppConfig.GetAccounts(model.BitgetPerp)[0]
-	model.AppEnvironment.PriConnecting.Store(model.BitgetPerp+account.Key, false)
-	api.WsOrderServeBybit(account)
-	select {
-	case <-time.After(time.Second * 160):
-
-	}
+	market := model.Gate
+	account := model.AppConfig.GetAccounts(market)[0]
+	api.GetPositions(account.Key, account.Secret, market)
+	//model.AppEnvironment.PriConnecting.Store(model.BitgetPerp+account.Key, false)
+	//api.WsOrderServeBybit(account)
+	//select {
+	//case <-time.After(time.Second * 160):
+	//
+	//}
 }
 
 func Test_BalAndPos(t *testing.T) {

@@ -299,6 +299,10 @@ func initTradeLine(account *model.Account, setting *model.Setting, status *model
 		util.LogLess(util.LogLevelError, fmt.Sprintf(`fail to get ticket %s %s`, setting.Market, setting.Symbol))
 	}
 	jumpOpen := 30.0
+	switch setting.Market {
+	case model.BinanceSpot, model.BinancePerp, model.BitgetPerp, model.BitgetSpot:
+		jumpOpen = 20
+	}
 	jumpClose := -20.0
 	jumpBuy := jumpOpen
 	jumpSell := jumpOpen
@@ -468,7 +472,45 @@ func equalAccounts(doEqual bool, traceId int64) {
 			break
 		}
 	}
+	for i := 0; i < api.GetCrossLen(); i++ {
+		indexAccounts := model.GetAccounts(i)
+		for _, market := range model.AppEnvironment.Markets {
+			liquidateSmallContracts(indexAccounts[market], market)
+			if market == model.Gate {
+				gateCm, _ := contractMarkets.Load(indexAccounts[market])
+				if gateCm != nil {
+					updateMoneyPerStep(i, gateCm.(*contractMarket))
+				}
+			}
+		}
+	}
 	util.Log(util.LogLevelInfo, fmt.Sprintf(`exit clearing cross all %d`, traceId))
+}
+
+func updateMoneyPerStep(index int, gateCm *contractMarket) {
+	value := api.GetCoinSettings(model.FunctionCross)
+	if value == nil {
+		return
+	}
+	value.Range(func(coin, settings interface{}) bool {
+		item, _ := util.LoadSyncMap(carryCoinMap, coin.(string), strconv.Itoa(index))
+		if item == nil {
+			return true
+		}
+		symbol := coin.(string) + model.UniStandardTail[model.MarketTypePerp]
+		if gateCm.positions == nil || gateCm.positions[symbol] == nil {
+			return true
+		}
+		pos := gateCm.positions[symbol]
+		moneyRiskLimit := pos.RiskLimit * pos.EntryPrice / 20
+		if moneyRiskLimit < item.(*model.CarryCoin).MoneyPerStep {
+			util.Log(util.LogLevelInfo, fmt.Sprintf(`update money per step %v from %f to %f`,
+				coin, item.(*model.CarryCoin).MoneyPerStep, moneyRiskLimit))
+			item.(*model.CarryCoin).MoneyPerStep = moneyRiskLimit
+		}
+		return true
+	})
+	return
 }
 
 func createCarryCoin(accounts map[string]*model.Account, index int, coin string, settings []*model.Setting) (carryCoin *model.CarryCoin) {
@@ -520,7 +562,6 @@ func equalAccount(i int, equalChan chan int, accounts map[string]*model.Account,
 		if account.Index != i {
 			continue
 		}
-		liquidateSmallContracts(account, market)
 		api.CancelAll(account.Key, account.Secret, market)
 	}
 	value := api.GetCoinSettings(model.FunctionCross)
@@ -786,11 +827,25 @@ func placeEqual(status *model.CarryStatus, price, amount float64, orderSide stri
 	return dealAmount
 }
 
-func inFundingTime() (in bool) {
-	if time.Now().Hour()%4 == 0 && time.Now().Minute() <= 2 {
+func validFundingTime(account *model.Account, setting *model.Setting) (valid bool) {
+	_, marketType, _, _ := model.GetFromStandard(setting.Market, setting.Symbol)
+	if marketType == model.MarketTypeSpot {
 		return true
 	}
-	return false
+	marketInfo, _ := util.LoadSyncMap(model.MarketInfos, setting.Market, setting.Symbol)
+	if marketInfo == nil {
+		return false
+	}
+	_, delayed, fr := api.GetFundingRate(account.Key, account.Secret, setting.Market, setting.Symbol)
+	if delayed || fr == nil {
+		return false
+	}
+	if fr.ExpireTime-time.Now().Unix() > int64(marketInfo.(*model.MarketInfo).FundingRateInterval/1000-180) {
+		util.Log(util.LogLevelError, fmt.Sprintf(`ignore tick just funding rate done %s %s %d expire %d`,
+			marketInfo.(*model.MarketInfo).Market, marketInfo.(*model.MarketInfo).Symbol, marketInfo.(*model.MarketInfo).FundingRateInterval, fr.ExpireTime))
+		return false
+	}
+	return true
 }
 
 // ProcessCross setting.Chance<0时该币种只关仓
@@ -813,7 +868,7 @@ var ProcessCross = func(setting *model.Setting, tick *model.BidAsk) {
 	}
 	ts1 := time.Now().UnixMilli()
 	if tick == nil || tick.Asks == nil || tick.Bids == nil || setting == nil || setting.Valid == false || model.AppEnvironment.CrossEqualing ||
-		(model.AppConfig.Env != `test` && model.AppConfig.Handle != `1`) || settings == nil || len(settings) == 0 || inFundingTime() {
+		(model.AppConfig.Env != `test` && model.AppConfig.Handle != `1`) || settings == nil || len(settings) == 0 {
 		return
 	}
 	// 同一个coin cross之间互斥
@@ -863,6 +918,9 @@ var ProcessCross = func(setting *model.Setting, tick *model.BidAsk) {
 			statusRelate, getRelate := util.LoadSyncMap(carryStatusMap, settingRelate.Coin, settingRelate.Market, settingRelate.Symbol, accountRelate.Key)
 			carryCoin, getCoin := util.LoadSyncMap(carryCoinMap, setting.Coin, strconv.Itoa(i))
 			if status == nil || statusRelate == nil || status == statusRelate || carryCoin == nil || !getStatus || !getRelate || !getCoin {
+				continue
+			}
+			if !validFundingTime(account, setting) || !validFundingTime(accountRelate, settingRelate) {
 				continue
 			}
 			delay, statusBuy, statusSell, amount, priceBuy, priceSell, tickBuy, tickSell :=
@@ -978,7 +1036,7 @@ func placeCross(carryCoin *model.CarryCoin, statusBuy, statusSell *model.CarrySt
 	}
 	// 买入现货时要交手续费，故而实际到手少于下单量，校准以免未来买单时数量不足
 	if marketType == model.MarketTypeSpot {
-		amountBuy = amountBuy * 0.9992
+		amountBuy = amountBuy * 0.9995
 	}
 	if carryCoin != nil && statusBuy.Account.CrossStyle == crossGrid {
 		carryCoin.AddTrade(statusBuy, statusSell, priceBuy, priceSell, amountBuy)

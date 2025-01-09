@@ -237,6 +237,7 @@ var wsAccountHandlerOKEX = func(market, key string, event []byte) {
 			model.AppEnvironment.WSRespChan <- wsResp
 		}
 	} else if responseJson.Get(`op`).MustString() == `batch-orders` {
+		util.Log(util.LogLevelInfo, "ok batch orders "+string(event))
 		wsRespBuy := model.WSResp{RequestId: responseJson.Get(`id`).MustString() + model.OrderSideBuy}
 		wsRespSell := model.WSResp{RequestId: responseJson.Get(`id`).MustString() + model.OrderSideSell}
 		for _, value := range responseJson.Get(`data`).MustArray() {
