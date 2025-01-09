@@ -386,6 +386,7 @@ func parseOrderBinanceSpot(market string, orderJson *simplejson.Json) (order *mo
 }
 
 var wsOrderUpdateBinance = func(market, key string, msg []byte) {
+	util.Log(util.LogLevelInfo, fmt.Sprintf(" %s msg: %s", market, string(msg)))
 	resJson, _ := util.NewJSON(msg)
 	if resJson == nil {
 		return
@@ -401,6 +402,18 @@ var wsOrderUpdateBinance = func(market, key string, msg []byte) {
 		dealAmount, _ := strconv.ParseFloat(resJson.Get(`z`).MustString(), 64)
 		status := model.GetOrderStatus(market, resJson.Get(`X`).MustString())
 		UpdateOrderDeal(market, orderId, status, string(msg), dealAmount)
+	case `ACCOUNT_UPDATE`:
+		collateral := &model.Collateral{AccountKey: key}
+		dataarray := resJson.GetPath(`a`, `B`).MustArray()
+		for _, v := range dataarray {
+			value := v.(map[string]interface{})
+			if value[`a`] != nil && value[`a`] == `USDT` {
+				collateral.Available, _ = strconv.ParseFloat(value[`cw`].(string), 64)
+			}
+		}
+		util.Log(util.LogLevelInfo, fmt.Sprintf("binance unified %s %f", collateral.AccountKey, collateral.Available))
+		model.CollateralHandler(collateral)
+
 	}
 }
 
