@@ -82,7 +82,7 @@ func (wsConn *WSConn) WriteMsg(msg []byte) (err error) {
 	}
 	connLock.Lock()
 	defer connLock.Unlock()
-	if wsConn.conn == nil {
+	if wsConn.conn == nil && wsConn.WSType == ChanTypeWS {
 		return fmt.Errorf(`nil conn`)
 	}
 	if wsConn.WSType == ChanTypeWS {
