@@ -2,6 +2,7 @@ package carry
 
 import (
 	"fmt"
+	"github.com/robfig/cron/v3"
 	"hello/api"
 	"hello/carry/Turtle"
 	"hello/carry/cross"
@@ -179,8 +180,15 @@ func Maintain() {
 		}
 	}
 	if initCross && model.AppConfig.Handle == `1` {
-		go cross.ClearCross()
 		go cross.ContinueComp()
+		go cross.ClearCross()
+		c := cron.New()
+		_, err := c.AddFunc("0,30 * * * ?", cross.ClearCross)
+		if err != nil {
+			util.Log(util.LogLevelError, `fail to cron clear cross `+err.Error())
+		} else {
+			c.Start()
+		}
 	}
 	for {
 		for _, market := range model.AppEnvironment.Markets {

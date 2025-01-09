@@ -7,6 +7,7 @@ import (
 	"github.com/go-redis/redis/v8"
 	"github.com/gorilla/websocket"
 	"github.com/jinzhu/configor"
+	"github.com/robfig/cron/v3"
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
 	"hello/api"
@@ -203,10 +204,20 @@ func Test_Redis(t *testing.T) {
 }
 
 func Test_Sync(t *testing.T) {
-	model.NewConfig()
-	market := model.Gate
-	account := model.AppConfig.GetAccounts(market)[0]
-	api.GetPositions(account.Key, account.Secret, market)
+	c := cron.New()
+	_, err := c.AddFunc("0,30,48 * * * ?", func() {
+		fmt.Println("sync success" + time.Now().String())
+	})
+	if err != nil {
+		fmt.Println(`fail to cron clear cross ` + err.Error())
+	} else {
+		c.Start()
+	}
+	select {}
+	//model.NewConfig()
+	//market := model.Gate
+	//account := model.AppConfig.GetAccounts(market)[0]
+	//api.GetPositions(account.Key, account.Secret, market)
 	//model.AppEnvironment.PriConnecting.Store(model.BitgetPerp+account.Key, false)
 	//api.WsOrderServeBybit(account)
 	//select {

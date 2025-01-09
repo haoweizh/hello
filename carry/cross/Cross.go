@@ -379,68 +379,62 @@ func FailOrdersReconnect() {
 	}
 }
 
-func ClearCross() {
+var ClearCross = func() {
+	model.AppEnvironment.CrossEqualing = true
+	doEqual := false
+	if time.Now().Minute() == 30 {
+		doEqual = true
+	}
+	traceId := time.Now().Unix()
+	util.Log(util.LogLevelInfo, fmt.Sprintf("begin to clearing cross get set %s %v do equal %v %d",
+		model.FunctionCross, model.AppEnvironment.CrossEqualing, doEqual, traceId))
+	FailOrdersReconnect()
+	compOrders.Clear()
+	carryStatusMap.Clear()
+	spotMarkets.Clear()
+	contractMarkets.Clear()
+	coinCrossing.Clear()
+	model.AppEnvironment.ReqIdOrders.Clear()
 	for {
-		model.AppEnvironment.CrossEqualing = true
-		doEqual := false
-		if time.Now().Unix()-model.AppEnvironment.CrossEqualTime.Unix() > 3600 {
-			doEqual = true
-			model.AppEnvironment.CrossEqualTime = time.Now()
-		}
-		traceId := time.Now().Unix()
-		util.Log(util.LogLevelInfo, fmt.Sprintf("begin to clearing cross get set %s %v do equal %v %d",
-			model.FunctionCross, model.AppEnvironment.CrossEqualing, doEqual, traceId))
-		FailOrdersReconnect()
-		compOrders.Clear()
-		carryStatusMap.Clear()
-		spotMarkets.Clear()
-		contractMarkets.Clear()
-		coinCrossing.Clear()
-		model.AppEnvironment.ReqIdOrders.Clear()
-		for {
-			leftOrders := 0
-			model.AppEnvironment.OrderIdOrders.Range(func(k, v interface{}) bool {
-				if time.Now().Unix()-v.(*model.Order).OrderTime.Unix() < 60 {
-					leftOrders++
-				}
-				util.Log(util.LogLevelInfo, fmt.Sprintf(`left orders in order id orders %d key %v %#v`, leftOrders, k, v))
-				return true
-			})
-			if leftOrders == 0 {
-				break
+		leftOrders := 0
+		model.AppEnvironment.OrderIdOrders.Range(func(k, v interface{}) bool {
+			if time.Now().Unix()-v.(*model.Order).OrderTime.Unix() < 60 {
+				leftOrders++
 			}
-			time.Sleep(time.Second * 3)
+			util.Log(util.LogLevelInfo, fmt.Sprintf(`left orders in order id orders %d key %v %#v`, leftOrders, k, v))
+			return true
+		})
+		if leftOrders == 0 {
+			break
 		}
-		today := util.GetNow()
-		today = time.Date(today.Year(), today.Month(), today.Day(), 0, 0, 0, 0, today.Location())
-		carryRows, _ := model.AppDB.Model(model.Order{}).Select(`sum(price*abs(amount)),refresh_type`).
-			Where(`order_time>?`, today).Group(`refresh_type`).Rows()
-		var compInU, crossInU float64
-		for carryRows.Next() {
-			var amountInU float64
-			var refreshType string
-			_ = carryRows.Scan(&amountInU, &refreshType)
-			if refreshType == model.FunctionComplement {
-				compInU = amountInU
-			} else if refreshType == model.FunctionCross {
-				crossInU = amountInU
-			}
-		}
-		err := carryRows.Close()
-		if err != nil {
-			util.Log(util.LogLevelError, `fail to close db conn`+err.Error())
-		}
-		msg := fmt.Sprintf(`comp compare cross %f %f`, compInU, crossInU)
-		util.Log(util.LogLevelInfo, msg)
-		if model.AppConfig.Handle == `1` {
-			equalAccounts(doEqual, traceId)
-		}
-		model.AppEnvironment.CrossEqualing = false
-		util.Log(util.LogLevelInfo, fmt.Sprintf("end to clearing cross get set %v %d", model.AppEnvironment.CrossEqualing, traceId))
-		select {
-		case <-time.After(time.Minute * 30):
+		time.Sleep(time.Second * 3)
+	}
+	today := util.GetNow()
+	today = time.Date(today.Year(), today.Month(), today.Day(), 0, 0, 0, 0, today.Location())
+	carryRows, _ := model.AppDB.Model(model.Order{}).Select(`sum(price*abs(amount)),refresh_type`).
+		Where(`order_time>?`, today).Group(`refresh_type`).Rows()
+	var compInU, crossInU float64
+	for carryRows.Next() {
+		var amountInU float64
+		var refreshType string
+		_ = carryRows.Scan(&amountInU, &refreshType)
+		if refreshType == model.FunctionComplement {
+			compInU = amountInU
+		} else if refreshType == model.FunctionCross {
+			crossInU = amountInU
 		}
 	}
+	err := carryRows.Close()
+	if err != nil {
+		util.Log(util.LogLevelError, `fail to close db conn`+err.Error())
+	}
+	msg := fmt.Sprintf(`comp compare cross %f %f`, compInU, crossInU)
+	util.Log(util.LogLevelInfo, msg)
+	if model.AppConfig.Handle == `1` {
+		equalAccounts(doEqual, traceId)
+	}
+	model.AppEnvironment.CrossEqualing = false
+	util.Log(util.LogLevelInfo, fmt.Sprintf("end to clearing cross get set %v %d", model.AppEnvironment.CrossEqualing, traceId))
 }
 
 func equalAccounts(doEqual bool, traceId int64) {
@@ -827,27 +821,6 @@ func placeEqual(status *model.CarryStatus, price, amount float64, orderSide stri
 	return dealAmount
 }
 
-func validFundingTime(account *model.Account, setting *model.Setting) (valid bool) {
-	_, marketType, _, _ := model.GetFromStandard(setting.Market, setting.Symbol)
-	if marketType == model.MarketTypeSpot {
-		return true
-	}
-	marketInfo, _ := util.LoadSyncMap(model.MarketInfos, setting.Market, setting.Symbol)
-	if marketInfo == nil {
-		return false
-	}
-	_, delayed, fr := api.GetFundingRate(account.Key, account.Secret, setting.Market, setting.Symbol)
-	if delayed || fr == nil {
-		return false
-	}
-	if fr.ExpireTime-time.Now().Unix() > int64(marketInfo.(*model.MarketInfo).FundingRateInterval/1000-180) {
-		util.Log(util.LogLevelError, fmt.Sprintf(`ignore tick just funding rate done %s %s %d expire %d`,
-			marketInfo.(*model.MarketInfo).Market, marketInfo.(*model.MarketInfo).Symbol, marketInfo.(*model.MarketInfo).FundingRateInterval, fr.ExpireTime))
-		return false
-	}
-	return true
-}
-
 // ProcessCross setting.Chance<0时该币种只关仓
 // setting.OpenShortMargin OpenShortMargin不等于0时作为开舱标准价格，否则使用通用价格
 // setting.CloseShortMargin CloseShortMargin作为开关舱标准价格
@@ -868,7 +841,7 @@ var ProcessCross = func(setting *model.Setting, tick *model.BidAsk) {
 	}
 	ts1 := time.Now().UnixMilli()
 	if tick == nil || tick.Asks == nil || tick.Bids == nil || setting == nil || setting.Valid == false || model.AppEnvironment.CrossEqualing ||
-		(model.AppConfig.Env != `test` && model.AppConfig.Handle != `1`) || settings == nil || len(settings) == 0 {
+		(model.AppConfig.Env != `test` && model.AppConfig.Handle != `1`) || settings == nil || len(settings) == 0 || time.Now().Minute() == 0 {
 		return
 	}
 	// 同一个coin cross之间互斥
@@ -918,9 +891,6 @@ var ProcessCross = func(setting *model.Setting, tick *model.BidAsk) {
 			statusRelate, getRelate := util.LoadSyncMap(carryStatusMap, settingRelate.Coin, settingRelate.Market, settingRelate.Symbol, accountRelate.Key)
 			carryCoin, getCoin := util.LoadSyncMap(carryCoinMap, setting.Coin, strconv.Itoa(i))
 			if status == nil || statusRelate == nil || status == statusRelate || carryCoin == nil || !getStatus || !getRelate || !getCoin {
-				continue
-			}
-			if !validFundingTime(account, setting) || !validFundingTime(accountRelate, settingRelate) {
 				continue
 			}
 			delay, statusBuy, statusSell, amount, priceBuy, priceSell, tickBuy, tickSell :=
