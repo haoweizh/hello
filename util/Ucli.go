@@ -41,8 +41,8 @@ func InitMarketPublisher(topic string) (*MarketPublisher, error) {
 		return nil, errors.New("InitMarketPublisher:trans go.msg to c.msg error")
 	}
 	defer C.free(unsafe.Pointer(cTopic))
-	len := C.uint(len(topic))
-	publisher := C.init_market_publisher(cTopic, len)
+	lenTopic := C.uint(len(topic))
+	publisher := C.init_market_publisher(cTopic, lenTopic)
 	if publisher == nil {
 		return nil, errors.New("InitMarketPublisher: C.init_market_publisher error")
 	}
@@ -55,8 +55,8 @@ func InitOrderPublisher(topic string) (*OrderPublisher, error) {
 		return nil, errors.New("InitOrderPublisher:trans go.msg to c.msg error")
 	}
 	defer C.free(unsafe.Pointer(cTopic))
-	len := C.uint(len(topic))
-	publisher := C.init_order_publisher(cTopic, len)
+	lenTopic := C.uint(len(topic))
+	publisher := C.init_order_publisher(cTopic, lenTopic)
 	if publisher == nil {
 		return nil, errors.New("InitOrderPublisher: C.init_order_publisher error")
 	}
@@ -68,8 +68,8 @@ func InitMarketReceiver(topic string) (*MarketReceiver, error) {
 		return nil, errors.New("InitMarketReceiver:trans go.msg to c.msg error")
 	}
 	defer C.free(unsafe.Pointer(cTopic))
-	len := C.uint(len(topic))
-	receiver := C.init_market_receiver(cTopic, len)
+	lenTopic := C.uint(len(topic))
+	receiver := C.init_market_receiver(cTopic, lenTopic)
 	if receiver == nil {
 		return nil, errors.New("InitMarketReceiver: C.init_market_receiver error")
 	}
@@ -82,8 +82,8 @@ func InitOrderReceiver(topic string) (*OrderReceiver, error) {
 		return nil, errors.New("InitOrderReceiver:trans go.msg to c.msg error")
 	}
 	defer C.free(unsafe.Pointer(cTopic))
-	len := C.uint(len(topic))
-	receiver := C.init_order_receiver(cTopic, len)
+	lenTopic := C.uint(len(topic))
+	receiver := C.init_order_receiver(cTopic, lenTopic)
 	if receiver == nil {
 		return nil, errors.New("InitOrderReceiver: C.init_order_receiver error")
 	}
@@ -103,8 +103,8 @@ func (mp *MarketPublisher) PublishMarket(msg string) error {
 		return errors.New("PublishMarket:trans go.msg to c.msg error")
 	}
 	defer C.free(unsafe.Pointer(cMsg))
-	len := C.uint(len(msg))
-	C.publish_market(mp.mPublisher, cMsg, len)
+	lenTopic := C.uint(len(msg))
+	C.publish_market(mp.mPublisher, cMsg, lenTopic)
 	return nil
 }
 func (op *OrderPublisher) PublishOrder(msg string) error {
@@ -113,8 +113,8 @@ func (op *OrderPublisher) PublishOrder(msg string) error {
 		return errors.New("PublishOrder:trans go.msg to c.msg error")
 	}
 	defer C.free(unsafe.Pointer(cMsg))
-	len := C.uint(len(msg))
-	C.publish_order(op.oPublisher, cMsg, len)
+	lenTopic := C.uint(len(msg))
+	C.publish_order(op.oPublisher, cMsg, lenTopic)
 	return nil
 }
 

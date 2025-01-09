@@ -129,6 +129,10 @@ func initChannel(url, market string, wsType ChannelType) (*WSConn, error) {
 		switch market {
 		case BinanceSpot, BinancePerp, BinanceMargin:
 			return newTsChannel(url, "bf", wsType)
+		case Gate:
+			return newTsChannel(url, "gate", wsType)
+		case OKEX:
+			return newTsChannel(url, "ok", wsType)
 		default:
 			return newWsGorillaChannel(url)
 		}
