@@ -380,6 +380,9 @@ func FailOrdersReconnect() {
 }
 
 var ClearCross = func() {
+	if model.AppEnvironment.CrossEqualing {
+		return
+	}
 	model.AppEnvironment.CrossEqualing = true
 	doEqual := false
 	if time.Now().Minute() == 30 {
