@@ -579,10 +579,14 @@ func GetFundingRate(key, secret, market, symbol string) (success, useRest bool, 
 			return true, false, fundingRate
 		} else {
 			newFRate := getFundingRateBitgetPerp(symbol)
-			if fundingRate != nil {
-				newFRate.ExpireTime = fundingRate.ExpireTime
+			if newFRate != nil {
+				if fundingRate != nil {
+					newFRate.ExpireTime = fundingRate.ExpireTime
+				}
+				fundingRate = newFRate
+			} else {
+				return false, true, nil
 			}
-			fundingRate = newFRate
 		}
 	case model.Bybit:
 		fundingRate = getFundingRateBybit(symbol)
