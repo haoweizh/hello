@@ -33,7 +33,7 @@ func maintainConnsBitget(market string, accounts []*model.Account) {
 		}
 		for _, account := range accounts {
 			success := false
-			valueUpdate, _ := util.LoadSyncMap(&model.AppEnvironment.ConnOrderUpdate, market, account.Key)
+			valueUpdate, _ := util.LoadSyncMap(&model.AppEnvironment.ConnOrder, market, account.Key)
 			if valueUpdate != nil {
 				if err := valueUpdate.(*model.WSConn).WriteMsg([]byte(`ping`)); err != nil {
 					valueUpdate.(*model.WSConn).Close()
@@ -51,7 +51,7 @@ func maintainConnsBitget(market string, accounts []*model.Account) {
 }
 
 var wsOrderConnHandlerBitget = func(market, key string, event []byte) {
-	value, _ := util.LoadSyncMap(&model.AppEnvironment.ConnOrderUpdate, market, key)
+	value, _ := util.LoadSyncMap(&model.AppEnvironment.ConnOrder, market, key)
 	if value == nil {
 		return
 	}
@@ -73,7 +73,7 @@ var wsOrderConnHandlerBitget = func(market, key string, event []byte) {
 		}
 		err := SendToConnection(market, value.(*model.WSConn), []byte(subStr))
 		if err != nil {
-			util.DelSyncMap(&model.AppEnvironment.ConnOrderUpdate, market, key)
+			util.DelSyncMap(&model.AppEnvironment.ConnOrder, market, key)
 		}
 	}
 	//判断事件是snapshot
@@ -128,12 +128,12 @@ func WsOrderServeBitget(market string, account *model.Account) {
 		return
 	}
 	defer model.AppEnvironment.PriConnecting.Store(market+account.Key, false)
-	conn, err := model.WsPrivateClient(&model.AppEnvironment.ConnOrderUpdate, market, account.Key, bitgetPrivate, wsOrderConnHandlerBitget)
+	conn, err := model.WsPrivateClient(&model.AppEnvironment.ConnOrder, market, account.Key, bitgetPrivate, wsOrderConnHandlerBitget)
 	if err != nil {
 		util.Log(util.LogLevelError, "can not create web socket "+err.Error())
 	} else if conn != nil {
 		if wsLoginBitget(account, conn) {
-			util.StoreSyncMap(&model.AppEnvironment.ConnOrderUpdate, conn, market, account.Key)
+			util.StoreSyncMap(&model.AppEnvironment.ConnOrder, conn, market, account.Key)
 		}
 	}
 }
