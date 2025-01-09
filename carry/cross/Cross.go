@@ -476,9 +476,41 @@ func equalAccounts(doEqual bool, traceId int64) {
 		indexAccounts := model.GetAccounts(i)
 		for _, market := range model.AppEnvironment.Markets {
 			liquidateSmallContracts(indexAccounts[market], market)
+			if market == model.Gate {
+				gateCm, _ := contractMarkets.Load(indexAccounts[market])
+				if gateCm != nil {
+					updateMoneyPerStep(i, gateCm.(*contractMarket))
+				}
+			}
 		}
 	}
 	util.Log(util.LogLevelInfo, fmt.Sprintf(`exit clearing cross all %d`, traceId))
+}
+
+func updateMoneyPerStep(index int, gateCm *contractMarket) {
+	value := api.GetCoinSettings(model.FunctionCross)
+	if value == nil {
+		return
+	}
+	value.Range(func(coin, settings interface{}) bool {
+		item, _ := util.LoadSyncMap(carryCoinMap, coin.(string), strconv.Itoa(index))
+		if item == nil {
+			return true
+		}
+		symbol := coin.(string) + model.UniStandardTail[model.MarketTypePerp]
+		if gateCm.positions == nil || gateCm.positions[symbol] == nil {
+			return true
+		}
+		pos := gateCm.positions[symbol]
+		moneyRiskLimit := pos.RiskLimit * pos.EntryPrice / 20
+		if moneyRiskLimit < item.(*model.CarryCoin).MoneyPerStep {
+			util.Log(util.LogLevelInfo, fmt.Sprintf(`update money per step %v from %f to %f`,
+				coin, item.(*model.CarryCoin).MoneyPerStep, moneyRiskLimit))
+			item.(*model.CarryCoin).MoneyPerStep = moneyRiskLimit
+		}
+		return true
+	})
+	return
 }
 
 func createCarryCoin(accounts map[string]*model.Account, index int, coin string, settings []*model.Setting) (carryCoin *model.CarryCoin) {
