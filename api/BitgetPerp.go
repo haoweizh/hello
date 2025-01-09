@@ -281,7 +281,7 @@ func getFundingRateBitgetPerp(symbol string) (fundingRate *model.FundingRate) {
 	return &model.FundingRate{Rate: rate, UpdateTime: util.GetNow(), ExpireTime: 0} //没有过期时间
 }
 
-func placeOrderBitgetPerp(key, secret string, order *model.Order, orderSide, orderType, orderParam, symbol string, price, amount float64) {
+func placeOrderBitgetPerp(account *model.Account, isWs bool, order *model.Order, orderSide, orderType, orderParam, symbol string, price, amount float64) {
 	success, _, _, dialectSymbol := model.GetFromStandard(model.BitgetPerp, symbol)
 	if !success {
 		util.Log(util.LogLevelError, "fail to place perp order, GetFromStandard: "+symbol)
@@ -302,7 +302,7 @@ func placeOrderBitgetPerp(key, secret string, order *model.Order, orderSide, ord
 	} else if orderType == model.OrderTypeLimit {
 		ordType = `limit`
 	}
-	client := dtos.BitgetRestClient{BaseUrl: bitgetRestUrl, Passphrase: model.AppConfig.Phase, ApiKey: key, ApiSecretKey: secret}
+	client := dtos.BitgetRestClient{BaseUrl: bitgetRestUrl, Passphrase: model.AppConfig.Phase, ApiKey: account.Key, ApiSecretKey: account.Secret}
 	params := map[string]interface{}{
 		"symbol":      dialectSymbol,
 		"marginCoin":  "USDT",

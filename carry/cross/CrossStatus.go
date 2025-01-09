@@ -432,7 +432,7 @@ func liquidateSmallContracts(account *model.Account, market string) {
 				if market == model.Gate {
 					orderParam = model.CloseContract
 				}
-				order := api.PlaceOrder(account.Key, account.Secret, orderSide, model.OrderTypeMarket, market,
+				order := api.PlaceOrder(account, orderSide, model.OrderTypeMarket, market,
 					position.Currency, orderParam, model.FunctionLiq, position.EntryPrice, position.EntryPrice, holding, false, nil)
 				saveCross(order, 0, 0, position.Holding)
 			}

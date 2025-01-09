@@ -295,7 +295,7 @@ func getBalanceBitgetSpot(key string, secret string) (success bool, balances []*
 	return true, balances
 }
 
-func placeOrderBitgetSpot(key, secret string, order *model.Order, orderSide, orderType, symbol string, price, amount float64) {
+func placeOrderBitgetSpot(account *model.Account, isWs bool, order *model.Order, orderSide, orderType, symbol string, price, amount float64) {
 	priceSpot, decimalSpot := model.FormatPrice(model.BitgetSpot, symbol, price)
 	priceStr := util.CutTailZero(strconv.FormatFloat(priceSpot, 'f', decimalSpot, 64))
 	ordType := ``
@@ -313,7 +313,7 @@ func placeOrderBitgetSpot(key, secret string, order *model.Order, orderSide, ord
 		util.Log(util.LogLevelError, "fail to place spot order, GetFromStandard: "+symbol)
 		return
 	}
-	client := dtos.BitgetRestClient{BaseUrl: bitgetRestUrl, Passphrase: model.AppConfig.Phase, ApiKey: key, ApiSecretKey: secret}
+	client := dtos.BitgetRestClient{BaseUrl: bitgetRestUrl, Passphrase: model.AppConfig.Phase, ApiKey: account.Key, ApiSecretKey: account.Secret}
 	params := map[string]interface{}{
 		"symbol":    dialectSymbol,
 		"force":     "gtc",

@@ -736,14 +736,14 @@ func GetStandardOrderType(market, dialectType string) (standardType string) {
 	return ``
 }
 
-func MustPlaceOrder(key, secret, orderSide, orderType, market, symbol, orderParam,
+func MustPlaceOrder(account *model.Account, orderSide, orderType, market, symbol, orderParam,
 	refreshType string, price, triggerPrice, amount float64, useLock bool) (orders []*model.Order) {
 	if useLock {
 		var lock *sync.Mutex
-		lockValue, _ := mustPlaceLock.Load(key)
+		lockValue, _ := mustPlaceLock.Load(account.Key)
 		if lockValue == nil {
 			lock = &sync.Mutex{}
-			mustPlaceLock.Store(key, lock)
+			mustPlaceLock.Store(account.Key, lock)
 		} else {
 			lock = lockValue.(*sync.Mutex)
 		}
@@ -762,9 +762,9 @@ func MustPlaceOrder(key, secret, orderSide, orderType, market, symbol, orderPara
 			sizeMax = v.(*model.MarketInfo).SizeMaxMarket
 		}
 		if sizeMax > 0 && amount > sizeMax {
-			ordersLeft := MustPlaceOrder(key, secret, orderSide, orderType, market, symbol, orderParam, refreshType, price,
+			ordersLeft := MustPlaceOrder(account, orderSide, orderType, market, symbol, orderParam, refreshType, price,
 				triggerPrice, sizeMax, false)
-			orders = MustPlaceOrder(key, secret, orderSide, orderType, market, symbol, orderParam, refreshType, price,
+			orders = MustPlaceOrder(account, orderSide, orderType, market, symbol, orderParam, refreshType, price,
 				triggerPrice, amount-sizeMax, false)
 			if ordersLeft == nil || len(ordersLeft) == 0 {
 				return orders
@@ -776,7 +776,7 @@ func MustPlaceOrder(key, secret, orderSide, orderType, market, symbol, orderPara
 			}
 			return orders
 		} else {
-			order := PlaceOrder(key, secret, orderSide, orderType, market, symbol, orderParam, refreshType, price,
+			order := PlaceOrder(account, orderSide, orderType, market, symbol, orderParam, refreshType, price,
 				triggerPrice, amount, false, nil)
 			if order != nil && order.OrderId != `` && order.Status != model.CarryStatusFail {
 				order.RefreshType = refreshType
@@ -802,7 +802,7 @@ func MustPlaceOrder(key, secret, orderSide, orderType, market, symbol, orderPara
 // PlaceOrder orderSide: OrderSideBuy OrderSideSell OrderSideLiquidateLong OrderSideLiquidateShort
 // orderType: OrderTypeLimit OrderTypeMarket
 // amount:如果是限价单或市价卖单，amount是左侧币种的数量，如果是市价买单，amount是右测币种的数量
-func PlaceOrder(key, secret, orderSide, orderType, market, symbol, orderParam, funcType string, price, triggerPrice,
+func PlaceOrder(account *model.Account, orderSide, orderType, market, symbol, orderParam, funcType string, price, triggerPrice,
 	amount float64, isWs bool, postOrder model.PostOrder) (order *model.Order) {
 	start := util.GetNowUnixMillion()
 	markSide := model.OrderSideBuy
@@ -818,7 +818,6 @@ func PlaceOrder(key, secret, orderSide, orderType, market, symbol, orderParam, f
 		return &model.Order{OrderSide: markSide, OrderType: orderType, Market: market, Symbol: symbol, Coin: coin, Price: price,
 			Amount: 0, TriggerPrice: triggerPrice, RefreshType: funcType, Status: model.CarryStatusFail, DealAmount: 0, DealPrice: price, OrderTime: util.GetNow()}
 	}
-	account := model.AppConfig.GetAccountFromKeyIndex(market, key, -1)
 	clientOrdId := strconv.FormatInt(time.Now().UnixMicro(), 10)[3:] + orderSide[0:1]
 	order = &model.Order{OrderId: clientOrdId, ClientOrdId: clientOrdId, RefreshType: funcType,
 		OrderSide: markSide, OrderType: orderType, Market: market, Symbol: symbol, Price: price, Amount: amount, DealAmount: 0, Coin: coin,
@@ -828,17 +827,17 @@ func PlaceOrder(key, secret, orderSide, orderType, market, symbol, orderParam, f
 	if model.AppConfig.Env == `test` {
 		return
 	}
-	if isWs && (market == model.Gate || market == model.OKEX || market == model.Bybit || market == model.BinanceSpot || market == model.BinancePerp) {
+	if isWs {
 		model.AppEnvironment.ReqIdOrders.Store(order.ClientOrdId, order)
 		util.Log(util.LogLevelInfo, fmt.Sprintf(`store order %s %s %s %s %s %#v`, market, coin, symbol, orderSide, order.ClientOrdId, order))
 	}
 	switch market {
 	case model.BitgetPerp:
 		isWs = false
-		placeOrderBitgetPerp(key, secret, order, orderSide, orderType, orderParam, symbol, price, amount)
+		placeOrderBitgetPerp(account, isWs, order, orderSide, orderType, orderParam, symbol, price, amount)
 	case model.BitgetSpot:
 		isWs = false
-		placeOrderBitgetSpot(key, secret, order, orderSide, orderType, symbol, price, amount)
+		placeOrderBitgetSpot(account, isWs, order, orderSide, orderType, symbol, price, amount)
 	case model.Gate:
 		placeOrderGate(account, isWs, order, orderSide, orderType, orderParam, symbol, price, amount)
 	case model.OKEX:

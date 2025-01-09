@@ -107,12 +107,12 @@ func ClearExtraOrders(key, secret, market, symbol string, dataArray []*model.Tur
 	}
 }
 
-func AdjustPosHolding(key, secret string, setting *model.Setting, data *model.TurtleData, tick *model.BidAsk) {
+func AdjustPosHolding(account *model.Account, setting *model.Setting, data *model.TurtleData, tick *model.BidAsk) {
 	if data.AdjustChecked {
 		return
 	}
 	data.AdjustChecked = true
-	success, marketPos, _, _, _ := GetPositions(key, secret, setting.Market)
+	success, marketPos, _, _, _ := GetPositions(account.Key, account.Secret, setting.Market)
 	if !success {
 		util.Log(util.LogLevelInfo, fmt.Sprintf(
 			`fail to adjust position holdings %s %s`, setting.Market, setting.Symbol))
@@ -153,7 +153,7 @@ func AdjustPosHolding(key, secret string, setting *model.Setting, data *model.Tu
 				}
 			}
 			if orderSide != `` {
-				orders = MustPlaceOrder(key, secret, orderSide, orderType, setting.Market, setting.Symbol, ``,
+				orders = MustPlaceOrder(account, orderSide, orderType, setting.Market, setting.Symbol, ``,
 					model.FunctionTurtleAdjust, priceDeal, price, math.Abs(posMap[setting.Symbol].Holding), true)
 			}
 			for _, order := range orders {
@@ -192,7 +192,7 @@ func CheckActiveTrail(account *model.Account, setting *model.Setting, data *mode
 	if setting.Chance > 0 && data.LowActTrail*data.ActivationRate > 0 && bidAsk.Bids[0].Price > data.LowActTrail*data.ActivationRate {
 		trailed = true
 		data.OrderShort = nil
-		trails = MustPlaceOrder(account.Key, account.Secret, model.OrderSideSell, model.OrderTypeTrailStop, setting.Market, setting.Symbol, ``,
+		trails = MustPlaceOrder(account, model.OrderSideSell, model.OrderTypeTrailStop, setting.Market, setting.Symbol, ``,
 			setting.Function, bidAsk.Bids[0].Price, data.CallBackRatio, setting.GridAmount, true)
 		for _, order := range trails {
 			order.Function = model.Close
@@ -204,7 +204,7 @@ func CheckActiveTrail(account *model.Account, setting *model.Setting, data *mode
 	} else if setting.Chance < 0 && data.ActivationRate > 0 && bidAsk.Asks[0].Price < data.HighActTrail/data.ActivationRate {
 		trailed = true
 		data.OrderLong = nil
-		trails = MustPlaceOrder(account.Key, account.Secret, model.OrderSideBuy, model.OrderTypeTrailStop, setting.Market, setting.Symbol, ``,
+		trails = MustPlaceOrder(account, model.OrderSideBuy, model.OrderTypeTrailStop, setting.Market, setting.Symbol, ``,
 			setting.Function, bidAsk.Asks[0].Price, data.CallBackRatio, setting.GridAmount, true)
 		for _, order := range trails {
 			order.Function = model.Close
@@ -225,19 +225,19 @@ func CheckActiveTrail(account *model.Account, setting *model.Setting, data *mode
 	return trailed
 }
 
-func HandleOrders(key, secret, market, symbol string, settings []*model.Setting, turtleData []*model.TurtleData,
+func HandleOrders(account *model.Account, market, symbol string, settings []*model.Setting, turtleData []*model.TurtleData,
 	tick *model.BidAsk) (checked bool) {
 	if (len(settings) != 2 && len(settings) != 1) || len(settings) != len(turtleData) {
 		util.Log(util.LogLevelError, `wrong combine turtle parameter`)
 		return false
 	}
 	if len(settings) == 1 {
-		AdjustPosHolding(key, secret, settings[0], turtleData[0], tick)
+		AdjustPosHolding(account, settings[0], turtleData[0], tick)
 	} else if len(settings) == 2 {
 		if settings[0].Chance == 0 {
-			AdjustPosHolding(key, secret, settings[1], turtleData[1], tick)
+			AdjustPosHolding(account, settings[1], turtleData[1], tick)
 		} else if settings[1].Chance == 0 {
-			AdjustPosHolding(key, secret, settings[0], turtleData[0], tick)
+			AdjustPosHolding(account, settings[0], turtleData[0], tick)
 		}
 		turtleData[0].AdjustChecked = true
 		turtleData[1].AdjustChecked = true
@@ -246,7 +246,7 @@ func HandleOrders(key, secret, market, symbol string, settings []*model.Setting,
 		return false
 	}
 	turtleData[0].CheckTimeOpen = util.GetNow()
-	ClearExtraOrders(key, secret, market, symbol, turtleData)
+	ClearExtraOrders(account.Key, account.Secret, market, symbol, turtleData)
 	return true
 }
 

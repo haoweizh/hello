@@ -795,7 +795,7 @@ func placeEqual(status *model.CarryStatus, price, amount float64, orderSide stri
 	checkAmount := model.GetAmountInMarket(status.Market, status.Symbol, amount, price, reduceOnly)
 	if checkAmount > 0 {
 		util.Log(util.LogLevelInfo, fmt.Sprintf(`do equal %f %f %#v`, price, amount, status))
-		order := api.PlaceOrder(status.Account.Key, status.Account.Secret, orderSide, model.OrderTypeLimit,
+		order := api.PlaceOrder(status.Account, orderSide, model.OrderTypeLimit,
 			status.Market, status.Symbol, ``, model.FunctionCompAll, price, price, amount, false, nil)
 		if order != nil && order.Status != model.CarryStatusFail {
 			compOrders.Store(order.OrderId, order)
@@ -1002,9 +1002,9 @@ func placeCross(carryCoin *model.CarryCoin, statusBuy, statusSell *model.CarrySt
 			orderBuy.ErrCode, orderSell.ErrCode = msg, msg
 		}
 	} else {
-		go api.PlaceOrder(statusBuy.Account.Key, statusBuy.Account.Secret, model.OrderSideBuy, model.OrderTypeLimit, statusBuy.Market,
+		go api.PlaceOrder(statusBuy.Account, model.OrderSideBuy, model.OrderTypeLimit, statusBuy.Market,
 			statusBuy.Symbol, ``, model.FunctionCross, priceBuy, priceBuy, amountBuy, true, PostOrderCross)
-		go api.PlaceOrder(statusSell.Account.Key, statusSell.Account.Secret, model.OrderSideSell, model.OrderTypeLimit, statusSell.Market,
+		go api.PlaceOrder(statusSell.Account, model.OrderSideSell, model.OrderTypeLimit, statusSell.Market,
 			statusSell.Symbol, ``, model.FunctionCross, priceSell, priceSell, amountSell, true, PostOrderCross)
 	}
 	// 买入现货时要交手续费，故而实际到手少于下单量，校准以免未来买单时数量不足
@@ -1173,7 +1173,7 @@ func ContinueComp() {
 					if model.AppEnvironment.CrossEqualing {
 						return false
 					}
-					orderComp := api.PlaceOrder(account.Key, account.Secret, order.OrderSide, model.OrderTypeLimit, order.Market, order.Symbol, ``,
+					orderComp := api.PlaceOrder(account, order.OrderSide, model.OrderTypeLimit, order.Market, order.Symbol, ``,
 						order.RefreshType, price, price, leftAmt, false, nil)
 					if orderComp != nil && orderComp.Status != model.CarryStatusFail {
 						orderComp.Fee = order.Fee
@@ -1270,7 +1270,7 @@ func compOrder(account *model.Account, order *model.Order, leftAmt float64) {
 				price = bidAsk.Asks[0].Price * (1 + compSlide)
 			}
 		}
-		comp := api.PlaceOrder(account.Key, account.Secret, order.OrderSide, model.OrderTypeLimit, order.Market, order.Symbol,
+		comp := api.PlaceOrder(account, order.OrderSide, model.OrderTypeLimit, order.Market, order.Symbol,
 			``, model.FunctionComplement, price, price, leftAmt, false, nil)
 		comp.Fee = order.Price
 		compOrders.Store(comp.OrderId, comp)

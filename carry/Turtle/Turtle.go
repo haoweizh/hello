@@ -57,7 +57,7 @@ var ProcessTurtle = func(setting *model.Setting, tick *model.BidAsk) {
 	util.StoreSyncMap(&model.CarryInfo, msg, account.Key, msgKey)
 	priceLong := data.HighFar
 	priceShort := data.LowFar
-	if api.HandleOrders(account.Key, account.Secret, setting.Market, setting.Symbol, []*model.Setting{setting}, []*model.TurtleData{data}, tick) ||
+	if api.HandleOrders(account, setting.Market, setting.Symbol, []*model.Setting{setting}, []*model.TurtleData{data}, tick) ||
 		api.CheckBreak(account, setting.Market, setting.Symbol, []*model.Setting{setting}, []*model.TurtleData{data}, tick) {
 		return
 	}
@@ -72,7 +72,7 @@ var ProcessTurtle = func(setting *model.Setting, tick *model.BidAsk) {
 	//	priceChange = 2.5 * data.N
 	//}
 	if setting.Chance == 0 { // 开初始仓
-		placeTurtleOrders(account.Key, account.Secret, data, setting, canOpenTurtle, chanceInAll, priceShort, priceLong, tick)
+		placeTurtleOrders(account, data, setting, canOpenTurtle, chanceInAll, priceShort, priceLong, tick)
 		if data.BreakLong && data.OrderLong != nil {
 			handleTurtleBreak(account.Key, account.Secret, setting, data, model.OrderSideBuy)
 			setting.Chance = 1
@@ -102,7 +102,7 @@ var ProcessTurtle = func(setting *model.Setting, tick *model.BidAsk) {
 		} else {
 			priceShort = math.Max(data.HighFar, data.HighActTrail) - priceChange
 		}
-		placeTurtleOrders(account.Key, account.Secret, data, setting, canOpenTurtle, chanceInAll, priceShort, priceLong, tick)
+		placeTurtleOrders(account, data, setting, canOpenTurtle, chanceInAll, priceShort, priceLong, tick)
 		// 加仓一个单位
 		if data.BreakLong && data.OrderLong != nil {
 			handleTurtleBreak(account.Key, account.Secret, setting, data, model.OrderSideBuy)
@@ -144,7 +144,7 @@ var ProcessTurtle = func(setting *model.Setting, tick *model.BidAsk) {
 				priceLong = data.LowFar + priceChange
 			}
 		}
-		placeTurtleOrders(account.Key, account.Secret, data, setting, canOpenTurtle, chanceInAll, priceShort, priceLong, tick)
+		placeTurtleOrders(account, data, setting, canOpenTurtle, chanceInAll, priceShort, priceLong, tick)
 		// 加仓一个单位
 		if data.BreakShort && data.OrderShort != nil {
 			handleTurtleBreak(account.Key, account.Secret, setting, data, model.OrderSideSell)
@@ -218,7 +218,7 @@ func handleTurtleBreak(key, secret string, setting *model.Setting, turtleData *m
 	}
 }
 
-func placeTurtleOrders(key, secret string, turtleData *model.TurtleData, setting *model.Setting, canOpen bool, chanceInAll float64,
+func placeTurtleOrders(account *model.Account, turtleData *model.TurtleData, setting *model.Setting, canOpen bool, chanceInAll float64,
 	priceShort, priceLong float64, tick *model.BidAsk) {
 	coinLimit := setting.ChanceLimit
 	canOpen = canOpen && math.Abs(float64(setting.Chance)) < float64(setting.ChanceLimit)
@@ -240,14 +240,14 @@ func placeTurtleOrders(key, secret string, turtleData *model.TurtleData, setting
 		turtleData.BreakLong = false
 		turtleTriggerDelta := api.GetTurtleTriggerDelta(setting.Market)
 		if priceLong <= tick.Asks[0].Price {
-			turtleData.OrderLong = api.MustPlaceOrder(key, secret, orderSide, model.OrderTypeLimit, setting.Market, setting.Symbol, ``,
+			turtleData.OrderLong = api.MustPlaceOrder(account, orderSide, model.OrderTypeLimit, setting.Market, setting.Symbol, ``,
 				setting.Function, priceLong*(1+turtleTriggerDelta), priceLong, amount, true)
 			for _, order := range turtleData.OrderLong {
 				turtleData.OrderAdjust[order.OrderId] = order
 			}
 			turtleData.BreakLong = true
 		} else {
-			turtleData.OrderLong = api.MustPlaceOrder(key, secret, orderSide, typeLong, setting.Market, setting.Symbol, ``,
+			turtleData.OrderLong = api.MustPlaceOrder(account, orderSide, typeLong, setting.Market, setting.Symbol, ``,
 				setting.Function, priceLong*(1+turtleTriggerDelta), priceLong, amount, true)
 		}
 		if turtleData.OrderLong != nil {
@@ -274,14 +274,14 @@ func placeTurtleOrders(key, secret string, turtleData *model.TurtleData, setting
 		turtleData.BreakShort = false
 		turtleTriggerDelta := api.GetTurtleTriggerDelta(setting.Market)
 		if priceShort >= tick.Bids[0].Price {
-			turtleData.OrderShort = api.MustPlaceOrder(key, secret, orderSide, model.OrderTypeLimit, setting.Market, setting.Symbol,
+			turtleData.OrderShort = api.MustPlaceOrder(account, orderSide, model.OrderTypeLimit, setting.Market, setting.Symbol,
 				``, setting.Function, priceShort*(1-turtleTriggerDelta), priceShort, amount, true)
 			for _, order := range turtleData.OrderShort {
 				turtleData.OrderAdjust[order.OrderId] = order
 			}
 			turtleData.BreakShort = true
 		} else {
-			turtleData.OrderShort = api.MustPlaceOrder(key, secret, orderSide, typeShort, setting.Market, setting.Symbol,
+			turtleData.OrderShort = api.MustPlaceOrder(account, orderSide, typeShort, setting.Market, setting.Symbol,
 				``, setting.Function, priceShort*(1-turtleTriggerDelta), priceShort, amount, true)
 		}
 		if turtleData.OrderShort != nil {
