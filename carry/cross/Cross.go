@@ -841,7 +841,7 @@ var ProcessCross = func(setting *model.Setting, tick *model.BidAsk) {
 	}
 	ts1 := time.Now().UnixMilli()
 	if tick == nil || tick.Asks == nil || tick.Bids == nil || setting == nil || setting.Valid == false || model.AppEnvironment.CrossEqualing ||
-		(model.AppConfig.Env != `test` && model.AppConfig.Handle != `1`) || settings == nil || len(settings) == 0 {
+		(model.AppConfig.Env != `test` && model.AppConfig.Handle != `1`) || settings == nil || len(settings) == 0 || time.Now().Minute() == 0 {
 		return
 	}
 	// 同一个coin cross之间互斥
