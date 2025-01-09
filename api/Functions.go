@@ -827,16 +827,17 @@ func PlaceOrder(account *model.Account, orderSide, orderType, market, symbol, or
 	if model.AppConfig.Env == `test` {
 		return
 	}
+	if market == model.BitgetPerp || market == model.BitgetSpot {
+		isWs = false
+	}
 	if isWs {
 		model.AppEnvironment.ReqIdOrders.Store(order.ClientOrdId, order)
 		util.Log(util.LogLevelInfo, fmt.Sprintf(`store order %s %s %s %s %s %#v`, market, coin, symbol, orderSide, order.ClientOrdId, order))
 	}
 	switch market {
 	case model.BitgetPerp:
-		isWs = false
 		placeOrderBitgetPerp(account, isWs, order, orderSide, orderType, orderParam, symbol, price, amount)
 	case model.BitgetSpot:
-		isWs = false
 		placeOrderBitgetSpot(account, isWs, order, orderSide, orderType, symbol, price, amount)
 	case model.Gate:
 		placeOrderGate(account, isWs, order, orderSide, orderType, orderParam, symbol, price, amount)
