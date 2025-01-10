@@ -322,10 +322,12 @@ func WsPublicClient(market, url string, subscribes []interface{}, subHandler Sub
 			return nil, nil, err
 		}
 		stopChan := make(chan struct{}, 2)
-		go publicHandler(market, stopChan, connection, msgHandler)
-		if subHandler != nil {
-			_ = subHandler(market, connection, stepSubscribes)
-		}
+		go func() {
+			if subHandler != nil {
+				_ = subHandler(market, connection, stepSubscribes)
+			}
+			publicHandler(market, stopChan, connection, msgHandler)
+		}()
 		msgChans = append(msgChans, stopChan)
 		socketMap[connection] = true
 		time.Sleep(time.Millisecond * 100)
