@@ -235,6 +235,7 @@ func calcAmount(index int, coin string, carryStatus, carryStatusRelate *model.Ca
 			bidAmount = tick.Asks[0].Amount
 		}
 	}
+	generateMonitorMsg(index, coin, score, scoreRelate, carryStatus, carryStatusRelate, marketInfo, marketInfoRelate, fundingRate, fundingRateRelate, valid)
 	if statusBuy == nil {
 		return false, nil, nil, 0, 0, 0, nil, nil
 	}
@@ -242,7 +243,6 @@ func calcAmount(index int, coin string, carryStatus, carryStatusRelate *model.Ca
 		breakMarkPrice(statusSell.Account, statusSell.Setting, priceSell, model.OrderSideSell) {
 		return false, nil, nil, 0, 0, 0, nil, nil
 	}
-	generateMonitorMsg(index, coin, score, scoreRelate, carryStatus, carryStatusRelate, marketInfo, marketInfoRelate, fundingRate, fundingRateRelate, valid)
 	amount = FormatCrossPair(statusBuy, statusSell, bidAmount, askAmount, amountLimit, priceBuy, priceSell)
 	if checkScoreLimit(carryStatus.Market, carryStatus.Symbol, carryStatusRelate.Market, carryStatusRelate.Symbol, score, scoreRelate) {
 		if carryStatus.Setting.Valid || carryStatusRelate.Setting.Valid {
