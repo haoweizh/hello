@@ -282,7 +282,6 @@ func initStatus(account *model.Account, setting *model.Setting) (status *model.C
 	}
 	status.LimitBuy = math.Min(status.LimitBuy, status.AvailableBuy)
 	status.LimitSell = math.Min(status.LimitSell, status.AvailableSell)
-	util.Log(util.LogLevelInfo, fmt.Sprintf(`init status set %s %s %s`, account.Key, setting.Market, setting.Symbol))
 	initTradeLine(account, setting, status, doRevert)
 	util.StoreSyncMap(carryStatusMap, status, setting.Coin, setting.Market, setting.Symbol, account.Key)
 	return
@@ -863,18 +862,18 @@ var ProcessCross = func(setting *model.Setting, tick *model.BidAsk) {
 			if status == nil || statusRelate == nil || status == statusRelate || carryCoin == nil || !getStatus || !getRelate || !getCoin {
 				continue
 			}
-			delay, statusBuy, statusSell, amount, priceBuy, priceSell, tickBuy, tickSell :=
+			delay, statusBuy, statusSell, amount, priceBuy, priceSell :=
 				calcAmount(i, setting.Coin, status.(*model.CarryStatus), statusRelate.(*model.CarryStatus), carryCoin.(*model.CarryCoin), tick, tickRelate)
 			if delay {
 				return
 			}
 			if amount > 0 {
-				nowTs := time.Now().UnixMilli()
+				//nowTs := time.Now().UnixMilli()
 				placeCross(carryCoin.(*model.CarryCoin), statusBuy, statusSell, priceBuy, priceSell, amount)
-				util.Log(util.LogLevelInfo, fmt.Sprintf(`time mark %s amt %e status %s %s tick %s %e = %e %e %d <- status %s %s tick %s %e = %e %e %d`,
-					time.Now().String(), amount,
-					statusBuy.Symbol, statusBuy.Market, tickBuy.Asks[0].Market, tickBuy.Asks[0].Price, priceBuy, tickBuy.Asks[0].Amount, nowTs-int64(tickBuy.Ts),
-					statusSell.Symbol, statusSell.Market, tickSell.Bids[0].Market, tickSell.Bids[0].Price, priceSell, tickSell.Bids[0].Amount, nowTs-int64(tickSell.Ts)))
+				//util.Log(util.LogLevelInfo, fmt.Sprintf(`time mark %s amt %e status %s %s tick %s %e = %e %e %d <- status %s %s tick %s %e = %e %e %d`,
+				//	time.Now().String(), amount,
+				//	statusBuy.Symbol, statusBuy.Market, tickBuy.Asks[0].Market, tickBuy.Asks[0].Price, priceBuy, tickBuy.Asks[0].Amount, nowTs-int64(tickBuy.Ts),
+				//	statusSell.Symbol, statusSell.Market, tickSell.Bids[0].Market, tickSell.Bids[0].Price, priceSell, tickSell.Bids[0].Amount, nowTs-int64(tickSell.Ts)))
 				time.Sleep(time.Millisecond * 200)
 				return
 			}
@@ -1074,7 +1073,7 @@ func handleCross(account *model.Account, order *model.Order) {
 		}
 	} else {
 		if order.HaveId() {
-			util.Log(util.LogLevelInfo, fmt.Sprintf(`post handle done %#v`, order))
+			//util.Log(util.LogLevelInfo, fmt.Sprintf(`post handle done %#v`, order))
 			order.Status = model.CarryStatusSuccess
 		} else {
 			order.OrderId = fmt.Sprintf("%d%s%s", time.Now().UnixMilli(), order.Market, order.Symbol)

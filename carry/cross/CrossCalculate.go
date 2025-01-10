@@ -28,8 +28,6 @@ var ProcessCollateral = func(accountKey string, reduceOnly bool, collateral *mod
 	}
 	if (reduceOnly || cm.collateralsAvailable < MarginULowLimit && cm.collateralsAvailable/cm.accountValueInU < 0.05) && cm.reduceOnly == false {
 		cm.reduceOnly = true
-		util.Log(util.LogLevelInfo, fmt.Sprintf(`set contract market reduce only %s %s %f %f`,
-			cm.market, accountKey, cm.collateralsAvailable, cm.accountValueInU))
 		num := 0
 		carryStatusMap.Range(func(k, v interface{}) bool {
 			if v == nil {
@@ -45,8 +43,6 @@ var ProcessCollateral = func(accountKey string, reduceOnly bool, collateral *mod
 					status.TradeLineBuy = 1
 				}
 				num++
-				util.Log(util.LogLevelInfo, fmt.Sprintf(`set contract market reduce only %s %s %s holding %f lines %f %f %d`,
-					cm.market, status.Symbol, accountKey, status.Holding, status.TradeLineBuy, status.TradeLineSell, num))
 			}
 			return true
 		})
@@ -188,17 +184,17 @@ func checkTradeLine(statusBuy, statusSell *model.CarryStatus, carryCoin *model.C
 // calcAmount
 // 返回amount是经过gridAmount乘数计算之后的数量，用以针对1000PEPE与PEPE这类币种的对冲交易.priceX与gridAmount相对应
 func calcAmount(index int, coin string, carryStatus, carryStatusRelate *model.CarryStatus, carryCoin *model.CarryCoin, tick, tickRelate *model.BidAsk) (
-	delay bool, statusBuy, statusSell *model.CarryStatus, amount, priceBuy, priceSell float64, tickBuy, tickSell *model.BidAsk) {
+	delay bool, statusBuy, statusSell *model.CarryStatus, amount, priceBuy, priceSell float64) {
 	var bidAmount, askAmount float64
 	marketInfo := model.GetMarketInfo(carryStatus.Market, carryStatus.Symbol)
 	marketInfoRelate := model.GetMarketInfo(carryStatusRelate.Market, carryStatusRelate.Symbol)
 	if marketInfo == nil || marketInfoRelate == nil {
-		return false, nil, nil, 0, 0, 0, nil, nil
+		return false, nil, nil, 0, 0, 0
 	}
 	gotFr, useRest, fundingRate, handledRate := handledFRate(carryStatus.Account, carryStatus.Market, carryStatus.Symbol, marketInfo.FundingRateInterval)
 	gotFrRelate, useRestRelate, fundingRateRelate, handledRateRelate := handledFRate(carryStatusRelate.Account, carryStatusRelate.Market, carryStatusRelate.Symbol, marketInfoRelate.FundingRateInterval)
 	if !gotFr || !gotFrRelate || useRest || useRestRelate {
-		return useRest || useRestRelate, nil, nil, 0, 0, 0, nil, nil
+		return useRest || useRestRelate, nil, nil, 0, 0, 0
 	}
 	priceAskRelate := tickRelate.Asks[0].Price * (1 + handledRateRelate)
 	priceBidRelate := tickRelate.Bids[0].Price * (1 + handledRateRelate)
@@ -216,8 +212,6 @@ func calcAmount(index int, coin string, carryStatus, carryStatusRelate *model.Ca
 	if valid {
 		statusSell = carryStatus
 		statusBuy = carryStatusRelate
-		tickSell = tick
-		tickBuy = tickRelate
 		priceSell = tick.Bids[0].Price
 		priceBuy = tickRelate.Asks[0].Price
 		askAmount = tick.Bids[0].Amount
@@ -227,8 +221,6 @@ func calcAmount(index int, coin string, carryStatus, carryStatusRelate *model.Ca
 		if valid {
 			statusSell = carryStatusRelate
 			statusBuy = carryStatus
-			tickSell = tickRelate
-			tickBuy = tick
 			priceSell = tickRelate.Bids[0].Price
 			priceBuy = tick.Asks[0].Price
 			askAmount = tickRelate.Bids[0].Amount
@@ -237,11 +229,11 @@ func calcAmount(index int, coin string, carryStatus, carryStatusRelate *model.Ca
 	}
 	generateMonitorMsg(index, coin, score, scoreRelate, carryStatus, carryStatusRelate, marketInfo, marketInfoRelate, fundingRate, fundingRateRelate, valid)
 	if statusBuy == nil {
-		return false, nil, nil, 0, 0, 0, nil, nil
+		return false, nil, nil, 0, 0, 0
 	}
 	if breakMarkPrice(statusBuy.Account, statusBuy.Setting, priceBuy, model.OrderSideBuy) ||
 		breakMarkPrice(statusSell.Account, statusSell.Setting, priceSell, model.OrderSideSell) {
-		return false, nil, nil, 0, 0, 0, nil, nil
+		return false, nil, nil, 0, 0, 0
 	}
 	amount = FormatCrossPair(statusBuy, statusSell, bidAmount, askAmount, amountLimit, priceBuy, priceSell)
 	if checkScoreLimit(carryStatus.Market, carryStatus.Symbol, carryStatusRelate.Market, carryStatusRelate.Symbol, score, scoreRelate) {
@@ -255,9 +247,9 @@ func calcAmount(index int, coin string, carryStatus, carryStatusRelate *model.Ca
 			carryStatusRelate.Setting.MarketRelated = fmt.Sprintf(`价差过大 %s %s %d‰ %d‰ %s`,
 				carryStatus.Market, carryStatus.Symbol, int(1000*scoreRelate), int(1000*score), time.Now().Format("2006-01-02 15:04:05"))
 		}
-		return false, nil, nil, 0, 0, 0, nil, nil
+		return false, nil, nil, 0, 0, 0
 	}
-	return false, statusBuy, statusSell, amount, priceBuy, priceSell, tickBuy, tickSell
+	return false, statusBuy, statusSell, amount, priceBuy, priceSell
 }
 
 func checkScoreLimit(market, symbol, marketRelate, symbolRelate string, score, scoreRelate float64) (invalid bool) {
