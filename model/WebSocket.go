@@ -245,10 +245,10 @@ func publicHandler(market string, stopChan chan struct{}, connection *WSConn, ms
 				if msgSize > 0 {
 					if needReconnection(buf[:msgSize]) {
 						util.Log(util.LogLevelInfo, fmt.Sprintf(`chan need reconnect market %s %s`, market, buf[:msgSize]))
-						err := connection.MarketPublisher.PublishMarket(string(connection.MarketSubscriber))
-						if err != nil {
-							util.Log(util.LogLevelInfo, fmt.Sprintf(`%s can not publish market %s`, market, err.Error()))
-						}
+						//err := connection.MarketPublisher.PublishMarket(string(connection.MarketSubscriber))
+						//if err != nil {
+						//	util.Log(util.LogLevelInfo, fmt.Sprintf(`%s can not publish market %s`, market, err.Error()))
+						//}
 					} else if msgHandler != nil {
 						msgHandler(market, connection, buf[:msgSize])
 					}
