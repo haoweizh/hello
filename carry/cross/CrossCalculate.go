@@ -17,17 +17,19 @@ var stepScores = []float64{0, 0.001, 0.0021, 0.0033, 0.0046, 0.006, 0.0075, 0.00
 const swapScore = 0.0015 // 换仓要求的利润金额
 const crossGrid = `grid`
 
-var ProcessCollateral = func(collateral *model.Collateral) {
-	value, _ := contractMarkets.Load(collateral.AccountKey)
+var ProcessCollateral = func(accountKey string, reduceOnly bool, collateral *model.Collateral) {
+	value, _ := contractMarkets.Load(accountKey)
 	if value == nil {
 		return
 	}
 	cm := value.(*contractMarket)
-	cm.collateralsAvailable = collateral.Available
-	if cm.collateralsAvailable < MarginULowLimit && cm.collateralsAvailable/cm.accountValueInU < 0.05 && cm.reduceOnly == false {
+	if collateral != nil {
+		cm.collateralsAvailable = collateral.Available
+	}
+	if (reduceOnly || cm.collateralsAvailable < MarginULowLimit && cm.collateralsAvailable/cm.accountValueInU < 0.05) && cm.reduceOnly == false {
 		cm.reduceOnly = true
 		util.Log(util.LogLevelInfo, fmt.Sprintf(`set contract market reduce only %s %s %f %f`,
-			cm.market, collateral.AccountKey, cm.collateralsAvailable, cm.accountValueInU))
+			cm.market, accountKey, cm.collateralsAvailable, cm.accountValueInU))
 		num := 0
 		carryStatusMap.Range(func(k, v interface{}) bool {
 			if v == nil {
@@ -35,7 +37,7 @@ var ProcessCollateral = func(collateral *model.Collateral) {
 			}
 			key := k.(string)
 			status := v.(*model.CarryStatus)
-			if strings.Contains(key, fmt.Sprintf("*%s*", cm.market)) && strings.Contains(key, collateral.AccountKey) {
+			if strings.Contains(key, fmt.Sprintf("*%s*", cm.market)) && strings.Contains(key, accountKey) {
 				if status.Holding >= 0 {
 					status.TradeLineBuy = 1
 				}
@@ -44,7 +46,7 @@ var ProcessCollateral = func(collateral *model.Collateral) {
 				}
 				num++
 				util.Log(util.LogLevelInfo, fmt.Sprintf(`set contract market reduce only %s %s %s holding %f lines %f %f %d`,
-					cm.market, status.Symbol, collateral.AccountKey, status.Holding, status.TradeLineBuy, status.TradeLineSell, num))
+					cm.market, status.Symbol, accountKey, status.Holding, status.TradeLineBuy, status.TradeLineSell, num))
 			}
 			return true
 		})

@@ -398,41 +398,6 @@ var ClearCross = func() {
 	contractMarkets.Clear()
 	coinCrossing.Clear()
 	model.AppEnvironment.ReqIdOrders.Clear()
-	for {
-		leftOrders := 0
-		model.AppEnvironment.OrderIdOrders.Range(func(k, v interface{}) bool {
-			if time.Now().Unix()-v.(*model.Order).OrderTime.Unix() < 60 {
-				leftOrders++
-			}
-			util.Log(util.LogLevelInfo, fmt.Sprintf(`left orders in order id orders %d key %v %#v`, leftOrders, k, v))
-			return true
-		})
-		if leftOrders == 0 {
-			break
-		}
-		time.Sleep(time.Second * 3)
-	}
-	today := util.GetNow()
-	today = time.Date(today.Year(), today.Month(), today.Day(), 0, 0, 0, 0, today.Location())
-	carryRows, _ := model.AppDB.Model(model.Order{}).Select(`sum(price*abs(amount)),refresh_type`).
-		Where(`order_time>?`, today).Group(`refresh_type`).Rows()
-	var compInU, crossInU float64
-	for carryRows.Next() {
-		var amountInU float64
-		var refreshType string
-		_ = carryRows.Scan(&amountInU, &refreshType)
-		if refreshType == model.FunctionComplement {
-			compInU = amountInU
-		} else if refreshType == model.FunctionCross {
-			crossInU = amountInU
-		}
-	}
-	err := carryRows.Close()
-	if err != nil {
-		util.Log(util.LogLevelError, `fail to close db conn`+err.Error())
-	}
-	msg := fmt.Sprintf(`comp compare cross %f %f`, compInU, crossInU)
-	util.Log(util.LogLevelInfo, msg)
 	if model.AppConfig.Handle == `1` {
 		equalAccounts(doEqual, traceId)
 	}
@@ -444,8 +409,10 @@ func equalAccounts(doEqual bool, traceId int64) {
 	util.Log(util.LogLevelInfo, fmt.Sprintf(`enter clearing cross all %d`, traceId))
 	waitEqual := make(map[int]bool)
 	equalChannel := make(chan int, 1)
-	api.InitCrossMarketInfos(model.AppEnvironment.Markets)
-	api.PrepareSettings()
+	if doEqual {
+		api.InitCrossMarketInfos(model.AppEnvironment.Markets)
+		api.PrepareSettings()
+	}
 	//needWaitEqual := false // 是否需要进入等待环节
 	for i := 0; i < api.GetCrossLen(); i++ {
 		accounts := make(map[string]*model.Account)

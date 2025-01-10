@@ -94,14 +94,12 @@ var wsOrderConnHandlerBitget = func(market, key string, event []byte) {
 			collateral := &model.Collateral{AccountKey: key}
 			collateral.Available, _ = strconv.ParseFloat(dataArray[0].(map[string]interface{})[`maxTransferOut`].(string), 64)
 			//util.Log(util.LogLevelInfo, fmt.Sprintf("bitget unified %s %f", collateral.AccountKey, collateral.Available))
-			model.CollateralHandler(collateral)
+			model.CollateralHandler(key, false, collateral)
 		} else if resJson.GetPath(`arg`, `channel`).MustString() == `positions` {
 			dataArray := resJson.Get(`data`).MustArray()
 			//util.Log(util.LogLevelInfo, fmt.Sprintf("bitget positions num %d", len(dataArray)))
 			if dataArray != nil && len(dataArray) >= model.BitgetPosLimit {
-				collateral := &model.Collateral{AccountKey: key}
-				collateral.Available = 0
-				model.CollateralHandler(collateral)
+				model.CollateralHandler(key, true, nil)
 			}
 		}
 	}
@@ -313,29 +311,37 @@ func placeOrderBitgetSpot(account *model.Account, isWs bool, order *model.Order,
 		util.Log(util.LogLevelError, "fail to place spot order, GetFromStandard: "+symbol)
 		return
 	}
-	client := dtos.BitgetRestClient{BaseUrl: bitgetRestUrl, Passphrase: model.AppConfig.Phase, ApiKey: account.Key, ApiSecretKey: account.Secret}
-	params := map[string]interface{}{
-		"symbol":    dialectSymbol,
-		"force":     "gtc",
-		"size":      amountStr,
-		"price":     priceStr,
-		"side":      orderSide,
-		"orderType": ordType,
-		"clientOid": order.ClientOrdId}
-	httpResp, httpErr := client.DoPost("/api/v2/spot/trade/place-order", string(util.JsonEncodeToByte(params)))
-	bitgetOrderResp := &dtos.BitgetOrderResp{}
-	jsonErr := json.Unmarshal(httpResp, bitgetOrderResp)
-	if bitgetOrderResp == nil {
-		util.Log(util.LogLevelError, fmt.Sprintf(
-			"fail to create bitget spot order no resp: %s httpErr: %#v, jsonErr: %#v", httpResp, httpErr, jsonErr))
-	} else if len(strings.Trim(bitgetOrderResp.Code, `0`)) == 0 {
-		order.Status = model.CarryStatusWorking
-		order.OrderId = bitgetOrderResp.Data.OrderId
+	if isWs {
+		//msg := fmt.Sprintf(`{"op":"trade","args":[{"id":"%s","instType":"SPOT","instId":"%s","channel":"place-order","params":{
+		//	"orderType":"%s","side":"%s","size":"%s","price":"%s","force":"gtc","clientOid":"%s"}}]}`,
+		//	order.ClientOrdId, dialectSymbol, orderType, orderSide, amountStr, priceStr, order.ClientOrdId)
 	} else {
-		order.Status = model.CarryStatusFail
-		order.ErrCode = bitgetOrderResp.Code
-		util.Log(util.LogLevelError, fmt.Sprintf(
-			"fail to create bitget spot order resp: %s httpErr: %#v, jsonErr: %#v", httpResp, httpErr, jsonErr))
+		client := dtos.BitgetRestClient{BaseUrl: bitgetRestUrl, Passphrase: model.AppConfig.Phase, ApiKey: account.Key, ApiSecretKey: account.Secret}
+		params := map[string]interface{}{
+			"symbol":    dialectSymbol,
+			"force":     "gtc",
+			"size":      amountStr,
+			"price":     priceStr,
+			"side":      orderSide,
+			"orderType": ordType,
+			"clientOid": order.ClientOrdId}
+		strParams := string(util.JsonEncodeToByte(params))
+		util.Log(util.LogLevelInfo, fmt.Sprintf(`place bitgetpspot %s`, strParams))
+		httpResp, httpErr := client.DoPost("/api/v2/spot/trade/place-order", strParams)
+		bitgetOrderResp := &dtos.BitgetOrderResp{}
+		jsonErr := json.Unmarshal(httpResp, bitgetOrderResp)
+		if bitgetOrderResp == nil {
+			util.Log(util.LogLevelError, fmt.Sprintf(
+				"fail to create bitget spot order no resp: %s httpErr: %#v, jsonErr: %#v", httpResp, httpErr, jsonErr))
+		} else if len(strings.Trim(bitgetOrderResp.Code, `0`)) == 0 {
+			order.Status = model.CarryStatusWorking
+			order.OrderId = bitgetOrderResp.Data.OrderId
+		} else {
+			order.Status = model.CarryStatusFail
+			order.ErrCode = bitgetOrderResp.Code
+			util.Log(util.LogLevelError, fmt.Sprintf(
+				"fail to create bitget spot order resp: %s httpErr: %#v, jsonErr: %#v", httpResp, httpErr, jsonErr))
+		}
 	}
 }
 
