@@ -65,7 +65,9 @@ var wsOrderConnHandlerBitget = func(market, key string, event []byte) {
 	} else if market == model.BitgetPerp {
 		instType = `USDT-FUTURES`
 	}
-	if resJson.Get(`event`).MustString() == `login` && resJson.Get(`code`).MustInt() == 0 {
+	respEvent := resJson.Get(`event`).MustString()
+	code := resJson.Get(`code`).MustInt()
+	if respEvent == `login` && code == 0 {
 		subStr := fmt.Sprintf(`{"op":"subscribe","args":[{"instType": "%s","channel":"orders","instId":"default"}]}`, instType)
 		//登录成功后新增账户订阅
 		if market == model.BitgetPerp {
@@ -75,6 +77,7 @@ var wsOrderConnHandlerBitget = func(market, key string, event []byte) {
 		if err != nil {
 			util.DelSyncMap(&model.AppEnvironment.ConnOrder, market, key)
 		}
+	} else if respEvent == `trade` && code == 0 {
 	}
 	//判断事件是snapshot
 	if resJson.Get(`action`).MustString() == `snapshot` {
@@ -312,9 +315,21 @@ func placeOrderBitgetSpot(account *model.Account, isWs bool, order *model.Order,
 		return
 	}
 	if isWs {
-		//msg := fmt.Sprintf(`{"op":"trade","args":[{"id":"%s","instType":"SPOT","instId":"%s","channel":"place-order","params":{
-		//	"orderType":"%s","side":"%s","size":"%s","price":"%s","force":"gtc","clientOid":"%s"}}]}`,
-		//	order.ClientOrdId, dialectSymbol, orderType, orderSide, amountStr, priceStr, order.ClientOrdId)
+		msg := fmt.Sprintf(`{"op":"trade","args":[{"id":"%s","instType":"SPOT","instId":"%s","channel":"place-order","params":{
+			"orderType":"%s","side":"%s","size":"%s","price":"%s","force":"gtc","clientOid":"%s"}}]}`,
+			order.ClientOrdId, dialectSymbol, orderType, orderSide, amountStr, priceStr, order.ClientOrdId)
+		value, _ := util.LoadSyncMap(&model.AppEnvironment.ConnOrder, model.BitgetSpot, account.Key)
+		if value == nil {
+			order.Status = model.CarryStatusFail
+		} else {
+			if err := value.(*model.WSConn).WriteMsg([]byte(msg)); err != nil {
+				order.Status = model.CarryStatusFail
+				util.Log(util.LogLevelError, fmt.Sprintf(`fail to place bitgetSpot order return: %s`, err.Error()))
+			}
+		}
+		if order.Status == model.CarryStatusFail {
+			HandleWsOrderConnFail(account, model.BitgetSpot, order)
+		}
 	} else {
 		client := dtos.BitgetRestClient{BaseUrl: bitgetRestUrl, Passphrase: model.AppConfig.Phase, ApiKey: account.Key, ApiSecretKey: account.Secret}
 		params := map[string]interface{}{
@@ -326,13 +341,13 @@ func placeOrderBitgetSpot(account *model.Account, isWs bool, order *model.Order,
 			"orderType": ordType,
 			"clientOid": order.ClientOrdId}
 		strParams := string(util.JsonEncodeToByte(params))
-		util.Log(util.LogLevelInfo, fmt.Sprintf(`place bitgetpspot %s`, strParams))
+		util.Log(util.LogLevelInfo, fmt.Sprintf(`place bitgetSpot %s`, strParams))
 		httpResp, httpErr := client.DoPost("/api/v2/spot/trade/place-order", strParams)
 		bitgetOrderResp := &dtos.BitgetOrderResp{}
 		jsonErr := json.Unmarshal(httpResp, bitgetOrderResp)
 		if bitgetOrderResp == nil {
 			util.Log(util.LogLevelError, fmt.Sprintf(
-				"fail to create bitget spot order no resp: %s httpErr: %#v, jsonErr: %#v", httpResp, httpErr, jsonErr))
+				"fail to create bitget spot order %s resp: %s httpErr: %#v, jsonErr: %#v", strParams, httpResp, httpErr, jsonErr))
 		} else if len(strings.Trim(bitgetOrderResp.Code, `0`)) == 0 {
 			order.Status = model.CarryStatusWorking
 			order.OrderId = bitgetOrderResp.Data.OrderId

@@ -302,36 +302,55 @@ func placeOrderBitgetPerp(account *model.Account, isWs bool, order *model.Order,
 	} else if orderType == model.OrderTypeLimit {
 		ordType = `limit`
 	}
-	client := dtos.BitgetRestClient{BaseUrl: bitgetRestUrl, Passphrase: model.AppConfig.Phase, ApiKey: account.Key, ApiSecretKey: account.Secret}
-	params := map[string]interface{}{
-		"symbol":      dialectSymbol,
-		"marginCoin":  "USDT",
-		`productType`: `USDT-FUTURES`,
-		`marginMode`:  `crossed`,
-		"size":        amountStr,
-		"price":       priceStr,
-		"clientOid":   order.ClientOrdId,
-		"side":        orderSide,
-		"orderType":   ordType,
-		"reduceOnly":  reduceOnlyStr}
-	httpResp, httpErr := client.DoPost("/api/v2/mix/order/place-order", string(util.JsonEncodeToByte(params)))
-	bitgetOrderResp := &dtos.BitgetOrderResp{}
-	jsonErr := json.Unmarshal(httpResp, bitgetOrderResp)
-	util.Log(util.LogLevelInfo, fmt.Sprintf(`place bitgetperp %#v`, params))
-	if bitgetOrderResp == nil {
-		util.Log(util.LogLevelError, fmt.Sprintf("fail to create bitget perp order no resp: %s httpErr: %#v, jsonErr: %#v",
-			httpResp, httpErr, jsonErr))
-	} else {
-		if len(strings.Trim(bitgetOrderResp.Code, `0`)) == 0 {
-			order.Status = model.CarryStatusWorking
-			order.OrderId = bitgetOrderResp.Data.OrderId
-		} else {
-			order.ErrCode = bitgetOrderResp.Code
+	if isWs {
+		msg := fmt.Sprintf(`{"args":[{"channel":"place-order","id":"%s","instId":"%s","instType":"USDT-FUTURES","params":{
+			"orderType":"%s","side":"%s","size":"%s","price":"%s","marginCoin":"USDT","force":"gtc","marginMode":"crossed","clientOid":"%s"}}],"op":"trade"}`,
+			order.ClientOrdId, dialectSymbol, orderType, orderSide, amountStr, priceStr, order.ClientOrdId)
+		value, _ := util.LoadSyncMap(&model.AppEnvironment.ConnOrder, model.BitgetPerp, account.Key)
+		if value == nil {
 			order.Status = model.CarryStatusFail
+		} else {
+			if err := value.(*model.WSConn).WriteMsg([]byte(msg)); err != nil {
+				order.Status = model.CarryStatusFail
+				util.Log(util.LogLevelError, fmt.Sprintf(`fail to place bitgetPerp order return: %s`, err.Error()))
+			}
 		}
-		util.Log(util.LogLevelInfo, fmt.Sprintf("create bitget perp order resp: %s httpErr: %#v, jsonErr: %#v",
-			httpResp, httpErr, jsonErr))
+		if order.Status == model.CarryStatusFail {
+			HandleWsOrderConnFail(account, model.BitgetPerp, order)
+		}
+	} else {
+		client := dtos.BitgetRestClient{BaseUrl: bitgetRestUrl, Passphrase: model.AppConfig.Phase, ApiKey: account.Key, ApiSecretKey: account.Secret}
+		params := map[string]interface{}{
+			"symbol":      dialectSymbol,
+			"marginCoin":  "USDT",
+			`productType`: `USDT-FUTURES`,
+			`marginMode`:  `crossed`,
+			"size":        amountStr,
+			"price":       priceStr,
+			"clientOid":   order.ClientOrdId,
+			"side":        orderSide,
+			"orderType":   ordType,
+			"reduceOnly":  reduceOnlyStr}
+		httpResp, httpErr := client.DoPost("/api/v2/mix/order/place-order", string(util.JsonEncodeToByte(params)))
+		bitgetOrderResp := &dtos.BitgetOrderResp{}
+		jsonErr := json.Unmarshal(httpResp, bitgetOrderResp)
+		util.Log(util.LogLevelInfo, fmt.Sprintf(`place bitgetperp %#v`, params))
+		if bitgetOrderResp == nil {
+			util.Log(util.LogLevelError, fmt.Sprintf("fail to create bitget perp order no resp: %s httpErr: %#v, jsonErr: %#v",
+				httpResp, httpErr, jsonErr))
+		} else {
+			if len(strings.Trim(bitgetOrderResp.Code, `0`)) == 0 {
+				order.Status = model.CarryStatusWorking
+				order.OrderId = bitgetOrderResp.Data.OrderId
+			} else {
+				order.ErrCode = bitgetOrderResp.Code
+				order.Status = model.CarryStatusFail
+			}
+			util.Log(util.LogLevelInfo, fmt.Sprintf("create bitget perp order resp: %s httpErr: %#v, jsonErr: %#v",
+				httpResp, httpErr, jsonErr))
+		}
 	}
+
 }
 
 func cancelOrderBitgetPerp(key, secret, symbol, orderId string) (result bool) {

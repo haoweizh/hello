@@ -541,39 +541,16 @@ func Test_download(t *testing.T) {
 }
 
 func Test_Order(t *testing.T) {
-	market := model.BinanceSpot
+	market := model.BitgetSpot
 	model.NewConfig()
-	//api.InitMarketInfos(market)
-	symbol := `GMT_PERP`
+	model.AppDB, _ = gorm.Open(postgres.Open(model.AppConfig.DBConnection), &gorm.Config{})
+	symbol := `GEMS_USDT`
 	account := model.GetAccounts(0)[market]
-	//api.SetSymbolLeverage(account, market, symbol)
-	//if time.Now().Year() > 2003 {
-	//	return
-	//}
-	//api.GetBalances(account.Key, account.Secret, market)
 	api.InitMarketInfos(market)
-	order1 := api.PlaceOrder(account, model.OrderSideSell, model.OrderTypeLimit, market, symbol, ``, `test`, 7.3213375, 7.3213375, 2, false, nil)
-	fmt.Println(fmt.Sprintf(`%#v`, order1))
-	//api.GetPositions(account.Key, account.Secret, market)
-	//fmt.Println(order.OrderId)
-	//api.CancelOrder(account.Key, account.Secret, market, symbol, ``, order.OrderId)
-	//api.QueryOrderById(account.Key, account.Secret, market, symbol, ``, `1249310068756389901`)
-	//api.CancelOrder(account.Key, account.Secret, market, symbol, model.OrderTypeLimit, orders[0].OrderId)
-	//_, listKey := api.RenewListenKeyBinance(account, market)
-	//api.ExtendListenKeyBinance(account, market, listKey)
-	//go model.AppEnvironment.HandleWSResp()
-	//api.MaintainConns(market)
-	//fmt.Println(order.Status)
-	//api.CancelOrder(account.Key, account.Secret, market, symbol, model.OrderTypeLimit, order.OrderId)
-	//markets := []string{model.BinancePerp}
-	//for _, mk := range markets {
-	//go carry.ManageConnTicks(mk)
 	go api.MaintainConns(market)
-	//}
 	time.Sleep(5 * time.Second)
-	order := api.PlaceOrder(account, model.OrderSideSell, model.OrderTypeLimit, market, symbol, ``,
-		`test`, 122, 122, 0.2, true, nil)
-	fmt.Println(fmt.Sprintf("%+v", order))
+	order1 := api.PlaceOrder(account, model.OrderSideBuy, model.OrderTypeLimit, market, symbol, ``, `test`, 0.110229699, 0.110229699, 55, true, nil)
+	fmt.Println(fmt.Sprintf(`%#v`, order1))
 	//go func() {
 	//	for {
 	//		for _, mk := range markets {
@@ -582,7 +559,10 @@ func Test_Order(t *testing.T) {
 	//		time.Sleep(2 * time.Minute)
 	//	}
 	//}()
-	select {}
+	select {
+	case <-time.After(time.Second * 33):
+
+	}
 }
 
 func Test_WSOKPair(t *testing.T) {
