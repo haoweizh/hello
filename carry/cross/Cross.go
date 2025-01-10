@@ -1252,7 +1252,7 @@ func compOrder(account *model.Account, order *model.Order, leftAmt float64) {
 
 // FormatCrossPair 不支持以BTC或ETH计价的交易对，只支持USD类
 // amountLimit=0表示无限制
-func FormatCrossPair(statusBuy, statusSell *model.CarryStatus, bidAmount, askAmount, amountLimit, price float64) (formattedAmount float64) {
+func FormatCrossPair(statusBuy, statusSell *model.CarryStatus, bidAmount, askAmount, amountLimit, priceBuy, priceSell float64) (formattedAmount float64) {
 	v, _ := util.LoadSyncMap(model.MarketInfos, statusBuy.Setting.Market, statusBuy.Setting.Symbol)
 	var marketInfoBuy, marketInfoSell *model.MarketInfo
 	if v != nil {
@@ -1269,30 +1269,30 @@ func FormatCrossPair(statusBuy, statusSell *model.CarryStatus, bidAmount, askAmo
 	}
 	formattedAmount = math.Min(math.Min(statusBuy.LimitBuy, bidAmount)*statusBuy.Setting.GridAmount,
 		math.Min(statusSell.LimitSell, askAmount)*statusSell.Setting.GridAmount)
-	formattedAmount = math.Min(formattedAmount, statusSell.Setting.GridAmount*openValueLimit/price)
+	formattedAmount = math.Min(formattedAmount, statusBuy.Setting.GridAmount*openValueLimit/priceBuy)
 	if amountLimit > 0 {
 		formattedAmount = math.Min(formattedAmount, amountLimit)
 	}
-	minBuy := marketInfoBuy.SizeMin
-	minSell := marketInfoSell.SizeMin
+	minBuy := marketInfoBuy.SizeMin * statusBuy.Setting.GridAmount
+	minSell := marketInfoSell.SizeMin * statusSell.Setting.GridAmount
 	if statusBuy.Setting.Market == model.Bybit {
-		minBuy = math.Max(5.5/price, minBuy)
+		minBuy = math.Max(5.5/priceBuy*statusBuy.Setting.GridAmount, minBuy)
 	}
 	if statusSell.Setting.Market == model.Bybit {
-		minSell = math.Max(5.5/price, minSell)
+		minSell = math.Max(5.5/priceSell*statusSell.Setting.GridAmount, minSell)
 	}
 	if marketInfoBuy.MoneyMin > 0 {
-		minBuy = math.Max(minBuy, marketInfoBuy.MoneyMin/price)
+		minBuy = math.Max(minBuy, marketInfoBuy.MoneyMin/priceBuy*statusBuy.Setting.GridAmount)
 	}
 	if marketInfoSell.MoneyMin > 0 {
-		minSell = math.Max(minSell, marketInfoSell.MoneyMin/price)
+		minSell = math.Max(minSell, marketInfoSell.MoneyMin/priceSell*statusSell.Setting.GridAmount)
 	}
-	//amountBuy := model.GetAmountInMarket(marketBuy, symbolBuy, amount, price, false)
+	//amountBuy := model.GetAmountInMarket(marketBuy, symbolBuy, amount, priceBuy, false)
 	//_, amountBuy = model.ParseRealAmount(marketBuy, symbolBuy, amountBuy)
-	//amountSell := model.GetAmountInMarket(marketSell, symbolSell, amount, price, false)
+	//amountSell := model.GetAmountInMarket(marketSell, symbolSell, amount, priceBuy, false)
 	//_, amountSell = model.ParseRealAmount(marketSell, symbolSell, amountSell)
 	//formattedAmount = math.Min(amountBuy, amountSell)
-	if formattedAmount < math.Max(minBuy*statusBuy.Setting.GridAmount, minSell*statusSell.Setting.GridAmount) {
+	if formattedAmount < math.Max(minBuy, minSell) {
 		return 0
 	}
 	return formattedAmount
