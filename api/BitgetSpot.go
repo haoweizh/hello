@@ -73,8 +73,7 @@ var wsOrderConnHandlerBitget = func(market, key string, event []byte) {
 		if market == model.BitgetPerp {
 			subStr = fmt.Sprintf(`{"op":"subscribe","args":[{"instType": "%s","channel":"orders","instId":"default"},{"instType":"%s","channel":"account","coin":"default"},{"instType":"%s","channel":"positions","instId":"default"}]}`, instType, instType, instType)
 		}
-		err := SendToConnection(market, value.(*model.WSConn), []byte(subStr))
-		if err != nil {
+		if err := value.(*model.WSConn).WriteMsg([]byte(subStr)); err != nil {
 			util.DelSyncMap(&model.AppEnvironment.ConnOrder, market, key)
 		}
 	} else if respEvent == `trade` && code == 0 {
@@ -263,7 +262,7 @@ var subscribeHandlerBitget = func(market string, connection *model.WSConn, subsc
 	subscribeMap["op"] = "subscribe"
 	subscribeMap["args"] = params
 	subscribeMessage := util.JsonEncodeToByte(subscribeMap)
-	if err = SendToConnection(market, connection, subscribeMessage); err != nil {
+	if err = connection.WriteMsg(subscribeMessage); err != nil {
 		util.Log(util.LogLevelInfo, fmt.Sprintf("%s can not subscribe %s %s", market, subscribeMessage, err.Error()))
 	}
 	return err

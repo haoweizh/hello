@@ -60,7 +60,7 @@ func maintainConnsOKEX(accounts []*model.Account) {
 			value, ConnOrderOk := util.LoadSyncMap(&model.AppEnvironment.ConnOrder, model.OKEX, account.Key)
 			if ConnOrderOk {
 				if value != nil {
-					if err := SendToConnection(model.OKEX, value.(*model.WSConn), []byte(`ping`)); err != nil {
+					if err := value.(*model.WSConn).WriteMsg([]byte(`ping`)); err != nil {
 						util.Log(util.LogLevelError, "-test ok ws-okex server ping client error "+err.Error())
 						success = false
 						value.(*model.WSConn).Close()
@@ -116,7 +116,7 @@ var subscribeHandlerOKEX = func(market string, connection *model.WSConn, subscri
 	}
 	subscribeMap[`args`] = subArray
 	subscribeMessage := util.JsonEncodeToByte(subscribeMap)
-	if err = SendToConnection(model.OKEX, connection, subscribeMessage); err != nil {
+	if err = connection.WriteMsg(subscribeMessage); err != nil {
 		util.Log(util.LogLevelError, "okex can not subscribe "+err.Error())
 		return err
 	}
@@ -283,7 +283,7 @@ func wsLogInOKEX(account *model.Account, conn *model.WSConn) (success bool) {
 		`apiKey`: account.Key, `passphrase`: model.AppConfig.OKPhase, `timestamp`: timestamp, `sign`: sign}}
 	loginMap[`args`] = loginArray
 	msg := util.JsonEncodeToByte(loginMap)
-	if err := SendToConnection(model.OKEX, conn, msg); err != nil {
+	if err := conn.WriteMsg(msg); err != nil {
 		util.Log(util.LogLevelError, fmt.Sprintf(
 			`fail to login okex ws: %s return %s`, account.Key, err.Error()))
 	} else {
@@ -601,7 +601,7 @@ func PlacePairOKEX(account *model.Account, requestId, symbolBuy, symbolSell, ord
 	}
 	util.Log(util.LogLevelInfo, fmt.Sprintf(`place pair %s`, msg))
 	if model.AppConfig.Env != `test` {
-		err := SendToConnection(model.OKEX, value.(*model.WSConn), msg)
+		err := value.(*model.WSConn).WriteMsg(msg)
 		if err != nil {
 			errMsg = fmt.Sprintf(`-test ok ws-fail to send order ws %s return %s`, account.Key, err.Error())
 			util.Log(util.LogLevelError, errMsg)
@@ -681,7 +681,7 @@ func placeOrderOKEX(account *model.Account, isWs bool, order *model.Order, order
 			util.Log(util.LogLevelError, fmt.Sprintf(`fail to get private connection when place okex order %s`, account.Key))
 			order.Status = model.CarryStatusFail
 		} else {
-			if err := SendToConnection(model.OKEX, value.(*model.WSConn), wsOrderMsg); err != nil {
+			if err := value.(*model.WSConn).WriteMsg(wsOrderMsg); err != nil {
 				util.Log(util.LogLevelError, fmt.Sprintf(`fail to send ws place okex order %s %s return %s`, account.Key, order.Symbol, err.Error()))
 				order.Status = model.CarryStatusFail
 			} else {

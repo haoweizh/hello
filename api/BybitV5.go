@@ -35,7 +35,7 @@ var wsOrdUdtHandlerBybit = func(market, key string, msg []byte) {
 	}
 	if responseJson.Get(`op`).MustString() == `auth` && responseJson.Get(`success`).MustBool() {
 		//新增wallet通道
-		err := SendToConnection(model.Bybit, value.(*model.WSConn), []byte(`{"op":"subscribe","args": ["order","wallet"]}`))
+		err := value.(*model.WSConn).WriteMsg([]byte(`{"op":"subscribe","args": ["order","wallet"]}`))
 		if err != nil {
 			util.DelSyncMap(&model.AppEnvironment.ConnOrderUpdate, market, key)
 		}
@@ -108,7 +108,7 @@ func maintainConnsBybit(accounts []*model.Account) {
 			errMsg := ``
 			connOrder, _ := util.LoadSyncMap(&model.AppEnvironment.ConnOrder, model.Bybit, account.Key)
 			if connOrder != nil {
-				if err := SendToConnection(model.Bybit, connOrder.(*model.WSConn), pingMsg); err != nil {
+				if err := connOrder.(*model.WSConn).WriteMsg(pingMsg); err != nil {
 					errMsg += err.Error()
 					success = false
 					util.Log(util.LogLevelError, "-ws-bybit trade ws ping client error "+err.Error())
@@ -118,7 +118,7 @@ func maintainConnsBybit(accounts []*model.Account) {
 			}
 			connOrderUpdate, _ := util.LoadSyncMap(&model.AppEnvironment.ConnOrderUpdate, model.Bybit, account.Key)
 			if connOrderUpdate != nil {
-				if err := SendToConnection(model.Bybit, connOrderUpdate.(*model.WSConn), pingMsg); err != nil {
+				if err := connOrderUpdate.(*model.WSConn).WriteMsg(pingMsg); err != nil {
 					errMsg += err.Error()
 					success = false
 					util.Log(util.LogLevelError, "ws-bybit order update ws ping client error "+err.Error())
@@ -154,7 +154,7 @@ func WsLogInBybit(account *model.Account, conn *model.WSConn) (success bool) {
 	loginArray := []interface{}{account.Key, timestamp, sign}
 	loginMap[`args`] = loginArray
 	loginBytes := util.JsonEncodeToByte(loginMap)
-	if err := SendToConnection(model.Bybit, conn, loginBytes); err != nil {
+	if err := conn.WriteMsg(loginBytes); err != nil {
 		util.Log(util.LogLevelError, fmt.Sprintf(
 			`fail to login bybit trade ws: %s return %s`, account.Key, err.Error()))
 	} else {
@@ -473,7 +473,7 @@ var subscribeHandlerBybit = func(market string, connection *model.WSConn, subscr
 	subscribeMap["op"] = "subscribe"
 	subscribeMap["args"] = subscribes
 	subscribeMessage := util.JsonEncodeToByte(subscribeMap)
-	if err = SendToConnection(model.Bybit, connection, subscribeMessage); err != nil {
+	if err = connection.WriteMsg(subscribeMessage); err != nil {
 		util.Log(util.LogLevelError, fmt.Sprintf(" bybit can not subscribe %s %s", subscribeMessage, err.Error()))
 	}
 	return err
@@ -789,7 +789,7 @@ func placeOrderBybit(account *model.Account, isWs bool, order *model.Order, orde
 			msgMap := map[string]interface{}{"reqId": order.ClientOrdId, `op`: "order.create", "args": []interface{}{param},
 				"header": map[string]string{"X-BAPI-TIMESTAMP": fmt.Sprintf(`%d`, time.Now().UnixMilli())}}
 			msg := util.JsonEncodeToByte(msgMap)
-			if err := SendToConnection(model.Bybit, value.(*model.WSConn), msg); err != nil {
+			if err := value.(*model.WSConn).WriteMsg(msg); err != nil {
 				order.Status = model.CarryStatusFail
 				util.Log(util.LogLevelError, fmt.Sprintf(`fail to place bybit ws order %s %s`, string(msg), err.Error()))
 			}

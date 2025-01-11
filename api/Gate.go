@@ -473,7 +473,7 @@ var wsPriHandlerGatePerp = func(market, key string, msg []byte) {
 				if valueFuture == nil {
 					return
 				}
-				err := SendToConnection(model.Gate, valueFuture.(*model.WSConn), []byte(msgSend))
+				err := valueFuture.(*model.WSConn).WriteMsg([]byte(msgSend))
 				if err != nil {
 					util.DelSyncMap(&model.AppEnvironment.ConnOrder, model.Gate, model.MarketTypePerp, key, channel)
 				}
@@ -538,7 +538,7 @@ var wsPriHandlerGateSpot = func(market, key string, msg []byte) {
 					return
 				}
 				msgSend := fmt.Sprintf(`{"time":%d,"channel":"spot.orders","event":"subscribe","payload":["!all"]}`, time.Now().Unix())
-				err := SendToConnection(model.Gate, valueSpot.(*model.WSConn), []byte(msgSend))
+				err := valueSpot.(*model.WSConn).WriteMsg([]byte(msgSend))
 				if err != nil {
 					util.DelSyncMap(&model.AppEnvironment.ConnOrder, model.Gate, model.MarketTypeSpot, key, channel)
 				}
@@ -764,7 +764,7 @@ var subscribeMarkPriceHandler = func(market string, connection *model.WSConn, su
 		"payload": symbols,
 	}
 	subscribeMessage := util.JsonEncodeToByte(subscribeMap)
-	if err = SendToConnection(model.Gate, connection, subscribeMessage); err != nil {
+	if err = connection.WriteMsg(subscribeMessage); err != nil {
 		util.Log(util.LogLevelInfo, fmt.Sprintf("gate can not subscribe perp symbols %s %s", subscribeMessage, err.Error()))
 	}
 	time.Sleep(500 * time.Millisecond)
@@ -790,7 +790,7 @@ var subscribeHandler = func(market string, connection *model.WSConn, subscribes 
 				"payload": symbols,
 			}
 			subscribeMessage := util.JsonEncodeToByte(subscribeMap)
-			if err = SendToConnection(model.Gate, connection, subscribeMessage); err != nil {
+			if err = connection.WriteMsg(subscribeMessage); err != nil {
 				util.Log(util.LogLevelError, fmt.Sprintf("gate can not subscribe perp symbols %s %s", subscribeMessage, err.Error()))
 			}
 			time.Sleep(500 * time.Millisecond)
@@ -807,7 +807,7 @@ var subscribeHandler = func(market string, connection *model.WSConn, subscribes 
 				"payload": symbols,
 			}
 			subscribeMessage := util.JsonEncodeToByte(subscribeMap)
-			if err = SendToConnection(model.Gate, connection, subscribeMessage); err != nil {
+			if err = connection.WriteMsg(subscribeMessage); err != nil {
 				util.Log(util.LogLevelError, fmt.Sprintf("gate can not subscribe spot symbols %s %s", subscribeMessage, err.Error()))
 			}
 			time.Sleep(500 * time.Millisecond)
@@ -823,7 +823,7 @@ var subscribeHandler = func(market string, connection *model.WSConn, subscribes 
 				"payload": subscribe,
 			}
 			subscribeMessage := util.JsonEncodeToByte(subscribeMap)
-			if err = SendToConnection(model.Gate, connection, subscribeMessage); err != nil {
+			if err = connection.WriteMsg(subscribeMessage); err != nil {
 				util.Log(util.LogLevelError, fmt.Sprintf("gate can not subscribe spot order book symbol %s %s", subscribeMessage, err.Error()))
 			}
 			time.Sleep(10 * time.Millisecond)
