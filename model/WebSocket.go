@@ -324,9 +324,6 @@ func WsPublicClient(market, url string, subscribes []interface{}, subHandler Sub
 			}
 			return nil, nil, err
 		}
-		if market == OKEX {
-			util.Log(util.LogLevelInfo, fmt.Sprintf("test special chan okex 1 %s %s %d", market, url, len(stepSubscribes)))
-		}
 		stopChan := make(chan struct{}, 2)
 		go func() {
 			if subHandler != nil {
