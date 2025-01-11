@@ -88,10 +88,8 @@ func (wsConn *WSConn) WriteMsg(msg []byte) (err error) {
 	if wsConn.WSType == ChanTypeWS {
 		err = wsConn.conn.WriteMessage(websocket.TextMessage, msg)
 	} else if wsConn.WSType == ChanTypeMarket {
-		util.Log(util.LogLevelInfo, fmt.Sprintf("test special chan okex 0 %s %#v", string(msg), err))
 		if len(string(msg)) <= 8000 {
 			err = wsConn.MarketPublisher.PublishMarket(string(msg))
-			util.Log(util.LogLevelInfo, fmt.Sprintf("test special chan okex 2 %s %#v", string(msg), err))
 			wsConn.MarketSubscriber = msg
 		} else {
 			util.Log(util.LogLevelInfo, fmt.Sprintf("too big msg %s %d", string(msg), len(msg)))
@@ -253,7 +251,6 @@ func publicHandler(market string, stopChan chan struct{}, connection *WSConn, ms
 				buf := make([]byte, 4096)
 				msgSize := connection.MarketReceiver.ReceiveMarket(buf)
 				if msgSize > 0 {
-					util.Log(util.LogLevelInfo, fmt.Sprintf("test special chan okex 3 %s", buf[:msgSize]))
 					if needReconnection(buf[:msgSize]) {
 						util.Log(util.LogLevelInfo, fmt.Sprintf(`chan need reconnect market %s %s`, market, buf[:msgSize]))
 						//err := connection.MarketPublisher.PublishMarket(string(connection.MarketSubscriber))
