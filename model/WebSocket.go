@@ -323,13 +323,16 @@ func WsPublicClient(market, url string, subscribes []interface{}, subHandler Sub
 			}
 			return nil, nil, err
 		}
-		util.Log(util.LogLevelInfo, fmt.Sprintf("test special chan okex 1 %s %s %d", market, url, len(stepSubscribes)))
+		if market == OKEX {
+			util.Log(util.LogLevelInfo, fmt.Sprintf("test special chan okex 1 %s %s %d", market, url, len(stepSubscribes)))
+		}
 		stopChan := make(chan struct{}, 2)
 		go func() {
 			if subHandler != nil {
 				_ = subHandler(market, connection, stepSubscribes)
+				time.Sleep(time.Second)
+				publicHandler(market, stopChan, connection, msgHandler)
 			}
-			publicHandler(market, stopChan, connection, msgHandler)
 		}()
 		msgChans = append(msgChans, stopChan)
 		socketMap[connection] = true
