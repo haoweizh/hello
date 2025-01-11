@@ -137,8 +137,8 @@ func (wsConn *WSConn) WriteJson(body map[string]interface{}) (err error) {
 func initChannel(url, market string, wsType ChannelType) (*WSConn, error) {
 	if AppConfig.SpecialChan == "1" {
 		switch market {
-		case BinanceSpot, BinancePerp, BinanceMargin:
-			return newTsChannel(url, "bf", wsType)
+		//case BinanceSpot, BinancePerp, BinanceMargin:
+		//	return newTsChannel(url, "bf", wsType)
 		case Gate:
 			return newTsChannel(url, "gate", wsType)
 		case OKEX:
@@ -323,9 +323,6 @@ func WsPublicClient(market, url string, subscribes []interface{}, subHandler Sub
 			stepSubscribes = subscribes[i*step : (i+1)*step]
 		} else {
 			stepSubscribes = subscribes[i*step:]
-		}
-		if market == BinancePerp {
-			util.Log(util.LogLevelInfo, fmt.Sprintf("special chan 0 %s %s", market, url))
 		}
 		connection, err := initChannel(url, market, ChanTypeMarket)
 		if err != nil || connection == nil {
