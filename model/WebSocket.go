@@ -88,6 +88,7 @@ func (wsConn *WSConn) WriteMsg(msg []byte) (err error) {
 	if wsConn.WSType == ChanTypeWS {
 		err = wsConn.conn.WriteMessage(websocket.TextMessage, msg)
 	} else if wsConn.WSType == ChanTypeMarket {
+		util.Log(util.LogLevelInfo, fmt.Sprintf("test special chan okex 0 %s %#v", string(msg), err))
 		err = wsConn.MarketPublisher.PublishMarket(string(msg))
 		util.Log(util.LogLevelInfo, fmt.Sprintf("test special chan okex 2 %s %#v", string(msg), err))
 		wsConn.MarketSubscriber = msg
