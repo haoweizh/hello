@@ -332,6 +332,10 @@ func WsPublicClient(market, url string, subscribes []interface{}, subHandler Sub
 				_ = subHandler(market, connection, stepSubscribes)
 				time.Sleep(time.Second)
 				publicHandler(market, stopChan, connection, msgHandler)
+			} else {
+				if market == OKEX {
+					util.Log(util.LogLevelInfo, fmt.Sprintf(`sub handler nil`))
+				}
 			}
 		}()
 		msgChans = append(msgChans, stopChan)
