@@ -89,9 +89,8 @@ func (wsConn *WSConn) WriteMsg(msg []byte) (err error) {
 		err = wsConn.conn.WriteMessage(websocket.TextMessage, msg)
 	} else if wsConn.WSType == ChanTypeMarket {
 		if len(string(msg)) <= 8000 {
-			util.Log(util.LogLevelInfo, fmt.Sprintf("special chan 2"))
 			err = wsConn.MarketPublisher.PublishMarket(string(msg))
-			util.Log(util.LogLevelInfo, fmt.Sprintf("special chan 3"))
+			util.Log(util.LogLevelInfo, fmt.Sprintf("special chan 2 %d %s", len(msg), string(msg)))
 			wsConn.MarketSubscriber = msg
 		} else {
 			util.Log(util.LogLevelInfo, fmt.Sprintf("too big msg %s %d", string(msg), len(msg)))
@@ -137,8 +136,8 @@ func (wsConn *WSConn) WriteJson(body map[string]interface{}) (err error) {
 func initChannel(url, market string, wsType ChannelType) (*WSConn, error) {
 	if AppConfig.SpecialChan == "1" {
 		switch market {
-		//case BinanceSpot, BinancePerp, BinanceMargin:
-		//	return newTsChannel(url, "bf", wsType)
+		case BinancePerp:
+			return newTsChannel(url, "bf", wsType)
 		case Gate:
 			return newTsChannel(url, "gate", wsType)
 		case OKEX:
