@@ -144,10 +144,6 @@ var wsHandlerBinancePerp = func(market string, conn *model.WSConn, event []byte)
 	if wsErr != nil {
 		return
 	}
-	id := result.Get("id").MustInt()
-	if id > 0 {
-		subIdBinance.Store(id, false)
-	}
 	subscribe, _ := result.Get("stream").String()
 	result = result.Get(`data`)
 	if result == nil {
