@@ -88,6 +88,7 @@ func (wsConn *WSConn) WriteMsg(msg []byte) (err error) {
 	if wsConn.WSType == ChanTypeWS {
 		err = wsConn.conn.WriteMessage(websocket.TextMessage, msg)
 	} else if wsConn.WSType == ChanTypeMarket {
+		util.Log(util.LogLevelInfo, fmt.Sprintf("1 test special chan 2 %s", string(msg)))
 		err = wsConn.MarketPublisher.PublishMarket(string(msg))
 		wsConn.MarketSubscriber = msg
 	} else if wsConn.WSType == ChanTypeOrder {
@@ -243,6 +244,7 @@ func publicHandler(market string, stopChan chan struct{}, connection *WSConn, ms
 				buf := make([]byte, 4096)
 				msgSize := connection.MarketReceiver.ReceiveMarket(buf)
 				if msgSize > 0 {
+					util.Log(util.LogLevelInfo, fmt.Sprintf("1 test special chan 3 %s", buf[:msgSize]))
 					if needReconnection(buf[:msgSize]) {
 						util.Log(util.LogLevelInfo, fmt.Sprintf(`chan need reconnect market %s %s`, market, buf[:msgSize]))
 						//err := connection.MarketPublisher.PublishMarket(string(connection.MarketSubscriber))
@@ -321,6 +323,7 @@ func WsPublicClient(market, url string, subscribes []interface{}, subHandler Sub
 			}
 			return nil, nil, err
 		}
+		util.Log(util.LogLevelInfo, fmt.Sprintf("1 test special chan %s %s %d", market, url, len(stepSubscribes)))
 		stopChan := make(chan struct{}, 2)
 		go func() {
 			if subHandler != nil {
