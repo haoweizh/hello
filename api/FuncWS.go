@@ -158,8 +158,10 @@ func HandleWsOrderConnFail(account *model.Account, market string, order *model.O
 	}
 	switch market {
 	case model.Gate:
-		_, marketType, _, _ := model.GetFromStandard(market, order.Symbol)
-		WSOrderServeGate(account, marketType)
+		if order != nil {
+			_, marketType, _, _ := model.GetFromStandard(market, order.Symbol)
+			WSOrderServeGate(account, marketType)
+		}
 	case model.OKEX:
 		WsOrderServeOKEX(account)
 	case model.BinancePerp, model.BinanceSpot, model.BinanceMargin:
@@ -190,13 +192,13 @@ func MaintainConns(market string) {
 var wsLock sync.Map // market - *sync.Mutex
 
 func SendToConnection(market string, connection *model.WSConn, msg []byte) (err error) {
-	lock, _ := wsLock.Load(market)
-	if lock == nil {
-		lock = &sync.Mutex{}
-		wsLock.Store(market, lock)
-	}
-	defer lock.(*sync.Mutex).Unlock()
-	lock.(*sync.Mutex).Lock()
+	//lock, _ := wsLock.Load(market)
+	//if lock == nil {
+	//	lock = &sync.Mutex{}
+	//	wsLock.Store(market, lock)
+	//}
+	//defer lock.(*sync.Mutex).Unlock()
+	//lock.(*sync.Mutex).Lock()
 	if connection == nil {
 		util.Log(util.LogLevelError, `fail to write to nil connection `+market)
 		return
