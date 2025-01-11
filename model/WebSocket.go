@@ -89,11 +89,19 @@ func (wsConn *WSConn) WriteMsg(msg []byte) (err error) {
 		err = wsConn.conn.WriteMessage(websocket.TextMessage, msg)
 	} else if wsConn.WSType == ChanTypeMarket {
 		util.Log(util.LogLevelInfo, fmt.Sprintf("test special chan okex 0 %s %#v", string(msg), err))
-		err = wsConn.MarketPublisher.PublishMarket(string(msg))
-		util.Log(util.LogLevelInfo, fmt.Sprintf("test special chan okex 2 %s %#v", string(msg), err))
-		wsConn.MarketSubscriber = msg
+		if len(string(msg)) <= 8000 {
+			err = wsConn.MarketPublisher.PublishMarket(string(msg))
+			util.Log(util.LogLevelInfo, fmt.Sprintf("test special chan okex 2 %s %#v", string(msg), err))
+			wsConn.MarketSubscriber = msg
+		} else {
+			util.Log(util.LogLevelInfo, fmt.Sprintf("too big msg %s %d", string(msg), len(msg)))
+		}
 	} else if wsConn.WSType == ChanTypeOrder {
-		err = wsConn.OrderPublisher.PublishOrder(string(msg))
+		if len(string(msg)) <= 8000 {
+			err = wsConn.OrderPublisher.PublishOrder(string(msg))
+		} else {
+			util.Log(util.LogLevelInfo, fmt.Sprintf("too big msg order %s %d", string(msg), len(msg)))
+		}
 	}
 	//return wsConn.conn.Write(ctx, websocket.MessageText, msg)
 	return
