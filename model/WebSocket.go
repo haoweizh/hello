@@ -89,7 +89,9 @@ func (wsConn *WSConn) WriteMsg(msg []byte) (err error) {
 		err = wsConn.conn.WriteMessage(websocket.TextMessage, msg)
 	} else if wsConn.WSType == ChanTypeMarket {
 		if len(string(msg)) <= 8000 {
+			util.Log(util.LogLevelInfo, fmt.Sprintf("special chan 2"))
 			err = wsConn.MarketPublisher.PublishMarket(string(msg))
+			util.Log(util.LogLevelInfo, fmt.Sprintf("special chan 3"))
 			wsConn.MarketSubscriber = msg
 		} else {
 			util.Log(util.LogLevelInfo, fmt.Sprintf("too big msg %s %d", string(msg), len(msg)))
@@ -322,6 +324,9 @@ func WsPublicClient(market, url string, subscribes []interface{}, subHandler Sub
 		} else {
 			stepSubscribes = subscribes[i*step:]
 		}
+		if market == BinancePerp {
+			util.Log(util.LogLevelInfo, fmt.Sprintf("special chan 0 %s %s", market, url))
+		}
 		connection, err := initChannel(url, market, ChanTypeMarket)
 		if err != nil || connection == nil {
 			if err != nil {
@@ -335,10 +340,6 @@ func WsPublicClient(market, url string, subscribes []interface{}, subHandler Sub
 				_ = subHandler(market, connection, stepSubscribes)
 				time.Sleep(time.Second)
 				publicHandler(market, stopChan, connection, msgHandler)
-			} else {
-				if market == OKEX {
-					util.Log(util.LogLevelInfo, fmt.Sprintf(`sub handler nil`))
-				}
 			}
 		}()
 		msgChans = append(msgChans, stopChan)
