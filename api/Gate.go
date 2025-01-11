@@ -24,7 +24,7 @@ var apiCtxGate = make(map[string]context.Context)
 
 const unifiedUrlGate = `wss://ws.gate.io/v4/ws/unified`
 
-const wsStepGate = 100
+const wsStepGate = 50
 
 func getClientGate(key, secret string) (apiClient *gateApi.APIClient, ctx context.Context) {
 	if apiClientsGate[key] == nil {

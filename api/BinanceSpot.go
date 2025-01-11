@@ -16,7 +16,6 @@ import (
 	"sort"
 	"strconv"
 	"strings"
-	"sync"
 	"time"
 )
 
@@ -148,10 +147,10 @@ var wsHandlerBinanceSpot = func(market string, conn *model.WSConn, event []byte)
 		util.Log(util.LogLevelError, `wsHandlerBinanceSpot binance fail to unmarshal json `+wsErr.Error())
 		return
 	}
-	id := result.Get(`id`).MustInt()
-	if id > 0 {
-		subIdBinance.Store(id, false)
-	}
+	//id := result.Get(`id`).MustInt()
+	//if id > 0 {
+	//	subIdBinance.Store(id, false)
+	//}
 	subscribe, _ := result.Get("stream").String()
 	result = result.Get(`data`)
 	//data := new(binance.WsBookTickerEvent)
@@ -175,7 +174,7 @@ var wsHandlerBinanceSpot = func(market string, conn *model.WSConn, event []byte)
 	}
 }
 
-var subIdBinance sync.Map
+//var subIdBinance sync.Map
 
 var subscribeHandlerBinance = func(market string, connection *model.WSConn, subscribes []interface{}) (err error) {
 	subParam := make(map[string]interface{})
@@ -184,18 +183,8 @@ var subscribeHandlerBinance = func(market string, connection *model.WSConn, subs
 	txId := time.Now().UnixMilli()
 	subParam["id"] = txId
 	subParamJson, _ := json.Marshal(subParam)
-	subIdBinance.Store(txId, true)
-	for {
-		if err = connection.WriteMsg(subParamJson); err != nil {
-			util.Log(util.LogLevelError, fmt.Sprintf("subscribeHandlerBinance spot can not subscribe %s %s", subParamJson, err.Error()))
-		}
-		time.Sleep(time.Millisecond * 300)
-		loadIdBool, _ := subIdBinance.Load(txId)
-		if loadIdBool.(bool) {
-			break
-		} else {
-			util.Log(util.LogLevelInfo, fmt.Sprintf(`%s retry subscribe %s `, market))
-		}
+	if err = connection.WriteMsg(subParamJson); err != nil {
+		util.Log(util.LogLevelError, fmt.Sprintf("subscribeHandlerBinance spot can not subscribe %s %s", subParamJson, err.Error()))
 	}
 	return err
 }
