@@ -144,7 +144,7 @@ var wsHandlerBinancePerp = func(market string, conn *model.WSConn, event []byte)
 	if wsErr != nil || result == nil {
 		return
 	}
-	if result.Get(`data`).MustString() != `` {
+	if result.Get(`data`).MustMap() != nil {
 		result = result.Get(`data`)
 	}
 	dialectSymbol := result.Get(`s`).MustString()
