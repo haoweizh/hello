@@ -58,8 +58,7 @@ func (config *Config) GetAccountFromKeyIndex(market, key string, index int) (acc
 }
 
 func (config *Config) GetAccounts(market string) []*Account {
-	if market != Gate && market != BinanceSpot && market != BinancePerp && market != BinanceMargin && market != BitgetSpot &&
-		market != BitgetPerp && market != OKEX && market != Bybit {
+	if market != Gate && market != BinanceSpot && market != BinancePerp && market != BinanceMargin && market != OKEX && market != Bybit {
 		return nil
 	}
 	value, ok := marketAccounts.Load(market)
@@ -86,11 +85,11 @@ func (config *Config) GetAccounts(market string) []*Account {
 				market, len(keys), len(gateLeverMin), len(gateLeverMax), len(gateRiskLimit)))
 			os.Exit(1)
 		}
-	case BitgetSpot, BitgetPerp:
-		keys = strings.Split(config.BitgetKey, `,`)
-		secrets = strings.Split(config.BitgetSecret, `,`)
-		closeValues = strings.Split(config.BitgetCarryClose, `,`)
-		rateValues = strings.Split(config.BitgetCarryRate, `,`)
+	//case BitgetSpot, BitgetPerp:
+	//	keys = strings.Split(config.BitgetKey, `,`)
+	//	secrets = strings.Split(config.BitgetSecret, `,`)
+	//	closeValues = strings.Split(config.BitgetCarryClose, `,`)
+	//	rateValues = strings.Split(config.BitgetCarryRate, `,`)
 	case OKEX:
 		isUnified = true
 		keys = strings.Split(config.OkexKey, `,`)
