@@ -160,15 +160,29 @@ func initChannel(account *Account, url, market string, wsType ChannelType) (*WSC
 //
 //	*WSConn - 一个指向WSConn对象的指针，该对象代表创建的通道。
 //	error - 如果创建过程中发生错误，则返回该错误。
-func newTsChannel(url, tsCode string, wsType ChannelType) (*WSConn, error) {
+func newTsChannel(url, tsCode string, wsType ChannelType) (wsConn *WSConn, err error) {
 	if wsType == ChanTypeMarket {
-		marketPublisher, errPub := util.InitMarketPublisher(tsCode + "_m_sub")
-		if errPub != nil {
-			return nil, errPub
+		codePub := tsCode + "_m_sub"
+		codeRev := tsCode + "_m_pub"
+		valuePub, _ := AppEnvironment.SpecialChanInits.Load(codePub)
+		valueRev, _ := AppEnvironment.SpecialChanInits.Load(codeRev)
+		var marketPublisher *util.MarketPublisher
+		var marketReceiver *util.MarketReceiver
+		if valuePub != nil {
+			marketPublisher = valuePub.(*util.MarketPublisher)
+		} else {
+			marketPublisher, err = util.InitMarketPublisher(codePub)
+			if err != nil {
+				return nil, err
+			}
 		}
-		marketReceiver, errRec := util.InitMarketReceiver(tsCode + "_m_pub")
-		if errRec != nil {
-			return nil, errRec
+		if valueRev != nil {
+			marketReceiver = valueRev.(*util.MarketReceiver)
+		} else {
+			marketReceiver, err = util.InitMarketReceiver(codeRev)
+			if err != nil {
+				return nil, err
+			}
 		}
 		return &WSConn{
 			conn:            nil,
@@ -177,13 +191,27 @@ func newTsChannel(url, tsCode string, wsType ChannelType) (*WSConn, error) {
 			MarketReceiver:  marketReceiver,
 		}, nil
 	} else if wsType == ChanTypeOrder {
-		orderPublisher, errPub := util.InitOrderPublisher(tsCode + "_order_sub")
-		if errPub != nil {
-			return nil, errPub
+		codePub := tsCode + "_order_sub"
+		codeRev := tsCode + "_order_pub"
+		valuePub, _ := AppEnvironment.SpecialChanInits.Load(codePub)
+		valueRev, _ := AppEnvironment.SpecialChanInits.Load(codeRev)
+		var orderPublisher *util.OrderPublisher
+		var orderReceiver *util.OrderReceiver
+		if valuePub != nil {
+			orderPublisher = valuePub.(*util.OrderPublisher)
+		} else {
+			orderPublisher, err = util.InitOrderPublisher(codePub)
+			if err != nil {
+				return nil, err
+			}
 		}
-		orderReceiver, errRec := util.InitOrderReceiver(tsCode + "_order_pub")
-		if errRec != nil {
-			return nil, errRec
+		if valueRev != nil {
+			orderReceiver = valueRev.(*util.OrderReceiver)
+		} else {
+			orderReceiver, err = util.InitOrderReceiver(codeRev)
+			if err != nil {
+				return nil, err
+			}
 		}
 		return &WSConn{
 			conn:           nil,
