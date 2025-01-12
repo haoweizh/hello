@@ -7,6 +7,7 @@ import (
 	"hello/controller"
 	"hello/model"
 	"hello/util"
+	"runtime"
 	//_ "net/http/pprof"
 )
 
@@ -17,6 +18,7 @@ func main() {
 	//		return
 	//	}
 	//}()
+	runtime.GOMAXPROCS(5)
 	model.NewConfig()
 	var err error
 	model.AppDB, err = gorm.Open(postgres.Open(model.AppConfig.DBConnection), &gorm.Config{})

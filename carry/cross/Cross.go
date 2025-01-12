@@ -94,6 +94,7 @@ func createFromPosition(account *model.Account, setting *model.Setting, valueLim
 		contractMarkets.Store(key, createContractMarket(key, account.Secret, setting.Market))
 		value, _ = contractMarkets.Load(key)
 		spotValue, spotOk := spotMarkets.Load(key)
+		util.Log(util.LogLevelInfo, fmt.Sprintf(`success set cm %d %s`, account.Index, setting.Market))
 		if account.IsUnified && (spotValue == nil || !spotOk) {
 			spotMarkets.Store(key, createSpotMarket(key, account.Secret, setting.Market))
 		}
@@ -101,8 +102,6 @@ func createFromPosition(account *model.Account, setting *model.Setting, valueLim
 	if value == nil {
 		util.Log(util.LogLevelError, fmt.Sprintf(`nil contract market %s %s`, setting.Market, setting.Symbol))
 		return nil, false
-	} else {
-		util.Log(util.LogLevelInfo, fmt.Sprintf(`success set cm %d %s`, account.Index, setting.Market))
 	}
 	cm := value.(*contractMarket)
 	_, price := api.GetPriceForce(setting.Symbol, setting.Market)
@@ -182,13 +181,12 @@ func createFromBalance(account *model.Account, setting *model.Setting, valueLimi
 	if value == nil || !ok {
 		spotMarkets.Store(key, createSpotMarket(key, account.Secret, setting.Market))
 		value, ok = spotMarkets.Load(key)
+		util.Log(util.LogLevelInfo, fmt.Sprintf(`success set sm %d %s`, account.Index, setting.Market))
 	}
 	success, price := api.GetPriceForce(setting.Symbol, setting.Market)
 	if value == nil {
 		util.Log(util.LogLevelError, fmt.Sprintf(`nil spot market %s %s getPrice %#v %f`, setting.Market, setting.Symbol, success, price))
 		return nil, true
-	} else {
-		util.Log(util.LogLevelInfo, fmt.Sprintf(`success set sm %d %s`, account.Index, setting.Market))
 	}
 	sm := value.(*spotMarket)
 	limitBuy, limitSell, availableBuy := 0.0, 0.0, 0.0
