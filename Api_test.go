@@ -548,6 +548,27 @@ func Test_download(t *testing.T) {
 	//-H 'Connection: keep-alive' \
 }
 
+func Test_ClearActs(t *testing.T) {
+	model.NewConfig()
+	market := model.BitgetSpot
+	api.InitMarketInfos(market)
+	account := model.AppConfig.GetAccounts(market)[0]
+	_, bals, _, _ := api.GetBalances(account.Key, account.Secret, market)
+	for _, bal := range bals {
+		if strings.ToUpper(bal.Coin) == `USDT` {
+			continue
+		}
+		price := api.GetPriceBitgetSpot(account, bal.Coin+`_USDT`)
+		if price > 0 && price*bal.Amount > 0.3 {
+			fmt.Println(fmt.Sprintf(`%s %f %f`, bal.Coin, bal.Amount, price))
+			time.Sleep(time.Second)
+			api.PlaceOrder(account, model.OrderSideSell, model.OrderTypeLimit, market, bal.Coin+`_USDT`,
+				``, `test`, price, price, bal.Amount, false, nil)
+			time.Sleep(time.Millisecond * 80)
+		}
+		time.Sleep(time.Millisecond * 70)
+	}
+}
 func Test_Order(t *testing.T) {
 	market := model.BitgetSpot
 	model.NewConfig()

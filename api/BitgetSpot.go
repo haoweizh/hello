@@ -295,6 +295,29 @@ func getBalanceBitgetSpot(key string, secret string) (success bool, balances []*
 	return true, balances
 }
 
+func GetPriceBitgetSpot(account *model.Account, symbol string) (price float64) {
+	_, _, _, dialectSymbol := model.GetFromStandard(model.BitgetSpot, symbol)
+	client := dtos.BitgetRestClient{BaseUrl: bitgetRestUrl, Passphrase: model.AppConfig.Phase, ApiKey: account.Key, ApiSecretKey: account.Secret}
+	resp, _ := client.DoGet("/api/v2/spot/market/tickers", map[string]string{`symbol`: dialectSymbol})
+	if resp == nil {
+		return
+	}
+	result, _ := util.NewJSON(resp)
+	if result == nil {
+		return
+	}
+	array := result.Get(`data`).MustArray()
+	if len(array) == 0 {
+		return 0
+	}
+	bidPr := array[0].(map[string]interface{})[`bidPr`]
+	priceBid, err := strconv.ParseFloat(bidPr.(string), 64)
+	if err != nil {
+		return
+	}
+	return priceBid
+}
+
 func placeOrderBitgetSpot(account *model.Account, isWs bool, order *model.Order, orderSide, orderType, symbol string, price, amount float64) {
 	priceSpot, decimalSpot := model.FormatPrice(model.BitgetSpot, symbol, price)
 	priceStr := util.CutTailZero(strconv.FormatFloat(priceSpot, 'f', decimalSpot, 64))
