@@ -541,6 +541,8 @@ func equalAccount(i int, equalChan chan int, accounts map[string]*model.Account,
 				if equalStatuses[j] == nil {
 					util.Log(util.LogLevelError, fmt.Sprintf(`store carry nil coin %s %s %s %s %d`,
 						setting.Coin, setting.Market, setting.Symbol, account.Key, account.Index))
+				} else {
+					util.Log(util.LogLevelInfo, fmt.Sprintf(`create init status %s %s %d %#v`, setting.Coin, setting.Market, account.Index, equalStatuses[j]))
 				}
 			}
 			coinCrossing.Store(coin.(string), false)
