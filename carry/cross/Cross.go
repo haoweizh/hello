@@ -48,7 +48,7 @@ func createContractMarket(key, secret, market string) (cm *contractMarket) {
 
 func createSpotMarket(key, secret, market string) (sm *spotMarket) {
 	success, balances, totalInUsd, collateral := api.GetBalances(key, secret, market)
-	util.Log(util.LogLevelInfo, fmt.Sprintf(`create spot market %s %#v`, market, balances))
+	util.Log(util.LogLevelInfo, fmt.Sprintf(`create spot market %s %d`, market, len(balances)))
 	if success {
 		sm = &spotMarket{key: key, market: market}
 		sm.balances = make(map[string]*model.Balance)
@@ -101,6 +101,8 @@ func createFromPosition(account *model.Account, setting *model.Setting, valueLim
 	if value == nil {
 		util.Log(util.LogLevelError, fmt.Sprintf(`nil contract market %s %s`, setting.Market, setting.Symbol))
 		return nil, false
+	} else {
+		util.Log(util.LogLevelInfo, fmt.Sprintf(`success set cm %d %s`, account.Index, setting.Market))
 	}
 	cm := value.(*contractMarket)
 	_, price := api.GetPriceForce(setting.Symbol, setting.Market)
@@ -185,6 +187,8 @@ func createFromBalance(account *model.Account, setting *model.Setting, valueLimi
 	if value == nil {
 		util.Log(util.LogLevelError, fmt.Sprintf(`nil spot market %s %s getPrice %#v %f`, setting.Market, setting.Symbol, success, price))
 		return nil, true
+	} else {
+		util.Log(util.LogLevelInfo, fmt.Sprintf(`success set sm %d %s`, account.Index, setting.Market))
 	}
 	sm := value.(*spotMarket)
 	limitBuy, limitSell, availableBuy := 0.0, 0.0, 0.0
