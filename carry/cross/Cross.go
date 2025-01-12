@@ -237,6 +237,7 @@ func initStatus(account *model.Account, setting *model.Setting) (status *model.C
 	if setting == nil {
 		return
 	}
+	util.Log(util.LogLevelInfo, fmt.Sprintf(`start to init status %s %s %s`, setting.Coin, setting.Market, setting.Symbol))
 	_, marketType, _, _ := model.GetFromStandard(setting.Market, setting.Symbol)
 	doRevert := false
 	localLimit := holdingLimitInU
