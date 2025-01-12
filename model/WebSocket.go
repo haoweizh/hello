@@ -252,7 +252,7 @@ func publicHandler(market string, stopChan chan struct{}, connection *WSConn, ms
 				buf := make([]byte, 4096)
 				msgSize := connection.MarketReceiver.ReceiveMarket(buf)
 				if market == BinancePerp {
-					fmt.Println(buf[:msgSize])
+					fmt.Println(string(buf[:msgSize]))
 				}
 				if msgSize > 0 {
 					if needReconnection(buf[:msgSize]) {
