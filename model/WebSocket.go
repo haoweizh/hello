@@ -175,6 +175,7 @@ func newTsChannel(url, tsCode string, wsType ChannelType) (wsConn *WSConn, err e
 			if err != nil {
 				return nil, err
 			}
+			AppEnvironment.SpecialChanInits.Store(codePub, marketPublisher)
 		}
 		if valueRev != nil {
 			marketReceiver = valueRev.(*util.MarketReceiver)
@@ -183,6 +184,7 @@ func newTsChannel(url, tsCode string, wsType ChannelType) (wsConn *WSConn, err e
 			if err != nil {
 				return nil, err
 			}
+			AppEnvironment.SpecialChanInits.Store(codeRev, marketReceiver)
 		}
 		return &WSConn{
 			conn:            nil,
@@ -204,6 +206,7 @@ func newTsChannel(url, tsCode string, wsType ChannelType) (wsConn *WSConn, err e
 			if err != nil {
 				return nil, err
 			}
+			AppEnvironment.SpecialChanInits.Store(codePub, orderPublisher)
 		}
 		if valueRev != nil {
 			orderReceiver = valueRev.(*util.OrderReceiver)
@@ -212,6 +215,7 @@ func newTsChannel(url, tsCode string, wsType ChannelType) (wsConn *WSConn, err e
 			if err != nil {
 				return nil, err
 			}
+			AppEnvironment.SpecialChanInits.Store(codeRev, orderReceiver)
 		}
 		return &WSConn{
 			conn:           nil,
