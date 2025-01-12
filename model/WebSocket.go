@@ -132,8 +132,8 @@ func (wsConn *WSConn) WriteJson(body map[string]interface{}) (err error) {
 //
 //	*WSConn - 成功时返回一个WebSocket连接指针。
 //	error - 如果初始化过程中遇到任何问题，则返回错误。
-func initChannel(url, market string, wsType ChannelType) (*WSConn, error) {
-	if AppConfig.SpecialChan == "1" {
+func initChannel(account *Account, url, market string, wsType ChannelType) (*WSConn, error) {
+	if AppConfig.SpecialChan == "1" && (account == nil || account.Index == 0) {
 		switch market {
 		case BinancePerp:
 			return newTsChannel(url, "bf", wsType)
@@ -266,9 +266,9 @@ func publicHandler(market string, stopChan chan struct{}, connection *WSConn, ms
 	}
 }
 
-func WsPrivateClient(connMap *sync.Map, market, key, url string, accountMsgHandler AccountMsgHandler) (connection *WSConn, err error) {
+func WsPrivateClient(account *Account, connMap *sync.Map, market, url string, accountMsgHandler AccountMsgHandler) (connection *WSConn, err error) {
 	util.Log(util.LogLevelInfo, market+` create account channel `+url)
-	connection, err = initChannel(url, market, ChanTypeOrder)
+	connection, err = initChannel(account, url, market, ChanTypeOrder)
 	if err != nil {
 		util.Log(util.LogLevelError, url+"can not create web socket"+err.Error())
 		return nil, err
@@ -283,16 +283,16 @@ func WsPrivateClient(connMap *sync.Map, market, key, url string, accountMsgHandl
 				//_, message, readErr := connection.conn.Read(context.Background())
 				_, message, readErr := connection.conn.ReadMessage()
 				if readErr != nil {
-					value, _ := util.LoadSyncMap(connMap, market, key)
+					value, _ := util.LoadSyncMap(connMap, market, account.Key)
 					if value != nil && value == connection.conn {
-						util.Log(util.LogLevelError, fmt.Sprintf(`delete connect %s %s %v`, market, key, value))
-						util.DelSyncMap(connMap, market, key)
+						util.Log(util.LogLevelError, fmt.Sprintf(`delete connect %s %s %v`, market, account.Key, value))
+						util.DelSyncMap(connMap, market, account.Key)
 					}
 					util.Log(util.LogLevelError, fmt.Sprintf(`%s %s can not read from account ws: %s`, market, url, readErr.Error()))
 					return
 				}
 				if accountMsgHandler != nil {
-					accountMsgHandler(market, key, message)
+					accountMsgHandler(market, account.Key, message)
 				}
 			} else if connection.WSType == ChanTypeOrder {
 				buf := make([]byte, 4096)
@@ -301,7 +301,7 @@ func WsPrivateClient(connMap *sync.Map, market, key, url string, accountMsgHandl
 					if needReconnection(buf[:msgSize]) {
 						util.Log(util.LogLevelInfo, fmt.Sprintf(`order %s %s reconnect`, market, buf[:msgSize]))
 					} else if accountMsgHandler != nil {
-						accountMsgHandler(market, key, buf[:msgSize])
+						accountMsgHandler(market, account.Key, buf[:msgSize])
 					}
 				}
 			}
@@ -322,7 +322,7 @@ func WsPublicClient(market, url string, subscribes []interface{}, subHandler Sub
 		} else {
 			stepSubscribes = subscribes[i*step:]
 		}
-		connection, err := initChannel(url, market, ChanTypeMarket)
+		connection, err := initChannel(nil, url, market, ChanTypeMarket)
 		if err != nil || connection == nil {
 			if err != nil {
 				util.Log(util.LogLevelError, fmt.Sprintf("can not create web socket %s %s %s", market, url, err.Error()))

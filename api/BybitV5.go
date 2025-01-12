@@ -178,7 +178,7 @@ func WsOrderServeBybit(account *model.Account) {
 		}
 		model.AppEnvironment.PriConnecting.Store(model.Bybit+account.Key, false)
 	}()
-	connOrder, errOrder := model.WsPrivateClient(&model.AppEnvironment.ConnOrder, model.Bybit, account.Key, bybitTradeWsUrl, wsOrderHandlerBybit)
+	connOrder, errOrder := model.WsPrivateClient(account, &model.AppEnvironment.ConnOrder, model.Bybit, bybitTradeWsUrl, wsOrderHandlerBybit)
 	if errOrder != nil {
 		util.Log(util.LogLevelError, "bybit can not create ws order "+errOrder.Error())
 	} else if connOrder != nil {
@@ -186,8 +186,7 @@ func WsOrderServeBybit(account *model.Account) {
 			util.StoreSyncMap(&model.AppEnvironment.ConnOrder, connOrder, model.Bybit, account.Key)
 		}
 	}
-	connOrderUpdate, errOrderUpdate := model.WsPrivateClient(&model.AppEnvironment.ConnOrderUpdate, model.Bybit,
-		account.Key, bybitStreamUrl+`/v5/private`, wsOrdUdtHandlerBybit)
+	connOrderUpdate, errOrderUpdate := model.WsPrivateClient(account, &model.AppEnvironment.ConnOrderUpdate, model.Bybit, bybitStreamUrl+`/v5/private`, wsOrdUdtHandlerBybit)
 	if errOrderUpdate != nil {
 		util.Log(util.LogLevelError, "bybit can not create ws order update"+errOrderUpdate.Error())
 	} else if connOrderUpdate != nil {

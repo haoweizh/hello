@@ -307,7 +307,7 @@ func WsOrderServeOKEX(account *model.Account) {
 		}
 		model.AppEnvironment.PriConnecting.Store(model.OKEX+account.Key, false)
 	}()
-	conn, err := model.WsPrivateClient(&model.AppEnvironment.ConnOrder, model.OKEX, account.Key, wsPrivateOKEX, wsAccountHandlerOKEX)
+	conn, err := model.WsPrivateClient(account, &model.AppEnvironment.ConnOrder, model.OKEX, wsPrivateOKEX, wsAccountHandlerOKEX)
 	if err != nil {
 		util.Log(util.LogLevelError, "can not create web socket "+err.Error())
 	} else if conn != nil {

@@ -622,11 +622,11 @@ func WSOrderServeGate(account *model.Account, marketType string) {
 	logInCode := ``
 	if marketType == model.MarketTypeSpot {
 		logInCode = `spot`
-		conn, err = model.WsPrivateClient(&model.AppEnvironment.ConnOrder, model.Gate, account.Key, gateWs.BaseUrl, wsPriHandlerGateSpot)
+		conn, err = model.WsPrivateClient(account, &model.AppEnvironment.ConnOrder, model.Gate, gateWs.BaseUrl, wsPriHandlerGateSpot)
 	} else if marketType == model.MarketTypePerp {
 		logInCode = `futures`
-		conn, err = model.WsPrivateClient(&model.AppEnvironment.ConnOrder, model.Gate, account.Key, gateWs.FuturesUsdtUrl, wsPriHandlerGatePerp)
-		connUpdate, errUpdate = model.WsPrivateClient(&model.AppEnvironment.ConnOrderUpdate, model.Gate, account.Key, unifiedUrlGate, wsPriHandlerGateUnified)
+		conn, err = model.WsPrivateClient(account, &model.AppEnvironment.ConnOrder, model.Gate, gateWs.FuturesUsdtUrl, wsPriHandlerGatePerp)
+		connUpdate, errUpdate = model.WsPrivateClient(account, &model.AppEnvironment.ConnOrderUpdate, model.Gate, unifiedUrlGate, wsPriHandlerGateUnified)
 		if errUpdate != nil {
 			util.Log(util.LogLevelError, fmt.Sprintf("gate wsAccount unified connect err: %s %s", errUpdate.Error(), account.Key))
 			return
