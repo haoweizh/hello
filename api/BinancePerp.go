@@ -144,23 +144,19 @@ var wsHandlerBinancePerp = func(market string, conn *model.WSConn, event []byte)
 	if wsErr != nil {
 		return
 	}
-	subscribe, _ := result.Get("stream").String()
-	result = result.Get(`data`)
-	if result == nil {
-		return
-	}
 	dialectSymbol := result.Get(`s`).MustString()
 	success, _, standardSymbol := model.GetFromDialect(model.BinancePerp, model.MarketTypePerp, dialectSymbol)
 	if !success {
 		return
 	}
+	subscribe := result.Get(`e`).MustString()
 	updateId := result.Get(`u`).MustInt64()
 	var bidAsk *model.BidAsk
-	if strings.Contains(subscribe, `@depth`) {
+	if strings.Contains(subscribe, `depthUpdate`) {
 		bidAsk = parseTickDepthBinancePerp(result, standardSymbol, updateId)
-	} else if strings.Contains(subscribe, `@bookTicker`) {
+	} else if strings.Contains(subscribe, `bookTicker`) {
 		bidAsk = parseBookBinancePerp(result, standardSymbol, updateId)
-	} else if strings.Contains(subscribe, `@markPrice`) {
+	} else if strings.Contains(subscribe, `markPriceUpdate`) {
 		handleMarkPriceBinancePerp(model.AppEnvironment, result, standardSymbol)
 		return
 	}

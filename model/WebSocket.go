@@ -90,7 +90,6 @@ func (wsConn *WSConn) WriteMsg(msg []byte) (err error) {
 	} else if wsConn.WSType == ChanTypeMarket {
 		if len(string(msg)) <= 8000 {
 			err = wsConn.MarketPublisher.PublishMarket(string(msg))
-			util.Log(util.LogLevelInfo, fmt.Sprintf("special chan 2 %d %s", len(msg), string(msg)))
 			wsConn.MarketSubscriber = msg
 		} else {
 			util.Log(util.LogLevelInfo, fmt.Sprintf("too big msg %s %d", string(msg), len(msg)))
@@ -251,9 +250,6 @@ func publicHandler(market string, stopChan chan struct{}, connection *WSConn, ms
 			} else if connection.WSType == ChanTypeMarket {
 				buf := make([]byte, 4096)
 				msgSize := connection.MarketReceiver.ReceiveMarket(buf)
-				if market == BinancePerp {
-					fmt.Println(string(buf[:msgSize]))
-				}
 				if msgSize > 0 {
 					if needReconnection(buf[:msgSize]) {
 						util.Log(util.LogLevelInfo, fmt.Sprintf(`chan need reconnect market %s %s`, market, buf[:msgSize]))
