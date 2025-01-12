@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	gateWs "github.com/gateio/gatews/go"
 	"strings"
 	"sync"
 
@@ -139,11 +138,12 @@ func initChannel(account *Account, url, market string, wsType ChannelType) (*WSC
 		case BinancePerp:
 			return newTsChannel(url, "bf", wsType)
 		case Gate:
-			if url == gateWs.FuturesUsdtUrl {
-				return newTsChannel(url, "gate", wsType)
-			} else {
-				return newWsGorillaChannel(url)
-			}
+			//if url == gateWs.FuturesUsdtUrl {
+			//	return newTsChannel(url, "gate", wsType)
+			//} else {
+			//	return newWsGorillaChannel(url)
+			//}
+			return newWsGorillaChannel(url)
 		case OKEX:
 			return newTsChannel(url, "ok", wsType)
 		default:

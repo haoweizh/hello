@@ -433,7 +433,7 @@ func GetPriceForce(symbol, market string) (result bool, price float64) {
 	//}
 	//lastPriceTime.Store(market+`_`+symbol, time.Now().Add(time.Second*14400))
 	//lastPrice.Store(market+`_`+symbol, price)
-	util.Log(util.LogLevelError, fmt.Sprintf(`fail to get price for %s %s`, market, symbol))
+	//util.Log(util.LogLevelError, fmt.Sprintf(`fail to get price for %s %s`, market, symbol))
 	return false, price
 }
 

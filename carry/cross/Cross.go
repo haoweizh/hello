@@ -14,8 +14,8 @@ import (
 
 func createContractMarket(key, secret, market string) (cm *contractMarket) {
 	success, positions, accountValue, availableU, mmr := api.GetPositions(key, secret, market)
-	util.Log(util.LogLevelInfo, fmt.Sprintf(`get positions %s %s %#v account value %f available u %f maintain rate %f positions %#v`,
-		market, key, success, accountValue, availableU, mmr, positions))
+	util.Log(util.LogLevelInfo, fmt.Sprintf(`get positions %s %s %#v account value %f available u %f maintain rate %f positions %d`,
+		market, key, success, accountValue, availableU, mmr, len(positions)))
 	settings := api.GetSettings(model.FunctionCross, market)
 	if success {
 		cm = &contractMarket{key: key, market: market}
