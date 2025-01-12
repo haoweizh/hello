@@ -141,8 +141,11 @@ func getMarketsBinancePerp(key, secret string) (marketInfos map[string]*model.Ma
 
 var wsHandlerBinancePerp = func(market string, conn *model.WSConn, event []byte) {
 	result, wsErr := util.NewJSON(event)
-	if wsErr != nil {
+	if wsErr != nil || result == nil {
 		return
+	}
+	if result.Get(`data`) != nil {
+		result = result.Get(`data`)
 	}
 	dialectSymbol := result.Get(`s`).MustString()
 	success, _, standardSymbol := model.GetFromDialect(model.BinancePerp, model.MarketTypePerp, dialectSymbol)
