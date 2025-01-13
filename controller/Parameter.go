@@ -557,9 +557,11 @@ func holdPage(c *gin.Context) {
 			var coin string
 			var currentStep int
 			var holding, moneyPerStep, moneyCurStep, price float64
-			_ = carryRows.Scan(&coin, &currentStep, &holding, &moneyPerStep, &moneyCurStep)
-			carryCoins = append(carryCoins, []string{coin, fmt.Sprintf(`%d`, currentStep), fmt.Sprintf(`%e`, holding),
-				fmt.Sprintf(`%.1f`, moneyPerStep), fmt.Sprintf(`%.1f`, moneyCurStep), fmt.Sprintf(`%e`, price)})
+			_ = carryRows.Scan(&coin, &currentStep, &holding, &moneyPerStep, &moneyCurStep, &price)
+			if currentStep > 0 || holding > 0 || moneyCurStep > 0 {
+				carryCoins = append(carryCoins, []string{coin, fmt.Sprintf(`%d`, currentStep), fmt.Sprintf(`%e`, holding),
+					fmt.Sprintf(`%.1f`, moneyPerStep), fmt.Sprintf(`%.1f`, moneyCurStep), fmt.Sprintf(`%e`, price)})
+			}
 		}
 		if carryRows.Close() != nil {
 			util.Log(util.LogLevelInfo, fmt.Sprintf(`fail to close DB for carry rows`))
