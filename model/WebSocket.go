@@ -133,7 +133,7 @@ func (wsConn *WSConn) WriteJson(body map[string]interface{}) (err error) {
 //	*WSConn - 成功时返回一个WebSocket连接指针。
 //	error - 如果初始化过程中遇到任何问题，则返回错误。
 func initChannel(account *Account, url, market string, wsType ChannelType) (*WSConn, error) {
-	if AppConfig.SpecialChan == "1" && (account == nil || account.Index == 0) {
+	if AppConfig.SpecialChan == "1" && account == nil {
 		switch market {
 		case BinancePerp:
 			return newTsChannel(url, "bf", wsType)
