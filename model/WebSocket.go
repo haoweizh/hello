@@ -272,10 +272,10 @@ func publicHandler(newCreated bool, market string, stopChan chan struct{}, conne
 		//err := connection.conn.Close(websocket.StatusNormalClosure, "")
 		connection.Close()
 	}()
+	if !newCreated {
+		return
+	}
 	for {
-		if !newCreated {
-			break
-		}
 		select {
 		case <-stopChan:
 			util.Log(util.LogLevelInfo, "get stop struct, return")
@@ -324,10 +324,10 @@ func WsPrivateClient(account *Account, connMap *sync.Map, market, url string, ac
 			//closeErr := connection.conn.Close(websocket.StatusNormalClosure, "")
 			connection.Close()
 		}()
+		if !newCreate {
+			return
+		}
 		for {
-			if !newCreate {
-				break
-			}
 			if connection.WSType == ChanTypeWS {
 				//_, message, readErr := connection.conn.Read(context.Background())
 				_, message, readErr := connection.conn.ReadMessage()
