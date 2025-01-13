@@ -844,6 +844,7 @@ var ProcessCross = func(setting *model.Setting, tick *model.BidAsk) {
 	if tick == nil || tick.Asks == nil || tick.Bids == nil || setting == nil || setting.Valid == false || model.AppEnvironment.CrossEqualing ||
 		(model.AppConfig.Env != `test` && model.AppConfig.Handle != `1`) || settings == nil || len(settings) == 0 ||
 		time.Now().Minute() < 3 || ts1-model.AppEnvironment.LastOrderMilli < 100 {
+		util.Log(util.LogLevelError, fmt.Sprintf(`tick %d`, ts1-model.AppEnvironment.LastOrderMilli))
 		return
 	}
 	// 同一个coin cross之间互斥
