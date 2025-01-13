@@ -88,32 +88,32 @@ func generateMonitorMsg(index int, coin string, score, scoreRelate float64, carr
 	if mark < markRelate {
 		mark = fmt.Sprintf(`%s|%s`, mark, markRelate)
 		infoValue = []string{coin, carryStatus.Market, coinValue, fundingStr,
-			fmt.Sprintf(`%.1f`, 100*carryStatus.TradeLineBuy),
-			fmt.Sprintf(`%.1f`, 100*carryStatus.TradeLineSell),
+			fmt.Sprintf(`%.3f`, 100*carryStatus.TradeLineBuy),
+			fmt.Sprintf(`%.3f`, 100*carryStatus.TradeLineSell),
 			fmt.Sprintf(`%.0e`, carryStatus.LimitBuy),
 			fmt.Sprintf(`%.0e`, carryStatus.LimitSell),
 			carryStatusRelate.Market, coinValueRelate, fundingStrRelate,
-			fmt.Sprintf(`%.1f`, 100*carryStatusRelate.TradeLineBuy),
-			fmt.Sprintf(`%.1f`, 100*carryStatusRelate.TradeLineSell),
+			fmt.Sprintf(`%.3f`, 100*carryStatusRelate.TradeLineBuy),
+			fmt.Sprintf(`%.3f`, 100*carryStatusRelate.TradeLineSell),
 			fmt.Sprintf(`%.0e`, carryStatusRelate.LimitBuy),
 			fmt.Sprintf(`%.0e`, carryStatusRelate.LimitSell),
-			fmt.Sprintf(`%.1f`, 100*scoreRelate),
-			fmt.Sprintf(`%.1f`, 100*score),
+			fmt.Sprintf(`%.3f`, 100*scoreRelate),
+			fmt.Sprintf(`%.3f`, 100*score),
 			fmt.Sprintf(`%v`, valid)}
 	} else {
 		mark = fmt.Sprintf(`%s|%s`, markRelate, mark)
 		infoValue = []string{coin, carryStatusRelate.Market, coinValueRelate, fundingStrRelate,
-			fmt.Sprintf(`%.1f`, 100*carryStatusRelate.TradeLineBuy),
-			fmt.Sprintf(`%.1f`, 100*carryStatusRelate.TradeLineSell),
+			fmt.Sprintf(`%.3f`, 100*carryStatusRelate.TradeLineBuy),
+			fmt.Sprintf(`%.3f`, 100*carryStatusRelate.TradeLineSell),
 			fmt.Sprintf(`%.0e`, carryStatusRelate.LimitBuy),
 			fmt.Sprintf(`%.0e`, carryStatusRelate.LimitSell),
 			carryStatus.Market, coinValue, fundingStr,
-			fmt.Sprintf(`%.1f`, 100*carryStatus.TradeLineBuy),
-			fmt.Sprintf(`%.1f`, 100*carryStatus.TradeLineSell),
+			fmt.Sprintf(`%.3f`, 100*carryStatus.TradeLineBuy),
+			fmt.Sprintf(`%.3f`, 100*carryStatus.TradeLineSell),
 			fmt.Sprintf(`%.0e`, carryStatus.LimitBuy),
 			fmt.Sprintf(`%.0e`, carryStatus.LimitSell),
-			fmt.Sprintf(`%.1f`, 100*score),
-			fmt.Sprintf(`%.1f`, 100*scoreRelate),
+			fmt.Sprintf(`%.3f`, 100*score),
+			fmt.Sprintf(`%.3f`, 100*scoreRelate),
 			fmt.Sprintf(`%v`, valid)}
 	}
 	go model.SetMonitorInfo(strconv.Itoa(index), model.FunctionCross, mark, infoValue)
