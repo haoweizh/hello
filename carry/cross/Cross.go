@@ -581,6 +581,7 @@ func equalAccount(i int, equalChan chan int, accounts map[string]*model.Account,
 					carryCoin = createCarryCoin(accounts, i, coin.(string), settings.([]*model.Setting))
 					if carryCoin != nil {
 						util.StoreSyncMap(carryCoinMap, carryCoin, coin.(string), strconv.Itoa(i))
+						model.AppDB.Save(carryCoin)
 					} else {
 						util.Log(util.LogLevelError, fmt.Sprintf(`fail to create carry coin %v`, coin))
 					}
