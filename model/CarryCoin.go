@@ -33,40 +33,36 @@ type CarryCoin struct {
 	UpdatedAt    time.Time
 }
 
-func (carryCoin *CarryCoin) AddTrade(statusBuy, statusSell *CarryStatus, priceBuy, priceSell, amountBuy float64) {
+func (carryCoin *CarryCoin) AddTrade(statusBuy, statusSell *CarryStatus, priceBuy, priceSell, amountSell float64) {
 	change := false
 	if statusBuy.Holding*priceBuy >= -SmallHolding && statusSell.Holding*priceSell <= SmallHolding { // 加仓
 		change = true
-		carryCoin.MoneyCurStep += amountBuy * priceBuy
-		carryCoin.Holding += amountBuy * statusBuy.Setting.GridAmount
+		carryCoin.MoneyCurStep += amountSell * priceSell
+		carryCoin.Holding += amountSell * statusSell.Setting.GridAmount
 		if carryCoin.MoneyCurStep > carryCoin.MoneyPerStep {
 			carryCoin.CurrentStep++
 			carryCoin.MoneyCurStep -= carryCoin.MoneyPerStep
 		}
-		util.Log(util.LogLevelInfo, fmt.Sprintf(`add trade deal open %#v amount %f price %f`, carryCoin, amountBuy, priceBuy))
-	} else if statusBuy.Holding*priceBuy < -SmallHolding && statusSell.Holding*priceSell > SmallHolding {
-		carryCoin.Holding -= amountBuy * statusBuy.Setting.GridAmount
+		util.Log(util.LogLevelInfo, fmt.Sprintf(`add trade deal open %#v amount %f price %f`, carryCoin, amountSell, priceSell))
+	} else if statusBuy.Holding*priceBuy < -SmallHolding && statusSell.Holding*priceSell > SmallHolding { // 平仓
+		change = true
+		carryCoin.Holding -= amountSell * statusSell.Setting.GridAmount
+		carryCoin.MoneyCurStep -= amountSell * priceSell
 		if carryCoin.Holding*priceBuy/statusBuy.Setting.GridAmount >= SmallHolding {
-			if carryCoin.MoneyCurStep > 0 || carryCoin.CurrentStep >= 1 {
-				change = true
-				carryCoin.MoneyCurStep -= amountBuy * priceBuy
-				if carryCoin.MoneyCurStep < 0 {
-					if carryCoin.CurrentStep >= 1 {
-						carryCoin.CurrentStep--
-						carryCoin.MoneyCurStep += carryCoin.MoneyPerStep
-					} else {
-						carryCoin.MoneyCurStep = 0
-					}
+			if carryCoin.MoneyCurStep < 0 {
+				if carryCoin.CurrentStep >= 1 {
+					carryCoin.CurrentStep--
+					carryCoin.MoneyCurStep += carryCoin.MoneyPerStep
+				} else {
+					carryCoin.MoneyCurStep = 0
 				}
 			}
-			util.Log(util.LogLevelInfo, fmt.Sprintf(`add trade deal close %#v amount %f price %f`, carryCoin, amountBuy, priceBuy))
+			util.Log(util.LogLevelInfo, fmt.Sprintf(`add trade deal close %#v amount %f price %f`, carryCoin, amountSell, priceSell))
 		} else {
-			if carryCoin.CurrentStep >= 1 || carryCoin.MoneyCurStep > 0 {
-				change = true
-				carryCoin.MoneyCurStep = 0
-				carryCoin.CurrentStep = 0
-				util.Log(util.LogLevelInfo, fmt.Sprintf(`add trade deal close no holding %#v amount %f price %f`, carryCoin, amountBuy, priceBuy))
-			}
+			change = true
+			carryCoin.MoneyCurStep = 0
+			carryCoin.CurrentStep = 0
+			util.Log(util.LogLevelInfo, fmt.Sprintf(`add trade deal close no holding %#v amount %f price %f`, carryCoin, amountSell, priceSell))
 		}
 	}
 	if change {

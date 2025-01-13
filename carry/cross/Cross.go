@@ -463,16 +463,26 @@ func updateMoneyPerStep(index int, gateCm *contractMarket) {
 		if item == nil {
 			return true
 		}
+		carryCoin := item.(*model.CarryCoin)
 		symbol := coin.(string) + model.UniStandardTail[model.MarketTypePerp]
 		if gateCm.positions == nil || gateCm.positions[symbol] == nil {
 			return true
 		}
 		pos := gateCm.positions[symbol]
-		moneyRiskLimit := pos.RiskLimit * pos.EntryPrice / 20
-		if moneyRiskLimit < item.(*model.CarryCoin).MoneyPerStep {
-			util.Log(util.LogLevelInfo, fmt.Sprintf(`update money per step %v from %f to %f`,
-				coin, item.(*model.CarryCoin).MoneyPerStep, moneyRiskLimit))
-			item.(*model.CarryCoin).MoneyPerStep = moneyRiskLimit
+		price := pos.EntryPrice
+		if price == 0 {
+			_, price = api.GetPriceForce(symbol, model.Gate)
+		}
+		if price == 0 {
+			return true
+		}
+		moneyRiskLimit := pos.RiskLimit * price / 20
+		if moneyRiskLimit < carryCoin.MoneyPerStep {
+			moneyInAll := carryCoin.MoneyPerStep*float64(carryCoin.CurrentStep) + carryCoin.MoneyCurStep
+			carryCoin.CurrentStep = int((moneyInAll) / moneyRiskLimit)
+			carryCoin.MoneyPerStep = moneyRiskLimit
+			carryCoin.MoneyCurStep = moneyInAll - float64(carryCoin.CurrentStep)*carryCoin.MoneyPerStep
+			util.Log(util.LogLevelInfo, fmt.Sprintf(`update money per step %s %#v`, coin, carryCoin))
 		}
 		return true
 	})
@@ -517,6 +527,8 @@ func createCarryCoin(accounts map[string]*model.Account, index int, coin string,
 		moneyInAll := bidHolding * price / priceSetting.GridAmount
 		carryCoin.CurrentStep = int(math.Floor(moneyInAll / carryCoin.MoneyPerStep))
 		carryCoin.MoneyCurStep = moneyInAll - float64(carryCoin.CurrentStep)*carryCoin.MoneyPerStep
+	} else {
+		carryCoin = nil
 	}
 	util.Log(util.LogLevelInfo, fmt.Sprintf(`create carry coin account index %d %#v`, index, carryCoin))
 	return
@@ -983,7 +995,7 @@ func placeCross(carryCoin *model.CarryCoin, statusBuy, statusSell *model.CarrySt
 		amountBuy = amountBuy * 0.9995
 	}
 	if carryCoin != nil && statusBuy.Account.CrossStyle == crossGrid {
-		carryCoin.AddTrade(statusBuy, statusSell, priceBuy, priceSell, amountBuy)
+		carryCoin.AddTrade(statusBuy, statusSell, priceBuy, priceSell, amountSell)
 	}
 	placeStatus(statusBuy, priceBuy, amountBuy)
 	placeStatus(statusSell, priceSell, -1*amountSell)
