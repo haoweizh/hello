@@ -132,7 +132,7 @@ func (wsConn *WSConn) WriteJson(body map[string]interface{}) (err error) {
 //
 //	*WSConn - 成功时返回一个WebSocket连接指针。
 //	error - 如果初始化过程中遇到任何问题，则返回错误。
-func initChannel(account *Account, url, market string, wsType ChannelType) (*WSConn, error) {
+func initChannel(account *Account, url, market string, wsType ChannelType) (newCreate bool, wsConn *WSConn, err error) {
 	if AppConfig.SpecialChan == "1" && account == nil {
 		switch market {
 		case BinancePerp:
@@ -143,14 +143,17 @@ func initChannel(account *Account, url, market string, wsType ChannelType) (*WSC
 			//} else {
 			//	return newWsGorillaChannel(url)
 			//}
-			return newWsGorillaChannel(url)
+			wsConn, err = newWsGorillaChannel(url)
+			return true, wsConn, err
 		case OKEX:
 			return newTsChannel(url, "ok", wsType)
 		default:
-			return newWsGorillaChannel(url)
+			wsConn, err = newWsGorillaChannel(url)
+			return true, wsConn, err
 		}
 	} else {
-		return newWsGorillaChannel(url)
+		wsConn, err = newWsGorillaChannel(url)
+		return true, wsConn, err
 	}
 }
 
@@ -165,7 +168,7 @@ func initChannel(account *Account, url, market string, wsType ChannelType) (*WSC
 //
 //	*WSConn - 一个指向WSConn对象的指针，该对象代表创建的通道。
 //	error - 如果创建过程中发生错误，则返回该错误。
-func newTsChannel(url, tsCode string, wsType ChannelType) (wsConn *WSConn, err error) {
+func newTsChannel(url, tsCode string, wsType ChannelType) (newCreate bool, wsConn *WSConn, err error) {
 	if wsType == ChanTypeMarket {
 		codePub := tsCode + "_m_sub"
 		codeRev := tsCode + "_m_pub"
@@ -176,22 +179,24 @@ func newTsChannel(url, tsCode string, wsType ChannelType) (wsConn *WSConn, err e
 		if valuePub != nil {
 			marketPublisher = valuePub.(*util.MarketPublisher)
 		} else {
+			newCreate = true
 			marketPublisher, err = util.InitMarketPublisher(codePub)
 			if err != nil {
-				return nil, err
+				return false, nil, err
 			}
 			AppEnvironment.SpecialChanInits.Store(codePub, marketPublisher)
 		}
 		if valueRev != nil {
 			marketReceiver = valueRev.(*util.MarketReceiver)
 		} else {
+			newCreate = true
 			marketReceiver, err = util.InitMarketReceiver(codeRev)
 			if err != nil {
-				return nil, err
+				return false, nil, err
 			}
 			AppEnvironment.SpecialChanInits.Store(codeRev, marketReceiver)
 		}
-		return &WSConn{
+		return newCreate, &WSConn{
 			conn:            nil,
 			WSType:          wsType,
 			MarketPublisher: marketPublisher,
@@ -207,29 +212,31 @@ func newTsChannel(url, tsCode string, wsType ChannelType) (wsConn *WSConn, err e
 		if valuePub != nil {
 			orderPublisher = valuePub.(*util.OrderPublisher)
 		} else {
+			newCreate = true
 			orderPublisher, err = util.InitOrderPublisher(codePub)
 			if err != nil {
-				return nil, err
+				return false, nil, err
 			}
 			AppEnvironment.SpecialChanInits.Store(codePub, orderPublisher)
 		}
 		if valueRev != nil {
 			orderReceiver = valueRev.(*util.OrderReceiver)
 		} else {
+			newCreate = true
 			orderReceiver, err = util.InitOrderReceiver(codeRev)
 			if err != nil {
-				return nil, err
+				return false, nil, err
 			}
 			AppEnvironment.SpecialChanInits.Store(codeRev, orderReceiver)
 		}
-		return &WSConn{
+		return newCreate, &WSConn{
 			conn:           nil,
 			WSType:         wsType,
 			OrderPublisher: orderPublisher,
 			OrderReceiver:  orderReceiver,
 		}, nil
 	}
-	return nil, errors.New(fmt.Sprintf("url %s not support %s Init Publisher or Receiver", url, tsCode))
+	return false, nil, errors.New(fmt.Sprintf("url %s not support %s Init Publisher or Receiver", url, tsCode))
 }
 
 func newWsGorillaChannel(url string) (*WSConn, error) {
@@ -262,12 +269,15 @@ func newWsGorillaChannel(url string) (*WSConn, error) {
 	return &WSConn{conn: c, WSType: ChanTypeWS}, nil
 }
 
-func publicHandler(market string, stopChan chan struct{}, connection *WSConn, msgHandler MsgHandler) {
+func publicHandler(newCreated bool, market string, stopChan chan struct{}, connection *WSConn, msgHandler MsgHandler) {
 	defer func() {
 		//err := connection.conn.Close(websocket.StatusNormalClosure, "")
 		connection.Close()
 	}()
 	for {
+		if !newCreated {
+			break
+		}
 		select {
 		case <-stopChan:
 			util.Log(util.LogLevelInfo, "get stop struct, return")
@@ -305,7 +315,8 @@ func publicHandler(market string, stopChan chan struct{}, connection *WSConn, ms
 
 func WsPrivateClient(account *Account, connMap *sync.Map, market, url string, accountMsgHandler AccountMsgHandler) (connection *WSConn, err error) {
 	util.Log(util.LogLevelInfo, market+` create account channel `+url)
-	connection, err = initChannel(account, url, market, ChanTypeOrder)
+	newCreate := true
+	newCreate, connection, err = initChannel(account, url, market, ChanTypeOrder)
 	if err != nil {
 		util.Log(util.LogLevelError, url+"can not create web socket"+err.Error())
 		return nil, err
@@ -316,6 +327,9 @@ func WsPrivateClient(account *Account, connMap *sync.Map, market, url string, ac
 			connection.Close()
 		}()
 		for {
+			if !newCreate {
+				break
+			}
 			if connection.WSType == ChanTypeWS {
 				//_, message, readErr := connection.conn.Read(context.Background())
 				_, message, readErr := connection.conn.ReadMessage()
@@ -359,7 +373,7 @@ func WsPublicClient(market, url string, subscribes []interface{}, subHandler Sub
 		} else {
 			stepSubscribes = subscribes[i*step:]
 		}
-		connection, err := initChannel(nil, url, market, ChanTypeMarket)
+		newCreate, connection, err := initChannel(nil, url, market, ChanTypeMarket)
 		if err != nil || connection == nil {
 			if err != nil {
 				util.Log(util.LogLevelError, fmt.Sprintf("can not create web socket %s %s %s", market, url, err.Error()))
@@ -371,7 +385,7 @@ func WsPublicClient(market, url string, subscribes []interface{}, subHandler Sub
 			if subHandler != nil {
 				_ = subHandler(market, connection, stepSubscribes)
 				time.Sleep(time.Second)
-				publicHandler(market, stopChan, connection, msgHandler)
+				publicHandler(newCreate, market, stopChan, connection, msgHandler)
 			}
 		}()
 		msgChans = append(msgChans, stopChan)
