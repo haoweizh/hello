@@ -28,8 +28,7 @@ type CarryCoin struct {
 	Holding      float64 // 当前持仓数量
 	MoneyPerStep float64 // 网格搬砖中每一档位以定价币为单位的金额
 	MoneyCurStep float64 // 当前档位已开仓金额
-	Price        float64
-	ID           uint `gorm:"primary_key"`
+	ID           uint    `gorm:"primary_key"`
 	CreatedAt    time.Time
 	UpdatedAt    time.Time
 }

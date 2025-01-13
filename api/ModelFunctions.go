@@ -89,7 +89,7 @@ func PrepareSettings() {
 	model.AppDB.Where(`valid = ?`, true).Find(&appSettings)
 	model.AppDB.Find(&appCarryCoins)
 	for _, carryCoin := range appCarryCoins {
-		util.StoreSyncMap(CarryCoins, &carryCoin, strconv.Itoa(carryCoin.AccountIndex), carryCoin.Coin)
+		util.StoreSyncMap(CarryCoins, &carryCoin, carryCoin.Coin, strconv.Itoa(carryCoin.AccountIndex))
 	}
 	util.Log(util.LogLevelInfo, fmt.Sprintf(`start to load settings carry coins %d %d`, len(appSettings), len(appCarryCoins)))
 	for i := 0; i < len(appSettings); i++ {
@@ -514,8 +514,8 @@ func GetMarketSymbols(market string) map[string]bool {
 //	return settings
 //}
 
-func GetCarryCoin(index int, coin string) (carryCoin *model.CarryCoin) {
-	value, ok := util.LoadSyncMap(CarryCoins, strconv.Itoa(index), coin)
+func GetCarryCoin(coin string, index int) (carryCoin *model.CarryCoin) {
+	value, ok := util.LoadSyncMap(CarryCoins, coin, strconv.Itoa(index))
 	if ok && value != nil {
 		return value.(*model.CarryCoin)
 	}
