@@ -104,11 +104,15 @@ func createFromPosition(account *model.Account, setting *model.Setting, valueLim
 		return nil, false
 	}
 	cm := value.(*contractMarket)
+	handledActValueInU := cm.accountValueInU
+	if setting.Market == model.Gate {
+		handledActValueInU = 0.7 * cm.accountValueInU
+	}
 	_, price := api.GetPriceForce(setting.Symbol, setting.Market)
 	limitAmount := 0.0
 	availableAmount := 0.0
 	if price > 0 {
-		limitAmount = math.Min(cm.accountValueInU/5, cm.collateralsAvailable) / price
+		limitAmount = math.Min(handledActValueInU/5, cm.collateralsAvailable) / price
 		if setting.Market == model.Gate {
 			riskLimit, loaded := util.LoadSyncMap(&model.AppEnvironment.RiskLimitsGate, account.Key, setting.Symbol)
 			if loaded {
@@ -130,7 +134,7 @@ func createFromPosition(account *model.Account, setting *model.Setting, valueLim
 	if cm.positions[setting.Symbol] != nil {
 		carryStatus.Holding = cm.positions[setting.Symbol].Holding
 		valueInUsd = math.Abs(carryStatus.Holding) * price
-		carryStatus.RateInAll = valueInUsd / cm.accountValueInU
+		carryStatus.RateInAll = valueInUsd / handledActValueInU
 		if carryStatus.Holding < 0 {
 			carryStatus.AvailableBuy = math.Max(availableAmount, math.Abs(carryStatus.Holding))
 		}
@@ -164,11 +168,11 @@ func createFromPosition(account *model.Account, setting *model.Setting, valueLim
 			doRevert = true
 		}
 	}
-	if cm.contractValueInU/cm.accountValueInU > rateLimitPosition || valueInUsd > valueLimit ||
-		valueInUsd/cm.accountValueInU > rateLimitHolding || (cm.collateralsAvailable < MarginULowLimit && cm.collateralsAvailable/cm.accountValueInU < 0.05) ||
+	if cm.contractValueInU/handledActValueInU > rateLimitPosition || valueInUsd > valueLimit ||
+		valueInUsd/handledActValueInU > rateLimitHolding || (cm.collateralsAvailable < MarginULowLimit && cm.collateralsAvailable/handledActValueInU < 0.05) ||
 		(setting.Market == model.BitgetPerp && (len(cm.positions) > model.BitgetPosLimit && carryStatus.Holding == 0)) {
 		util.Log(util.LogLevelError, fmt.Sprintf(`do revert true %s %s value big %f %f %f %f %f %f margin u %f pos len %d`,
-			setting.Market, setting.Symbol, cm.contractValueInU, cm.accountValueInU, rateLimitPosition, valueInUsd, valueLimit, rateLimitHolding, cm.contractValueInU, len(cm.positions)))
+			setting.Market, setting.Symbol, cm.contractValueInU, handledActValueInU, rateLimitPosition, valueInUsd, valueLimit, rateLimitHolding, cm.contractValueInU, len(cm.positions)))
 		doRevert = true
 	}
 	return carryStatus, doRevert
@@ -189,9 +193,13 @@ func createFromBalance(account *model.Account, setting *model.Setting, valueLimi
 		return nil, true
 	}
 	sm := value.(*spotMarket)
+	handledActValueInU := sm.accountValueInU
+	if setting.Market == model.Gate {
+		handledActValueInU *= 0.7
+	}
 	limitBuy, limitSell, availableBuy := 0.0, 0.0, 0.0
 	if price > 0 {
-		limitBuy = math.Min(sm.availableU/5, sm.accountValueInU/15) / price
+		limitBuy = math.Min(sm.availableU/5, handledActValueInU/15) / price
 		availableBuy = sm.availableU / price
 	} else {
 		util.Log(util.LogLevelError, fmt.Sprintf(`do revert true %s %s price 0`, setting.Market, setting.Symbol))
@@ -210,9 +218,9 @@ func createFromBalance(account *model.Account, setting *model.Setting, valueLimi
 		carryStatus.Holding = balance.Amount
 		// 暂不支持借币
 		carryStatus.LimitSell, carryStatus.AvailableSell = limitSell, limitSell
-		carryStatus.RateInAll = math.Abs(carryStatus.Holding * price / sm.accountValueInU)
+		carryStatus.RateInAll = math.Abs(carryStatus.Holding * price / handledActValueInU)
 	}
-	usdLowLine := math.Min(100000, 0.1*sm.accountValueInU)
+	usdLowLine := math.Min(100000, 0.1*handledActValueInU)
 	if sm.availableU < usdLowLine || carryStatus.RateInAll > 0.2 {
 		doRevert = true
 	}
@@ -862,7 +870,7 @@ var ProcessCross = func(setting *model.Setting, tick *model.BidAsk) {
 		if !tickGet || setting.ID == settingRelate.ID || (!model.NonRTTicker[tick.Bids[0].Market] && model.NonRTTicker[tickRelate.Bids[0].Market]) || !settingRelate.Valid {
 			continue
 		}
-		tickLimit += 2000
+		tickLimit += 500
 		if int(ts1)-tickRelate.Ts > tickLimit {
 			//util.LogLess(util.LogLevelError, fmt.Sprintf(`abandon tick limit relate %s %s %s limit %v`,
 			//	setting.Coin, tick.Bids[0].Market, tick.Bids[0].Symbol, model.AppEnvironment.CrossEqualing))
@@ -1191,12 +1199,21 @@ var PostOrderCross = func(order *model.Order) {
 	account := model.AppConfig.GetAccountFromKeyIndex(order.Market, ``, order.AccountIndex)
 	go handleCross(account, order)
 	if !order.HaveId() || order.ErrCode != `` || order.Status == model.CarryStatusFail {
-		status, _ := util.LoadSyncMap(carryStatusMap, setting.Coin, setting.Market, setting.Symbol, account.Key)
-		if status != nil {
-			status.(*model.CarryStatus).TradeLineSell = 1
-			status.(*model.CarryStatus).TradeLineBuy = 1
-			status.(*model.CarryStatus).LimitSell = 0
-			status.(*model.CarryStatus).LimitBuy = 0
+		value, _ := util.LoadSyncMap(carryStatusMap, setting.Coin, setting.Market, setting.Symbol, account.Key)
+		if value != nil {
+			status := value.(*model.CarryStatus)
+			if (status.Holding > 0 && order.OrderSide == model.OrderSideSell) || (status.Holding < 0 && order.OrderSide == model.OrderSideBuy) {
+				status.TradeLineSell = 1
+				status.TradeLineBuy = 1
+				status.LimitSell = 0
+				status.LimitBuy = 0
+			} else if status.Holding > 0 {
+				status.TradeLineBuy = 1
+				status.LimitBuy = 0
+			} else if status.Holding < 0 {
+				status.TradeLineSell = 1
+				status.LimitSell = 0
+			}
 			util.Log(util.LogLevelError, fmt.Sprintf(`set trade line 1 fail order %s %s %s %s`,
 				account.Key, order.OrderId, order.ErrCode, order.OrderTime.Format(time.DateTime)))
 		}

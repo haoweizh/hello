@@ -632,7 +632,7 @@ func Test_transferInner(t *testing.T) {
 			amtStr := strconv.FormatFloat(bal.Amount, 'f', -1, 64)
 			//suc := api.TransferInnerBybit(model.AppConfig.BybitKey, model.AppConfig.BybitSecret, bal.Coin,
 			//	amtStr, `UNIFIED`, `FUND`)
-			suc := api.WithdrawBybit(model.AppConfig.BybitKey, model.AppConfig.BybitSecret, bal.Coin,
+			suc = api.WithdrawBybit(model.AppConfig.BybitKey, model.AppConfig.BybitSecret, bal.Coin,
 				`65058810`, `65058810`, amtStr)
 			if !suc {
 				fmt.Println(fmt.Sprintf(`fail to transfer from FUND to UNIFIED %s %s`, bal.Coin, amtStr))
@@ -716,13 +716,16 @@ func remove(value *sync.Map) {
 }
 
 func Test_map(t *testing.T) {
-	p := make([]float64, 26)
-	for n := 1; n <= 25; n++ {
+	p := make([]float64, 5555555)
+	for n := 1; n <= 250000; n++ {
 		if n == 1 {
 			p[n] = 0.001
 		} else {
 			p[n] = p[n-1] + 0.001 + 0.0001*float64(n-1)
-			fmt.Println(fmt.Sprintf(`%d: %f`, n, p[n]))
+			fmt.Println(fmt.Sprintf(`%f`, p[n]))
+		}
+		if p[n] > 0.2 {
+			break
 		}
 	}
 

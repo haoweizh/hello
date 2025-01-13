@@ -549,8 +549,25 @@ func holdPage(c *gin.Context) {
 			return
 		}
 	}
-	c.HTML(http.StatusOK, `hold.gohtml`, gin.H{
-		`marketValue`: marketValues, `trade`: tradeInfo, `orders`: orders, `holdings`: cross.GetHoldings(queryAccounts)})
+	carryCoins := make([][]string, 0)
+	carryRows, _ = model.AppDB.Model(model.CarryCoin{}).Select(`coin,current_step,holding,money_per_step,money_cur_step,price`).
+		Where(`account_index=?`, indexStr).Order(`current_step desc`).Rows()
+	if carryRows != nil {
+		for carryRows.Next() {
+			var coin string
+			var currentStep int
+			var holding, moneyPerStep, moneyCurStep, price float64
+			_ = carryRows.Scan(&coin, &currentStep, &holding, &moneyPerStep, &moneyCurStep)
+			carryCoins = append(carryCoins, []string{coin, fmt.Sprintf(`%d`, currentStep), fmt.Sprintf(`%e`, holding),
+				fmt.Sprintf(`%.1f`, moneyPerStep), fmt.Sprintf(`%.1f`, moneyCurStep), fmt.Sprintf(`%e`, price)})
+		}
+		if carryRows.Close() != nil {
+			util.Log(util.LogLevelInfo, fmt.Sprintf(`fail to close DB for carry rows`))
+			return
+		}
+	}
+	c.HTML(http.StatusOK, `hold.gohtml`, gin.H{`marketValue`: marketValues, `carryCoins`: carryCoins,
+		`trade`: tradeInfo, `orders`: orders, `holdings`: cross.GetHoldings(queryAccounts)})
 }
 
 func crossRefresh(c *gin.Context) {

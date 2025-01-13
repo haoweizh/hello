@@ -11,8 +11,10 @@ import (
 )
 
 // step(n) = step(n-1) + 0.001 + 0.0001*(n-1) 共22档
-var stepScores = []float64{0, 0.001, 0.0021, 0.0033, 0.0046, 0.006, 0.0075, 0.0091, 0.0108, 0.0126, 0.0145, 0.0165,
-	0.0186, 0.0208, 0.0231, 0.0255, 0.028, 0.0306, 0.0333, 0.0361, 0.039, 0.042}
+var stepScores = []float64{0, 0.001, 0.0021, 0.0033, 0.0046, 0.006, 0.0075, 0.0091, 0.0108, 0.0126, 0.0145, 0.0165, 0.0186,
+	0.0208, 0.0231, 0.0255, 0.028, 0.0306, 0.0333, 0.0361, 0.039, 0.042, 0.0451, 0.0483, 0.0516, 0.055, 0.0585, 0.0621, 0.0658,
+	0.0696, 0.0735, 0.0775, 0.0816, 0.0858, 0.0901, 0.0945, 0.099, 0.1036, 0.1083, 0.1131, 0.118, 0.123, 0.1281, 0.1333, 0.1386, 0.144,
+	0.1495, 0.1551, 0.1608, 0.1666, 0.1725, 0.1785, 0.1846, 0.1908, 0.1971, 0.2035}
 
 const swapScore = 0.0015 // 换仓要求的利润金额
 const crossGrid = `grid`
@@ -245,7 +247,7 @@ func calcAmount(index int, coin string, carryStatus, carryStatusRelate *model.Ca
 }
 
 func checkScoreLimit(market, symbol, marketRelate, symbolRelate string, score, scoreRelate float64) (invalid bool) {
-	if score > 0.3 || scoreRelate > 0.3 {
+	if score > 0.2 || scoreRelate > 0.2 {
 		invalid = true
 	}
 	checkKey := fmt.Sprintf(`%s_%s_%s_%s`, market, symbol, marketRelate, symbolRelate)

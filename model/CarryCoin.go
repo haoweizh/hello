@@ -28,7 +28,8 @@ type CarryCoin struct {
 	Holding      float64 // 当前持仓数量
 	MoneyPerStep float64 // 网格搬砖中每一档位以定价币为单位的金额
 	MoneyCurStep float64 // 当前档位已开仓金额
-	ID           uint    `gorm:"primary_key"`
+	Price        float64
+	ID           uint `gorm:"primary_key"`
 	CreatedAt    time.Time
 	UpdatedAt    time.Time
 }
@@ -66,6 +67,7 @@ func (carryCoin *CarryCoin) AddTrade(statusBuy, statusSell *CarryStatus, priceBu
 	}
 	if change {
 		AppDB.Model(carryCoin).Where(`coin=? and account_index=?`, carryCoin.Coin, carryCoin.AccountIndex).Updates(
-			map[string]interface{}{`current_step`: carryCoin.CurrentStep, `money_cur_step`: carryCoin.MoneyCurStep, `holding`: carryCoin.Holding})
+			map[string]interface{}{`current_step`: carryCoin.CurrentStep, `money_cur_step`: carryCoin.MoneyCurStep,
+				`holding`: carryCoin.Holding, `price`: priceSell / statusSell.Setting.PriceX})
 	}
 }

@@ -265,7 +265,7 @@ var wsAccountHandlerOKEX = func(market, key string, event []byte) {
 			collateral.Occupied, _ = strconv.ParseFloat(dataArray[0].(map[string]interface{})[`imr`].(string), 64) // 被占用保证金
 			collateral.Rate, _ = strconv.ParseFloat(dataArray[0].(map[string]interface{})[`mgnRatio`].(string), 64)
 			collateral.Available, _ = strconv.ParseFloat(dataArray[0].(map[string]interface{})[`adjEq`].(string), 64)
-			util.Log(util.LogLevelInfo, fmt.Sprintf("okex unified %s %f", collateral.AccountKey, collateral.Available))
+			//util.Log(util.LogLevelInfo, fmt.Sprintf("okex unified %s %f", collateral.AccountKey, collateral.Available))
 			model.CollateralHandler(key, false, collateral)
 		}
 	}

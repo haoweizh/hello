@@ -26,6 +26,27 @@
         </tr>
     {{end}}
 </table>
+<h4>网格状态</h4>
+<table border="1" cellspacing="0">
+    <tr>
+        <th>coin</th>
+        <th>holding</th>
+        <th>Step</th>
+        <th>MoneyPerStep</th>
+        <th>MoneyCurStep</th>
+        <th>price</th>
+    </tr>
+    {{range $i, $value := $.carryCoins}}
+        <tr>
+            <td>{{index $value 0}}</td>
+            <td>{{index $value 1}}</td>
+            <td>{{index $value 2}}</td>
+            <td>{{index $value 3}}</td>
+            <td>{{index $value 4}}</td>
+            <td>{{index $value 5}}</td>
+        </tr>
+    {{end}}
+</table>
 <h4>交易概览表</h4>
 <table border="1" cellspacing="0">
     <th>市场</th>
