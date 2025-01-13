@@ -239,7 +239,7 @@ func initStatus(account *model.Account, setting *model.Setting) (status *model.C
 	if setting == nil {
 		return
 	}
-	util.Log(util.LogLevelInfo, fmt.Sprintf(`start to init status %s %s %s`, setting.Coin, setting.Market, setting.Symbol))
+	//util.Log(util.LogLevelInfo, fmt.Sprintf(`start to init status %s %s %s`, setting.Coin, setting.Market, setting.Symbol))
 	_, marketType, _, _ := model.GetFromStandard(setting.Market, setting.Symbol)
 	doRevert := false
 	localLimit := holdingLimitInU
@@ -544,8 +544,8 @@ func equalAccount(i int, equalChan chan int, accounts map[string]*model.Account,
 				if equalStatuses[j] == nil {
 					util.Log(util.LogLevelError, fmt.Sprintf(`store carry nil coin %s %s %s %s %d`,
 						setting.Coin, setting.Market, setting.Symbol, account.Key, account.Index))
-				} else {
-					util.Log(util.LogLevelInfo, fmt.Sprintf(`create init status %s %s %d %#v`, setting.Coin, setting.Market, account.Index, equalStatuses[j]))
+					//} else {
+					//	util.Log(util.LogLevelInfo, fmt.Sprintf(`create init status %s %s %d %#v`, setting.Coin, setting.Market, account.Index, equalStatuses[j]))
 				}
 			}
 			coinCrossing.Store(coin.(string), false)
