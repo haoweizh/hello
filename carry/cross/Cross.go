@@ -584,7 +584,7 @@ func equalAccount(i int, equalChan chan int, accounts map[string]*model.Account,
 			}
 			valueCarryCoin, ok := util.LoadSyncMap(carryCoinMap, coin.(string), strconv.Itoa(i))
 			if !ok || valueCarryCoin == nil {
-				carryCoin := api.GetCarryCoin(coin.(string))
+				carryCoin := api.GetCarryCoin(i, coin.(string))
 				if carryCoin == nil {
 					carryCoin = createCarryCoin(accounts, i, coin.(string), settings.([]*model.Setting))
 					if carryCoin != nil {

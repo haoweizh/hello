@@ -148,7 +148,7 @@ func _(coin string, closeLine float64) (tradeLineExtra *TradeLineExtra) {
 	return
 }
 
-func GetHoldings(accounts map[string]*model.Account) (holding [][]interface{}) {
+func GetHoldings(indexStr string, accounts map[string]*model.Account) (holding [][]interface{}) {
 	holding = make([][]interface{}, 0)
 	coinHold := make(map[string]float64)
 	coinValue := make(map[string]float64)
@@ -296,8 +296,17 @@ func GetHoldings(accounts map[string]*model.Account) (holding [][]interface{}) {
 		market := holding[i][0].(string)
 		symbol := holding[i][2].(string)
 		_, price := api.GetPriceForce(symbol, market)
+		value, _ := util.LoadSyncMap(carryCoinMap, indexStr, coin)
+		currentStep := 0
+		moneyCurStep := 0.0
+		if value != nil {
+			currentStep = value.(*model.CarryCoin).CurrentStep
+			moneyCurStep = value.(*model.CarryCoin).MoneyCurStep
+		}
 		holding[i] = append(holding[i], math.Round(coinValue[coin]/10)*10)
 		holding[i] = append(holding[i], price)
+		holding[i] = append(holding[i], currentStep)
+		holding[i] = append(holding[i], moneyCurStep)
 	}
 	return
 }

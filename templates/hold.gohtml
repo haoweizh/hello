@@ -26,27 +26,6 @@
         </tr>
     {{end}}
 </table>
-<h4>网格状态</h4>
-<table border="1" cellspacing="0">
-    <tr>
-        <th>coin</th>
-        <th>holding</th>
-        <th>Step</th>
-        <th>MoneyPerStep</th>
-        <th>MoneyCurStep</th>
-        <th>price</th>
-    </tr>
-    {{range $i, $value := $.carryCoins}}
-        <tr>
-            <td>{{index $value 0}}</td>
-            <td>{{index $value 1}}</td>
-            <td>{{index $value 2}}</td>
-            <td>{{index $value 3}}</td>
-            <td>{{index $value 4}}</td>
-            <td>{{index $value 5}}</td>
-        </tr>
-    {{end}}
-</table>
 <h4>交易概览表</h4>
 <table border="1" cellspacing="0">
     <th>市场</th>
@@ -120,6 +99,8 @@
     <th>valid</th>
     <th>price</th>
     <th>信息</th>
+    <th>curStep</th>
+    <th>MoneyCurStep</th>
     {{range $i, $value := $.holdings}}
         <tr>
             {{$valid := index $value 5}}
@@ -133,6 +114,8 @@
                 <td bgcolor="#00FF00">{{index $value 5}}</td>
                 <td bgcolor="#00FF00">{{index $value 8}}</td>
                 <td bgcolor="#00FF00">{{index $value 6}}</td>
+                <td bgcolor="#00FF00">{{index $value 9}}</td>
+                <td bgcolor="#00FF00">{{index $value 10}}</td>
             {{else if eq $valid "extra"}}
                 <td bgcolor="#FF0000">{{index $value 0}}</td>
                 <td bgcolor="#FF0000">{{index $value 1}}</td>
@@ -143,6 +126,8 @@
                 <td bgcolor="#FF0000">{{index $value 5}}</td>
                 <td bgcolor="#FF0000">{{index $value 8}}</td>
                 <td bgcolor="#FF0000">{{index $value 6}}</td>
+                <td bgcolor="#FF0000">{{index $value 9}}</td>
+                <td bgcolor="#FF0000">{{index $value 10}}</td>
             {{else if eq $valid "removed"}}
                 <td bgcolor="#0000FF">{{index $value 0}}</td>
                 <td bgcolor="#0000FF">{{index $value 1}}</td>
@@ -153,6 +138,8 @@
                 <td bgcolor="#0000FF">{{index $value 5}}</td>
                 <td bgcolor="#0000FF">{{index $value 8}}</td>
                 <td bgcolor="#0000FF">{{index $value 6}}</td>
+                <td bgcolor="#0000FF">{{index $value 9}}</td>
+                <td bgcolor="#0000FF">{{index $value 10}}</td>
             {{else}}
                 <td>{{index $value 0}}</td>
                 <td>{{index $value 1}}</td>
@@ -163,6 +150,8 @@
                 <td>{{index $value 5}}</td>
                 <td>{{index $value 8}}</td>
                 <td>{{index $value 6}}</td>
+                <td>{{index $value 9}}</td>
+                <td>{{index $value 10}}</td>
             {{end}}
         </tr>
     {{end}}

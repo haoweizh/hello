@@ -6,6 +6,7 @@ import (
 	"hello/util"
 	"os"
 	"sort"
+	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -15,7 +16,7 @@ var DynamicHandleTime = &sync.Map{} // market - handle time.Time
 var symbolSettings = &sync.Map{}    // function*market - map[symbol]*setting
 var handlers = &sync.Map{}          //market*symbol / *sync.Map:map[function]carryHandler
 var coinSettings = &sync.Map{}      // function / *sync.Map:map[coin][]*model.Setting
-var CarryCoins = &sync.Map{}
+var CarryCoins = &sync.Map{}        // accountIndex*coin *CarryCoin
 var crossLen int
 var settingLoading bool
 var processLock sync.Mutex
@@ -88,7 +89,7 @@ func PrepareSettings() {
 	model.AppDB.Where(`valid = ?`, true).Find(&appSettings)
 	model.AppDB.Find(&appCarryCoins)
 	for _, carryCoin := range appCarryCoins {
-		CarryCoins.Store(carryCoin.Coin, &carryCoin)
+		util.StoreSyncMap(CarryCoins, &carryCoin, strconv.Itoa(carryCoin.AccountIndex), carryCoin.Coin)
 	}
 	util.Log(util.LogLevelInfo, fmt.Sprintf(`start to load settings carry coins %d %d`, len(appSettings), len(appCarryCoins)))
 	for i := 0; i < len(appSettings); i++ {
@@ -513,8 +514,8 @@ func GetMarketSymbols(market string) map[string]bool {
 //	return settings
 //}
 
-func GetCarryCoin(coin string) (carryCoin *model.CarryCoin) {
-	value, ok := CarryCoins.Load(coin)
+func GetCarryCoin(index int, coin string) (carryCoin *model.CarryCoin) {
+	value, ok := util.LoadSyncMap(CarryCoins, strconv.Itoa(index), coin)
 	if ok && value != nil {
 		return value.(*model.CarryCoin)
 	}
