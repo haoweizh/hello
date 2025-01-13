@@ -842,7 +842,8 @@ var ProcessCross = func(setting *model.Setting, tick *model.BidAsk) {
 	}
 	ts1 := time.Now().UnixMilli()
 	if tick == nil || tick.Asks == nil || tick.Bids == nil || setting == nil || setting.Valid == false || model.AppEnvironment.CrossEqualing ||
-		(model.AppConfig.Env != `test` && model.AppConfig.Handle != `1`) || settings == nil || len(settings) == 0 || time.Now().Minute() < 3 {
+		(model.AppConfig.Env != `test` && model.AppConfig.Handle != `1`) || settings == nil || len(settings) == 0 ||
+		time.Now().Minute() < 3 || ts1-model.AppEnvironment.LastOrderMilli < 100 {
 		return
 	}
 	// 同一个coin cross之间互斥
@@ -906,7 +907,7 @@ var ProcessCross = func(setting *model.Setting, tick *model.BidAsk) {
 				//	time.Now().String(), amount,
 				//	statusBuy.Symbol, statusBuy.Market, tickBuy.Asks[0].Market, tickBuy.Asks[0].Price, priceBuy, tickBuy.Asks[0].Amount, nowTs-int64(tickBuy.Ts),
 				//	statusSell.Symbol, statusSell.Market, tickSell.Bids[0].Market, tickSell.Bids[0].Price, priceSell, tickSell.Bids[0].Amount, nowTs-int64(tickSell.Ts)))
-				time.Sleep(time.Millisecond * 200)
+				model.AppEnvironment.LastOrderMilli = time.Now().UnixMilli()
 				return
 			}
 		}
