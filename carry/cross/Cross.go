@@ -449,7 +449,9 @@ func equalAccounts(doEqual bool, traceId int64) {
 	for i := 0; i < api.GetCrossLen(); i++ {
 		indexAccounts := model.GetAccounts(i)
 		for _, market := range model.AppEnvironment.Markets {
-			liquidateSmallContracts(indexAccounts[market], market)
+			if doEqual {
+				liquidateSmallContracts(indexAccounts[market], market)
+			}
 			if market == model.Gate {
 				gateCm, _ := contractMarkets.Load(indexAccounts[market])
 				if gateCm != nil {

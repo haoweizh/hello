@@ -183,7 +183,7 @@ func Maintain() {
 		go cross.ContinueComp()
 		go cross.ClearCross()
 		c := cron.New()
-		_, err := c.AddFunc("0,30 * * * ?", cross.ClearCross)
+		_, err := c.AddFunc("0,15,30,45 * * * ?", cross.ClearCross)
 		if err != nil {
 			util.Log(util.LogLevelError, `fail to cron clear cross `+err.Error())
 		} else {
