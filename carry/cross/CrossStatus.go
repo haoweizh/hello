@@ -296,7 +296,7 @@ func GetHoldings(indexStr string, accounts map[string]*model.Account) (holding [
 		market := holding[i][0].(string)
 		symbol := holding[i][2].(string)
 		_, price := api.GetPriceForce(symbol, market)
-		value, _ := util.LoadSyncMap(carryCoinMap, indexStr, coin)
+		value, _ := util.LoadSyncMap(carryCoinMap, coin, indexStr)
 		currentStep := 0
 		moneyCurStep := 0.0
 		if value != nil {
