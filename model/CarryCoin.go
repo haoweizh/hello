@@ -68,6 +68,6 @@ func (carryCoin *CarryCoin) AddTrade(statusBuy, statusSell *CarryStatus, priceBu
 	if change {
 		AppDB.Model(carryCoin).Where(`coin=? and account_index=?`, carryCoin.Coin, carryCoin.AccountIndex).Updates(
 			map[string]interface{}{`current_step`: carryCoin.CurrentStep, `money_cur_step`: carryCoin.MoneyCurStep,
-				`holding`: carryCoin.Holding, `price`: priceSell / statusSell.Setting.PriceX})
+				`holding`: carryCoin.Holding})
 	}
 }

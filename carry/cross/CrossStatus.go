@@ -302,6 +302,9 @@ func GetHoldings(indexStr string, accounts map[string]*model.Account) (holding [
 		if value != nil {
 			currentStep = value.(*model.CarryCoin).CurrentStep
 			moneyCurStep = value.(*model.CarryCoin).MoneyCurStep
+			util.Log(util.LogLevelError, fmt.Sprintf(`success get carry coin %d %f`, currentStep, moneyCurStep))
+		} else {
+			util.Log(util.LogLevelError, fmt.Sprintf(`fail to get carry coin %s %s`, coin, indexStr))
 		}
 		holding[i] = append(holding[i], math.Round(coinValue[coin]/10)*10)
 		holding[i] = append(holding[i], price)
