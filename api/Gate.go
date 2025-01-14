@@ -573,7 +573,7 @@ func maintainConnsGate(accounts []*model.Account) {
 			if wsSpot != nil {
 				if err := wsSpot.(*model.WSConn).WriteMsg([]byte(fmt.Sprintf(`{"time": %d, "channel" : "spot.ping"}`, time.Now().Unix()))); err != nil {
 					successSpot = false
-					wsSpot.(*model.WSConn).Close()
+					//wsSpot.(*model.WSConn).Close()
 					util.Log(util.LogLevelError, fmt.Sprintf("send account spot ping message err:%s %s", model.Gate, err.Error()))
 				}
 			} else {
@@ -582,12 +582,13 @@ func maintainConnsGate(accounts []*model.Account) {
 			if !successSpot {
 				WSOrderServeGate(account, model.MarketTypeSpot)
 			}
+			time.Sleep(time.Second * 2)
 			successPerp := true
 			wsFuture, _ := util.LoadSyncMap(&model.AppEnvironment.ConnOrder, model.Gate, model.MarketTypePerp, account.Key)
 			if wsFuture != nil {
 				if err := wsFuture.(*model.WSConn).WriteMsg([]byte(fmt.Sprintf(`{"time": %d, "channel" : "futures.ping"}`, time.Now().Unix()))); err != nil {
 					util.Log(util.LogLevelError, fmt.Sprintf("send account futures ping message err:%s %s", model.Gate, err.Error()))
-					wsFuture.(*model.WSConn).Close()
+					//wsFuture.(*model.WSConn).Close()
 					successPerp = false
 				}
 			} else {
@@ -609,12 +610,7 @@ func WSOrderServeGate(account *model.Account, marketType string) {
 	if !replaced {
 		return
 	}
-	defer func() {
-		select {
-		case <-time.After(time.Second * 30):
-		}
-		model.AppEnvironment.PriConnecting.Store(model.Gate+marketType+account.Key, false)
-	}()
+	defer model.AppEnvironment.PriConnecting.Store(model.Gate+marketType+account.Key, false)
 	ts := time.Now().Unix()
 	hash := hmac.New(sha512.New, []byte(account.Secret))
 	var conn, connUpdate *model.WSConn

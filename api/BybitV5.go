@@ -25,15 +25,15 @@ const bybitTradeWsUrl = "wss://stream.bybit.com/v5/trade"
 const wsStepBybit = 10
 
 var wsOrdUdtHandlerBybit = func(market, key string, msg []byte) {
-	value, _ := util.LoadSyncMap(&model.AppEnvironment.ConnOrderUpdate, market, key)
-	if value == nil {
-		return
-	}
 	responseJson, err := util.NewJSON(msg)
 	if err != nil || responseJson == nil {
 		return
 	}
 	if responseJson.Get(`op`).MustString() == `auth` && responseJson.Get(`success`).MustBool() {
+		value, _ := util.LoadSyncMap(&model.AppEnvironment.ConnOrderUpdate, market, key)
+		if value == nil {
+			return
+		}
 		//新增wallet通道
 		err := value.(*model.WSConn).WriteMsg([]byte(`{"op":"subscribe","args": ["order","wallet"]}`))
 		if err != nil {
@@ -126,12 +126,12 @@ func maintainConnsBybit(accounts []*model.Account) {
 				success = false
 			}
 			if !success {
-				if connOrderUpdate != nil {
-					connOrderUpdate.(*model.WSConn).Close()
-				}
-				if connOrder != nil {
-					connOrder.(*model.WSConn).Close()
-				}
+				//if connOrderUpdate != nil {
+				//	connOrderUpdate.(*model.WSConn).Close()
+				//}
+				//if connOrder != nil {
+				//	connOrder.(*model.WSConn).Close()
+				//}
 				util.Log(util.LogLevelError, "fail to ping ws bybit "+errMsg)
 				WsOrderServeBybit(account)
 			}
@@ -171,12 +171,7 @@ func WsOrderServeBybit(account *model.Account) {
 	if !replaced {
 		return
 	}
-	defer func() {
-		select {
-		case <-time.After(time.Second * 30):
-		}
-		model.AppEnvironment.PriConnecting.Store(model.Bybit+account.Key, false)
-	}()
+	defer model.AppEnvironment.PriConnecting.Store(model.Bybit+account.Key, false)
 	connOrder, errOrder := model.WsPrivateClient(account, &model.AppEnvironment.ConnOrder, model.Bybit, bybitTradeWsUrl, wsOrderHandlerBybit)
 	if errOrder != nil {
 		util.Log(util.LogLevelError, "bybit can not create ws order "+errOrder.Error())

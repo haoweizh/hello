@@ -63,7 +63,7 @@ func maintainConnsOKEX(accounts []*model.Account) {
 					if err := value.(*model.WSConn).WriteMsg([]byte(`ping`)); err != nil {
 						util.Log(util.LogLevelError, "-test ok ws-okex server ping client error "+err.Error())
 						success = false
-						value.(*model.WSConn).Close()
+						//value.(*model.WSConn).Close()
 					}
 				} else {
 					util.Log(util.LogLevelError, "okex ws connection is nil  ")
@@ -321,12 +321,7 @@ func WsOrderServeOKEX(account *model.Account) {
 	if !replaced {
 		return
 	}
-	defer func() {
-		select {
-		case <-time.After(time.Second * 30):
-		}
-		model.AppEnvironment.PriConnecting.Store(model.OKEX+account.Key, false)
-	}()
+	defer model.AppEnvironment.PriConnecting.Store(model.OKEX+account.Key, false)
 	util.Log(util.LogLevelInfo, fmt.Sprintf("okex order serve %s", account.Key))
 	conn, err := model.WsPrivateClient(account, &model.AppEnvironment.ConnOrder, model.OKEX, wsPrivateOKEX, wsAccountHandlerOKEX)
 	if err != nil {

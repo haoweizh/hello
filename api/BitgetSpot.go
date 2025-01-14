@@ -36,7 +36,7 @@ func maintainConnsBitget(market string, accounts []*model.Account) {
 			valueUpdate, _ := util.LoadSyncMap(&model.AppEnvironment.ConnOrder, market, account.Key)
 			if valueUpdate != nil {
 				if err := valueUpdate.(*model.WSConn).WriteMsg([]byte(`ping`)); err != nil {
-					valueUpdate.(*model.WSConn).Close()
+					//valueUpdate.(*model.WSConn).Close()
 					util.Log(util.LogLevelError, fmt.Sprintf("order update conn maintain error %s %s", market, err.Error()))
 				} else {
 					success = true
@@ -53,6 +53,7 @@ func maintainConnsBitget(market string, accounts []*model.Account) {
 var wsOrderConnHandlerBitget = func(market, key string, event []byte) {
 	value, _ := util.LoadSyncMap(&model.AppEnvironment.ConnOrder, market, key)
 	if value == nil {
+		util.Log(util.LogLevelError, fmt.Sprintf("ignore msg %s %s", market, string(event)))
 		return
 	}
 	resJson, _ := util.NewJSON(event)

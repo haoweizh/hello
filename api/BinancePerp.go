@@ -43,12 +43,12 @@ func MaintainConnsBinance(market string, accounts []*model.Account) {
 					}
 				}
 			} else {
-				if value != nil {
-					value.(*model.WSConn).Close()
-				}
-				if valueUpdate != nil {
-					valueUpdate.(*model.WSConn).Close()
-				}
+				//if value != nil {
+				//	value.(*model.WSConn).Close()
+				//}
+				//if valueUpdate != nil {
+				//	valueUpdate.(*model.WSConn).Close()
+				//}
 				WsOrderServeBinance(account, market)
 			}
 			GetAccountFromWsAPI(account, wsAccountStatusV2, market)
