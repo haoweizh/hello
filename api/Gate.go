@@ -1179,8 +1179,8 @@ func placeOrderGate(account *model.Account, isWs bool, order *model.Order, order
 				order.Status = model.CarryStatusFail
 				order.ErrCode = err.Error()
 			} else {
-				orderResp, _ := json.Marshal(createOrder)
-				util.Log(util.LogLevelInfo, fmt.Sprintf(`create spot order response: %s`, orderResp))
+				//orderResp, _ := json.Marshal(createOrder)
+				//util.Log(util.LogLevelInfo, fmt.Sprintf(`create spot order response: %s`, orderResp))
 				order.OrderId = createOrder.Id
 				//order.Symbol = createOrder.CurrencyPair
 				secondUnix, _ := strconv.ParseInt(createOrder.CreateTime, 10, 64)
@@ -1236,8 +1236,8 @@ func placeOrderGate(account *model.Account, isWs bool, order *model.Order, order
 				order.Status = model.CarryStatusFail
 				order.ErrCode = err.Error()
 			} else {
-				orderResp, _ := json.Marshal(createFuturesOrder)
-				util.Log(util.LogLevelError, fmt.Sprintf(`create future order response: %s`, orderResp))
+				//orderResp, _ := json.Marshal(createFuturesOrder)
+				//util.Log(util.LogLevelError, fmt.Sprintf(`create future order response: %s`, orderResp))
 				if createFuturesOrder.IsLiq {
 					util.Log(util.LogLevelError, fmt.Sprintf("warning warning, blow up!!!"))
 				}

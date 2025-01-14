@@ -76,15 +76,15 @@ type MarkPriceInfo struct {
 	Ts        int // time in unix epoch millionSeconds
 }
 
-func (environment *Environment) HandleWSResp() {
+func HandleWSResp() {
 	for {
-		wsResp := <-environment.WSRespChan
-		value, _ := environment.ReqIdOrders.Load(wsResp.RequestId)
+		wsResp := <-AppEnvironment.WSRespChan
+		value, _ := AppEnvironment.ReqIdOrders.Load(wsResp.RequestId)
 		if value == nil {
-			value, _ = environment.ReqIdOrders.Load(wsResp.RequestId + OrderSideSell)
+			value, _ = AppEnvironment.ReqIdOrders.Load(wsResp.RequestId + OrderSideSell)
 			util.Log(util.LogLevelInfo, fmt.Sprintf(`get pair order sell %#v`, value))
 			if value == nil {
-				value, _ = environment.ReqIdOrders.Load(wsResp.RequestId + OrderSideBuy)
+				value, _ = AppEnvironment.ReqIdOrders.Load(wsResp.RequestId + OrderSideBuy)
 				util.Log(util.LogLevelInfo, fmt.Sprintf(`get pair order buy %#v`, value))
 			}
 		}
@@ -100,12 +100,12 @@ func (environment *Environment) HandleWSResp() {
 				order.Status = CarryStatusWorking
 				order.OrderId = wsResp.OrderId
 				util.Log(util.LogLevelInfo, fmt.Sprintf(`OrderIdOrders add order %s`, wsResp.OrderId))
-				environment.OrderIdOrders.Store(wsResp.OrderId, order)
+				AppEnvironment.OrderIdOrders.Store(wsResp.OrderId, order)
 			} else {
 				order.Status = CarryStatusFail
 				order.ErrCode = wsResp.Msg
 			}
-			environment.ReqIdOrders.Delete(wsResp.RequestId)
+			AppEnvironment.ReqIdOrders.Delete(wsResp.RequestId)
 			util.Log(util.LogLevelInfo, fmt.Sprintf(`del request store order %s %s %s %s %s %d %#v`,
 				order.Market, order.Coin, order.Symbol, order.OrderSide, wsResp.RequestId, time.Now().Unix()-order.OrderTime.Unix(), order))
 			if AccountHandlerMap[order.RefreshType] != nil {
