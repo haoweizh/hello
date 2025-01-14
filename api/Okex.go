@@ -186,6 +186,7 @@ var wsHandlerOKEX = func(market string, conn *model.WSConn, event []byte) {
 }
 
 var wsAccountHandlerOKEX = func(market, key string, event []byte) {
+	fmt.Println(string(event))
 	responseJson, err := util.NewJSON(event)
 	if err != nil || responseJson == nil {
 		return
@@ -307,6 +308,7 @@ func WsOrderServeOKEX(account *model.Account) {
 		}
 		model.AppEnvironment.PriConnecting.Store(model.OKEX+account.Key, false)
 	}()
+	util.Log(util.LogLevelInfo, fmt.Sprintf("okex order serve %s", account.Key))
 	conn, err := model.WsPrivateClient(account, &model.AppEnvironment.ConnOrder, model.OKEX, wsPrivateOKEX, wsAccountHandlerOKEX)
 	if err != nil {
 		util.Log(util.LogLevelError, "can not create web socket "+err.Error())
