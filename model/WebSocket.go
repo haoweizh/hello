@@ -45,7 +45,8 @@ func (ct ChannelType) String() string {
 }
 
 type WSConn struct {
-	conn *websocket.Conn
+	conn   *websocket.Conn
+	WSChan chan []byte
 	//默认ws 使用ws  ChanTypeMarket 使用特殊通道market WSTypeOrder使用特殊通道order
 	WSType           ChannelType
 	MarketPublisher  *util.MarketPublisher
@@ -57,6 +58,7 @@ type WSConn struct {
 
 func (wsConn *WSConn) Close() {
 	if wsConn.WSType == ChanTypeWS {
+		close(wsConn.WSChan)
 		err := wsConn.conn.Close()
 		if err != nil {
 			util.Log(util.LogLevelError, `close conn err `+err.Error())
@@ -66,41 +68,41 @@ func (wsConn *WSConn) Close() {
 	return
 }
 
-var lockMap sync.Map // market - *sync.Mutex
+func (wsConn *WSConn) handle() {
+	for {
+		msg := <-wsConn.WSChan
+		if len(wsConn.WSChan) > 10 {
+			util.Log(util.LogLevelError, fmt.Sprintf(`wsConn wait list 100 %#v`, wsConn))
+			continue
+		}
+		var err error
+		if wsConn.WSType == ChanTypeWS {
+			err = wsConn.conn.WriteMessage(websocket.TextMessage, msg)
+		} else if wsConn.WSType == ChanTypeMarket {
+			if len(string(msg)) <= 8000 {
+				err = wsConn.MarketPublisher.PublishMarket(string(msg))
+				wsConn.MarketSubscriber = msg
+			} else {
+				util.Log(util.LogLevelInfo, fmt.Sprintf("too big msg %s %d", string(msg), len(msg)))
+			}
+		} else if wsConn.WSType == ChanTypeOrder {
+			if len(string(msg)) <= 8000 {
+				err = wsConn.OrderPublisher.PublishOrder(string(msg))
+			} else {
+				util.Log(util.LogLevelInfo, fmt.Sprintf("too big msg order %s %d", string(msg), len(msg)))
+			}
+		}
+		if err != nil {
+			util.Log(util.LogLevelError, `handle ws err `+err.Error())
+		}
+	}
+}
 
 func (wsConn *WSConn) WriteMsg(msg []byte) (err error) {
-	//ctx, cancel := context.WithTimeout(context.Background(), time.Minute)
-	//defer cancel()
-	value, _ := lockMap.Load(wsConn)
-	var connLock *sync.Mutex
-	if value == nil {
-		connLock = &sync.Mutex{}
-		lockMap.Store(wsConn, connLock)
-	} else {
-		connLock = value.(*sync.Mutex)
-	}
-	connLock.Lock()
-	defer connLock.Unlock()
 	if wsConn.conn == nil && wsConn.WSType == ChanTypeWS {
 		return fmt.Errorf(`nil conn`)
 	}
-	if wsConn.WSType == ChanTypeWS {
-		err = wsConn.conn.WriteMessage(websocket.TextMessage, msg)
-	} else if wsConn.WSType == ChanTypeMarket {
-		if len(string(msg)) <= 8000 {
-			err = wsConn.MarketPublisher.PublishMarket(string(msg))
-			wsConn.MarketSubscriber = msg
-		} else {
-			util.Log(util.LogLevelInfo, fmt.Sprintf("too big msg %s %d", string(msg), len(msg)))
-		}
-	} else if wsConn.WSType == ChanTypeOrder {
-		if len(string(msg)) <= 8000 {
-			err = wsConn.OrderPublisher.PublishOrder(string(msg))
-		} else {
-			util.Log(util.LogLevelInfo, fmt.Sprintf("too big msg order %s %d", string(msg), len(msg)))
-		}
-	}
-	//return wsConn.conn.Write(ctx, websocket.MessageText, msg)
+	wsConn.WSChan <- msg
 	return
 }
 
@@ -174,7 +176,7 @@ func newTsChannel(url, tsCode string, wsType ChannelType) (newCreate bool, wsCon
 		return false, value.(*WSConn), nil
 	}
 	if wsType == ChanTypeMarket {
-		wsConn = &WSConn{conn: nil, WSType: wsType}
+		wsConn = &WSConn{conn: nil, WSType: wsType, WSChan: make(chan []byte, 1000)}
 		wsConn.MarketPublisher, err = util.InitMarketPublisher(tsCode + "_m_sub")
 		if err != nil {
 			return false, nil, err
@@ -184,9 +186,10 @@ func newTsChannel(url, tsCode string, wsType ChannelType) (newCreate bool, wsCon
 			return false, nil, err
 		}
 		util.StoreSyncMap(AppEnvironment.SpecialChans, wsConn, tsCode, wsType.String())
+		go wsConn.handle()
 		return true, wsConn, nil
 	} else if wsType == ChanTypeOrder {
-		wsConn = &WSConn{conn: nil, WSType: wsType}
+		wsConn = &WSConn{conn: nil, WSType: wsType, WSChan: make(chan []byte, 1000)}
 		wsConn.OrderPublisher, err = util.InitOrderPublisher(tsCode + "_order_sub")
 		if err != nil {
 			return false, nil, err
@@ -196,6 +199,7 @@ func newTsChannel(url, tsCode string, wsType ChannelType) (newCreate bool, wsCon
 			return false, nil, err
 		}
 		util.StoreSyncMap(AppEnvironment.SpecialChans, wsConn, tsCode, wsType.String())
+		go wsConn.handle()
 		return true, wsConn, nil
 	}
 	return true, nil, errors.New(fmt.Sprintf("url %s not support %s Init Publisher or Receiver", url, tsCode))
@@ -228,7 +232,9 @@ func newWsGorillaChannel(url string) (newCreate bool, wsConn *WSConn, err error)
 	if connErr != nil {
 		return true, nil, connErr
 	}
-	return true, &WSConn{conn: c, WSType: ChanTypeWS}, nil
+	wsConn = &WSConn{conn: c, WSType: ChanTypeWS, WSChan: make(chan []byte, 1000)}
+	go wsConn.handle()
+	return true, wsConn, nil
 }
 
 func publicHandler(market string, stopChan chan struct{}, connection *WSConn, msgHandler MsgHandler) {
