@@ -58,6 +58,7 @@ type WSConn struct {
 
 func (wsConn *WSConn) Close() {
 	if wsConn.WSType == ChanTypeWS {
+		util.Log(util.LogLevelInfo, fmt.Sprintf("close websocket connection %s", wsConn.WSType.String()))
 		close(wsConn.WSChan)
 		err := wsConn.conn.Close()
 		if err != nil {
