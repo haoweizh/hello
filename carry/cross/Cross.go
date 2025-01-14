@@ -1074,6 +1074,12 @@ func placeStatus(status *model.CarryStatus, price float64, amount float64) {
 }
 
 func handleCross(account *model.Account, order *model.Order) {
+	time.Sleep(time.Minute)
+	value, _ := model.AppEnvironment.OrderIdOrders.Load(order.OrderId)
+	if value == nil {
+		return
+	}
+	order = value.(*model.Order)
 	if order.Amount == order.DealAmount {
 		order.Status = model.CarryStatusSuccess
 	}
@@ -1090,7 +1096,6 @@ func handleCross(account *model.Account, order *model.Order) {
 		compOrder(account, order, leftAmt)
 		model.AppEnvironment.OrderIdOrders.Delete(order.OrderId)
 	} else if leftAmt > marketInfo.SizeMin && leftAmt*order.Price > marketInfo.MoneyMin && order.Status != model.CarryStatusSuccess && order.HaveId() {
-		time.Sleep(time.Minute)
 		api.CancelOrder(account.Key, account.Secret, order.Market, order.Symbol, model.OrderTypeLimit, order.OrderId)
 		time.Sleep(time.Second * 10)
 		queryOrder := api.QueryOrderById(account.Key, account.Secret, order.Market, order.Symbol, order.OrderType, order.OrderId)
