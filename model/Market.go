@@ -48,27 +48,27 @@ type WSResp struct {
 }
 
 type Environment struct {
-	markPriceInfos   sync.Map // symbol - market - ticker 行情包含标记价格
-	bidAsks          sync.Map // market*symbol - bidAsk
-	kLines           sync.Map // symbol - market - *candle
-	MsgChanTick      sync.Map // market - []chan struct{}
-	MsgChanKLine     sync.Map // market - []chan struct{}
-	WsInitTime       sync.Map // market - time
-	ConnTick         sync.Map // market - map[*websocket.conn]bool for depth sockets
-	ConnOrder        sync.Map // market*accountKey / Gate*marketType*accountKey - *WSConn;
-	ConnOrderUpdate  sync.Map // market*accountKey / Gate*marketType*accountKey - *WSConn;
-	ReqIdOrders      sync.Map // requestId - *Order
-	OrderIdOrders    sync.Map // orderId - *Order
-	RiskLimitsGate   sync.Map // accountKey * symbol - money in usdt
-	WSRespChan       chan WSResp
-	MonitorSettings  *sync.Map // sync.Map[market]*sync.Map[symbol]*sync.Map[interval]*sync.Map[address]*MonitorSetting
-	WsManager        *WSManager
-	Markets          []string
-	Settings         []Setting
-	CrossEqualing    bool
-	PriConnecting    sync.Map // accountKey * market - bool
-	SpecialChanInits sync.Map
-	LastOrderMilli   int64 // last order time in million-seconds
+	markPriceInfos  sync.Map // symbol - market - ticker 行情包含标记价格
+	bidAsks         sync.Map // market*symbol - bidAsk
+	kLines          sync.Map // symbol - market - *candle
+	MsgChanTick     sync.Map // market - []chan struct{}
+	MsgChanKLine    sync.Map // market - []chan struct{}
+	WsInitTime      sync.Map // market - time
+	ConnTick        sync.Map // market - map[*websocket.conn]bool for depth sockets
+	ConnOrder       sync.Map // market*accountKey / Gate*marketType*accountKey - *WSConn;
+	ConnOrderUpdate sync.Map // market*accountKey / Gate*marketType*accountKey - *WSConn;
+	ReqIdOrders     sync.Map // requestId - *Order
+	OrderIdOrders   sync.Map // orderId - *Order
+	RiskLimitsGate  sync.Map // accountKey * symbol - money in usdt
+	WSRespChan      chan WSResp
+	MonitorSettings *sync.Map // sync.Map[market]*sync.Map[symbol]*sync.Map[interval]*sync.Map[address]*MonitorSetting
+	WsManager       *WSManager
+	Markets         []string
+	Settings        []Setting
+	CrossEqualing   bool
+	PriConnecting   sync.Map  // accountKey * market - bool
+	SpecialChans    *sync.Map // tsCode * wsType *WSConn
+	LastOrderMilli  int64     // last order time in million-seconds
 }
 
 type MarkPriceInfo struct {

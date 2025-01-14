@@ -464,7 +464,7 @@ func WsOrderServeBinance(account *model.Account, market string) {
 		apiUrl = wsBinanceSpotApi
 		streamUrl = wsBinance
 	} else if market == model.BinancePerp {
-		apiUrl = wsBinancePerpApi
+		apiUrl = model.WsBinancePerpApi
 		streamUrl = wsBinancePerp
 	}
 	conn, err := model.WsPrivateClient(account, &model.AppEnvironment.ConnOrder, market, apiUrl, wsActHandlerBinance)

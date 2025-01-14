@@ -22,7 +22,6 @@ import (
 
 const restBinancePerp = `https://fapi.binance.com`
 const wsBinancePerp = `wss://fstream.binance.com`
-const wsBinancePerpApi = `wss://ws-fapi.binance.com/ws-fapi/v1`
 
 var listenKeys sync.Map // market*accountKey listenKey
 var listenTime sync.Map // listenKey - time

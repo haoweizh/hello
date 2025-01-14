@@ -57,6 +57,9 @@ func _(environment *model.Environment, market string, symbols map[string]bool) (
 }
 
 func RequireConnTickReset(environment *model.Environment, market string) bool {
+	if model.AppConfig.SpecialChan == `1` && (market == model.OKEX || market == model.BinancePerp) {
+		return false
+	}
 	needReset, ok := requireReset.Load(market)
 	if ok && needReset != nil && needReset.(bool) {
 		requireReset.Store(market, false)
