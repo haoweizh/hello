@@ -172,7 +172,7 @@ func initChannel(account *Account, url, market string, wsType ChannelType) (newC
 //	*WSConn - 一个指向WSConn对象的指针，该对象代表创建的通道。
 //	error - 如果创建过程中发生错误，则返回该错误。
 func newTsChannel(url, tsCode string, wsType ChannelType) (newCreate bool, wsConn *WSConn, err error) {
-	value, ok := util.LoadSyncMap(AppEnvironment.SpecialChans, tsCode, wsType.String())
+	value, ok := util.LoadSyncMap(&AppEnvironment.SpecialChans, tsCode, wsType.String())
 	if value != nil && ok {
 		return false, value.(*WSConn), nil
 	}
@@ -186,10 +186,7 @@ func newTsChannel(url, tsCode string, wsType ChannelType) (newCreate bool, wsCon
 		if err != nil {
 			return false, nil, err
 		}
-		util.StoreSyncMap(AppEnvironment.SpecialChans, wsConn, tsCode, wsType.String())
-		util.Log(util.LogLevelInfo, fmt.Sprintf("new ts channel %s %s _m_sub _m_pub %v %v", tsCode, wsType.String(), value, wsConn))
-		value, ok = util.LoadSyncMap(AppEnvironment.SpecialChans, tsCode, wsType.String())
-		util.Log(util.LogLevelInfo, fmt.Sprintf(`new ts channel %s %s %v %v`, tsCode, wsType.String(), value, ok))
+		util.StoreSyncMap(&AppEnvironment.SpecialChans, wsConn, tsCode, wsType.String())
 		go wsConn.handle()
 		return true, wsConn, nil
 	} else if wsType == ChanTypeOrder {
@@ -202,7 +199,7 @@ func newTsChannel(url, tsCode string, wsType ChannelType) (newCreate bool, wsCon
 		if err != nil {
 			return false, nil, err
 		}
-		util.StoreSyncMap(AppEnvironment.SpecialChans, wsConn, tsCode, wsType.String())
+		util.StoreSyncMap(&AppEnvironment.SpecialChans, wsConn, tsCode, wsType.String())
 		go wsConn.handle()
 		util.Log(util.LogLevelInfo, fmt.Sprintf("new ts channel %s %s _m_sub _m_pub", tsCode, wsType.String()))
 		return true, wsConn, nil
