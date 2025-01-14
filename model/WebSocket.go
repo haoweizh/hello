@@ -186,6 +186,7 @@ func newTsChannel(url, tsCode string, wsType ChannelType) (newCreate bool, wsCon
 		if err != nil {
 			return false, nil, err
 		}
+		util.Log(util.LogLevelInfo, fmt.Sprintf("new ts channel %s %s _m_sub _m_pub", tsCode, wsType.String()))
 		util.StoreSyncMap(AppEnvironment.SpecialChans, wsConn, tsCode, wsType.String())
 		go wsConn.handle()
 		return true, wsConn, nil
@@ -201,6 +202,7 @@ func newTsChannel(url, tsCode string, wsType ChannelType) (newCreate bool, wsCon
 		}
 		util.StoreSyncMap(AppEnvironment.SpecialChans, wsConn, tsCode, wsType.String())
 		go wsConn.handle()
+		util.Log(util.LogLevelInfo, fmt.Sprintf("new ts channel %s %s _m_sub _m_pub", tsCode, wsType.String()))
 		return true, wsConn, nil
 	}
 	return true, nil, errors.New(fmt.Sprintf("url %s not support %s Init Publisher or Receiver", url, tsCode))
