@@ -287,7 +287,7 @@ var wsAccountHandlerOKEX = func(market, key string, event []byte) {
 			model.CollateralHandler(key, false, collateral)
 		}
 	} else {
-		fmt.Println(`other msg ` + string(event))
+		fmt.Println(time.Now().String() + ` other msg ` + string(event))
 	}
 }
 
