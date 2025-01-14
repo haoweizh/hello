@@ -230,6 +230,8 @@ var wsAccountHandlerOKEX = func(market, key string, event []byte) {
 		data := responseJson.Get(`data`).MustArray()
 		for _, value := range data {
 			order := parseOrderOKEX(value.(map[string]interface{}))
+			wsResp := model.WSResp{RequestId: order.ClientOrdId, OrderId: order.OrderId}
+			model.AppEnvironment.WSRespChan <- wsResp
 			UpdateOrderDeal(market, order.OrderId, order.Status, ``, order.DealAmount)
 		}
 	}
