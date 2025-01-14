@@ -72,7 +72,7 @@ func (wsConn *WSConn) handle() {
 	for {
 		msg := <-wsConn.WSChan
 		if len(wsConn.WSChan) > 10 {
-			util.Log(util.LogLevelError, fmt.Sprintf(`wsConn wait list 100 %#v`, wsConn))
+			util.Log(util.LogLevelError, fmt.Sprintf(`wsConn wait list 10 %#v`, wsConn))
 			continue
 		}
 		var err error
