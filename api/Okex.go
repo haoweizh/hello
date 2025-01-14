@@ -191,6 +191,7 @@ var wsAccountHandlerOKEX = func(market, key string, event []byte) {
 		return
 	}
 	if responseJson.Get(`code`).MustString() == `60011` {
+		fmt.Println(string(event))
 		value, success := util.LoadSyncMap(&model.AppEnvironment.ConnOrder, market, key)
 		if !success || value == nil {
 			return
@@ -202,6 +203,7 @@ var wsAccountHandlerOKEX = func(market, key string, event []byte) {
 		return
 	}
 	if responseJson.Get(`event`).MustString() == `login` && responseJson.Get(`code`).MustString() == `0` {
+		fmt.Println(`log in success `)
 		value, success := util.LoadSyncMap(&model.AppEnvironment.ConnOrder, market, key)
 		if !success || value == nil {
 			return
@@ -224,6 +226,7 @@ var wsAccountHandlerOKEX = func(market, key string, event []byte) {
 		}
 	}
 	if responseJson.GetPath(`arg`, `channel`).MustString() == `orders` {
+		fmt.Println(`get orders value`)
 		data := responseJson.Get(`data`).MustArray()
 		for _, value := range data {
 			order := parseOrderOKEX(value.(map[string]interface{}))
@@ -231,6 +234,7 @@ var wsAccountHandlerOKEX = func(market, key string, event []byte) {
 		}
 	}
 	if responseJson.Get(`op`).MustString() == `order` {
+		fmt.Println(`get order `)
 		data := responseJson.Get(`data`).MustArray()
 		for i, item := range data {
 			value := item.(map[string]interface{})
@@ -248,6 +252,7 @@ var wsAccountHandlerOKEX = func(market, key string, event []byte) {
 			model.AppEnvironment.WSRespChan <- wsResp
 		}
 	} else if responseJson.Get(`op`).MustString() == `batch-orders` {
+		fmt.Println(`get batch orders `)
 		util.Log(util.LogLevelInfo, "ok batch orders "+string(event))
 		wsRespBuy := model.WSResp{RequestId: responseJson.Get(`id`).MustString() + model.OrderSideBuy}
 		wsRespSell := model.WSResp{RequestId: responseJson.Get(`id`).MustString() + model.OrderSideSell}
@@ -279,6 +284,8 @@ var wsAccountHandlerOKEX = func(market, key string, event []byte) {
 			util.Log(util.LogLevelInfo, fmt.Sprintf("okex unified %s %f", collateral.AccountKey, collateral.Available))
 			model.CollateralHandler(key, false, collateral)
 		}
+	} else {
+		fmt.Println(`other msg ` + string(event))
 	}
 }
 
