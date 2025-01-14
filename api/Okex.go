@@ -191,6 +191,17 @@ var wsAccountHandlerOKEX = func(market, key string, event []byte) {
 	if err != nil || responseJson == nil {
 		return
 	}
+	if responseJson.Get(`code`).MustString() == `60011` {
+		value, success := util.LoadSyncMap(&model.AppEnvironment.ConnOrder, market, key)
+		if !success || value == nil {
+			return
+		}
+		account := model.AppConfig.GetAccountFromKeyIndex(model.OKEX, key, -1)
+		if account != nil {
+			wsLogInOKEX(account, value.(*model.WSConn))
+		}
+		return
+	}
 	if responseJson.Get(`event`).MustString() == `login` && responseJson.Get(`code`).MustString() == `0` {
 		value, success := util.LoadSyncMap(&model.AppEnvironment.ConnOrder, market, key)
 		if !success || value == nil {

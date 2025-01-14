@@ -45,7 +45,7 @@ func (config *Config) GetAccountFromKeyIndex(market, key string, index int) (acc
 	}
 	for _, item := range accounts {
 		if item == nil {
-			return nil
+			continue
 		}
 		if item.Key == key {
 			return item
