@@ -186,7 +186,6 @@ var wsHandlerOKEX = func(market string, conn *model.WSConn, event []byte) {
 }
 
 var wsAccountHandlerOKEX = func(market, key string, event []byte) {
-	fmt.Println(string(event))
 	responseJson, err := util.NewJSON(event)
 	if err != nil || responseJson == nil {
 		return
