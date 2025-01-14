@@ -138,7 +138,7 @@ func initChannel(account *Account, url, market string, wsType ChannelType) (newC
 	if AppConfig.SpecialChan == "1" && (account == nil || account.Index == 0) {
 		switch market {
 		case BinancePerp:
-			if url == WsBinancePerpApi {
+			if url == WsBinancePerpApi || url == WsBinancePerp+`/stream` {
 				return newTsChannel(url, "bf", wsType)
 			}
 			return newWsGorillaChannel(url)
@@ -172,8 +172,8 @@ func initChannel(account *Account, url, market string, wsType ChannelType) (newC
 //	*WSConn - 一个指向WSConn对象的指针，该对象代表创建的通道。
 //	error - 如果创建过程中发生错误，则返回该错误。
 func newTsChannel(url, tsCode string, wsType ChannelType) (newCreate bool, wsConn *WSConn, err error) {
-	value, _ := util.LoadSyncMap(AppEnvironment.SpecialChans, tsCode, wsType.String())
-	if value != nil {
+	value, ok := util.LoadSyncMap(AppEnvironment.SpecialChans, tsCode, wsType.String())
+	if value != nil && ok {
 		return false, value.(*WSConn), nil
 	}
 	if wsType == ChanTypeMarket {
@@ -188,6 +188,8 @@ func newTsChannel(url, tsCode string, wsType ChannelType) (newCreate bool, wsCon
 		}
 		util.StoreSyncMap(AppEnvironment.SpecialChans, wsConn, tsCode, wsType.String())
 		util.Log(util.LogLevelInfo, fmt.Sprintf("new ts channel %s %s _m_sub _m_pub %v %v", tsCode, wsType.String(), value, wsConn))
+		value, ok = util.LoadSyncMap(AppEnvironment.SpecialChans, tsCode, wsType.String())
+		util.Log(util.LogLevelInfo, fmt.Sprintf(`new ts channel %s %s %v %v`, tsCode, wsType.String(), value, ok))
 		go wsConn.handle()
 		return true, wsConn, nil
 	} else if wsType == ChanTypeOrder {

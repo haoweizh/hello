@@ -80,6 +80,7 @@ const Close = `close`
 const ReduceOnly = `reduceOnly`
 const CloseContract = `closeContract`
 const WsBinancePerpApi = `wss://ws-fapi.binance.com/ws-fapi/v1`
+const WsBinancePerp = `wss://fstream.binance.com`
 
 var AppDB *gorm.DB
 var AppRedis *redis.Client

@@ -716,20 +716,25 @@ func remove(value *sync.Map) {
 }
 
 func Test_map(t *testing.T) {
-	p := make([]float64, 5555555)
-	for n := 1; n <= 250000; n++ {
-		if n == 1 {
-			p[n] = 0.001
-		} else {
-			p[n] = p[n-1] + 0.001 + 0.0001*float64(n-1)
-			fmt.Println(fmt.Sprintf(`%f`, p[n]))
-		}
-		if p[n] > 0.2 {
-			break
-		}
-	}
+	//p := make([]float64, 5555555)
+	//for n := 1; n <= 250000; n++ {
+	//	if n == 1 {
+	//		p[n] = 0.001
+	//	} else {
+	//		p[n] = p[n-1] + 0.001 + 0.0001*float64(n-1)
+	//		fmt.Println(fmt.Sprintf(`%f`, p[n]))
+	//	}
+	//	if p[n] > 0.2 {
+	//		break
+	//	}
+	//}
 
 	valueMap := &sync.Map{}
+	util.StoreSyncMap(valueMap, 1, `1`, `2`)
+	util.StoreSyncMap(valueMap, 2, `1`, `3`)
+	value, ok := util.LoadSyncMap(valueMap, `1`, `2`)
+	fmt.Println(ok)
+	fmt.Println(fmt.Sprintf(`%v`, value))
 	valueMap.Store(1, true)
 	valueMap.Store(2, true)
 	valueMap.Store(3, true)
