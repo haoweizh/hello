@@ -251,7 +251,7 @@ func publicHandler(market string, stopChan chan struct{}, connection *WSConn, ms
 				}
 				//if msgType == websocket.MessageText {
 				if msgType == websocket.TextMessage {
-					msgHandler(market, connection, message)
+					go msgHandler(market, connection, message)
 				}
 			} else if connection.WSType == ChanTypeMarket {
 				buf := make([]byte, 4096)
@@ -264,7 +264,7 @@ func publicHandler(market string, stopChan chan struct{}, connection *WSConn, ms
 						//	util.Log(util.LogLevelInfo, fmt.Sprintf(`%s can not publish market %s`, market, err.Error()))
 						//}
 					} else if msgHandler != nil {
-						msgHandler(market, connection, buf[:msgSize])
+						go msgHandler(market, connection, buf[:msgSize])
 					}
 				}
 			}
@@ -302,7 +302,7 @@ func WsPrivateClient(account *Account, connMap *sync.Map, market, url string, ac
 					return
 				}
 				if accountMsgHandler != nil {
-					accountMsgHandler(market, account.Key, message)
+					go accountMsgHandler(market, account.Key, message)
 				}
 			} else if connection.WSType == ChanTypeOrder {
 				buf := make([]byte, 4096)
@@ -311,7 +311,7 @@ func WsPrivateClient(account *Account, connMap *sync.Map, market, url string, ac
 					if needReconnection(buf[:msgSize]) {
 						util.Log(util.LogLevelInfo, fmt.Sprintf(`order channel reconnect %s %s `, market, buf[:msgSize]))
 					} else if accountMsgHandler != nil {
-						accountMsgHandler(market, account.Key, buf[:msgSize])
+						go accountMsgHandler(market, account.Key, buf[:msgSize])
 					}
 				}
 			}
