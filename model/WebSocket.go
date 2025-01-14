@@ -77,7 +77,7 @@ func (wsConn *WSConn) handle() {
 			continue
 		}
 		if strings.Contains(string(msg), `order`) {
-			util.Log(util.LogLevelInfo, fmt.Sprintf("send order at %d %s", time.Now().UnixMilli(), string(msg)))
+			util.Log(util.LogLevelInfo, fmt.Sprintf("time mark %d %s", time.Now().UnixMilli(), string(msg)))
 		}
 		var err error
 		if wsConn.WSType == ChanTypeWS {
