@@ -99,6 +99,7 @@ func (environment *Environment) HandleWSResp() {
 			if wsResp.Success {
 				order.Status = CarryStatusWorking
 				order.OrderId = wsResp.OrderId
+				util.Log(util.LogLevelInfo, fmt.Sprintf(`OrderIdOrders add order %s`, wsResp.OrderId))
 				environment.OrderIdOrders.Store(wsResp.OrderId, order)
 			} else {
 				order.Status = CarryStatusFail
