@@ -903,10 +903,8 @@ var ProcessCross = func(setting *model.Setting, tick *model.BidAsk) {
 			if amount > 0 {
 				//nowTs := time.Now().UnixMilli()
 				placeCross(carryCoin.(*model.CarryCoin), statusBuy, statusSell, priceBuy, priceSell, amount)
-				//util.Log(util.LogLevelInfo, fmt.Sprintf(`time mark %s amt %e status %s %s tick %s %e = %e %e %d <- status %s %s tick %s %e = %e %e %d`,
-				//	time.Now().String(), amount,
-				//	statusBuy.Symbol, statusBuy.Market, tickBuy.Asks[0].Market, tickBuy.Asks[0].Price, priceBuy, tickBuy.Asks[0].Amount, nowTs-int64(tickBuy.Ts),
-				//	statusSell.Symbol, statusSell.Market, tickSell.Bids[0].Market, tickSell.Bids[0].Price, priceSell, tickSell.Bids[0].Amount, nowTs-int64(tickSell.Ts)))
+				util.Log(util.LogLevelInfo, fmt.Sprintf(`time mark coin %s %s %s <- %s %s amt %f ts %d`,
+					setting.Coin, statusBuy.Symbol, statusBuy.Market, statusSell.Symbol, statusSell.Market, amount, ts1))
 				model.AppEnvironment.LastOrderMilli = time.Now().UnixMilli()
 				return
 			}

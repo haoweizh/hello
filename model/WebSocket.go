@@ -59,7 +59,7 @@ type WSConn struct {
 func (wsConn *WSConn) Close() {
 	if wsConn.WSType == ChanTypeWS {
 		util.Log(util.LogLevelInfo, fmt.Sprintf("close websocket connection %s", wsConn.WSType.String()))
-		close(wsConn.WSChan)
+		//close(wsConn.WSChan)
 		err := wsConn.conn.Close()
 		if err != nil {
 			util.Log(util.LogLevelError, `close conn err `+err.Error())
@@ -75,6 +75,9 @@ func (wsConn *WSConn) handle() {
 		if len(wsConn.WSChan) > 10 {
 			util.Log(util.LogLevelError, fmt.Sprintf(`wsConn wait list 10 %#v`, wsConn))
 			continue
+		}
+		if strings.Contains(string(msg), `order`) {
+			util.Log(util.LogLevelInfo, fmt.Sprintf("send order at %d %s", time.Now().UnixMilli(), string(msg)))
 		}
 		var err error
 		if wsConn.WSType == ChanTypeWS {
@@ -177,7 +180,7 @@ func newTsChannel(url, tsCode string, wsType ChannelType) (newCreate bool, wsCon
 		return false, value.(*WSConn), nil
 	}
 	if wsType == ChanTypeMarket {
-		wsConn = &WSConn{conn: nil, WSType: wsType, WSChan: make(chan []byte, 1000)}
+		wsConn = &WSConn{conn: nil, WSType: wsType, WSChan: make(chan []byte, 50)}
 		wsConn.MarketPublisher, err = util.InitMarketPublisher(tsCode + "_m_sub")
 		if err != nil {
 			return false, nil, err
@@ -190,7 +193,7 @@ func newTsChannel(url, tsCode string, wsType ChannelType) (newCreate bool, wsCon
 		go wsConn.handle()
 		return true, wsConn, nil
 	} else if wsType == ChanTypeOrder {
-		wsConn = &WSConn{conn: nil, WSType: wsType, WSChan: make(chan []byte, 1000)}
+		wsConn = &WSConn{conn: nil, WSType: wsType, WSChan: make(chan []byte, 50)}
 		wsConn.OrderPublisher, err = util.InitOrderPublisher(tsCode + "_order_sub")
 		if err != nil {
 			return false, nil, err
@@ -234,7 +237,7 @@ func newWsGorillaChannel(url string) (newCreate bool, wsConn *WSConn, err error)
 	if connErr != nil {
 		return true, nil, connErr
 	}
-	wsConn = &WSConn{conn: c, WSType: ChanTypeWS, WSChan: make(chan []byte, 1000)}
+	wsConn = &WSConn{conn: c, WSType: ChanTypeWS, WSChan: make(chan []byte, 50)}
 	go wsConn.handle()
 	return true, wsConn, nil
 }

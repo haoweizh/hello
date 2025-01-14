@@ -446,7 +446,9 @@ func liquidateSmallContracts(account *model.Account, market string) {
 				}
 				order := api.PlaceOrder(account, orderSide, model.OrderTypeMarket, market,
 					position.Currency, orderParam, model.FunctionLiq, position.EntryPrice, position.EntryPrice, holding, false, nil)
-				saveCross(order, 0, 0, position.Holding)
+				if order.HaveId() {
+					saveCross(order, 0, 0, position.Holding)
+				}
 			}
 		}
 	}

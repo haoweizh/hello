@@ -716,6 +716,7 @@ func remove(value *sync.Map) {
 }
 
 func Test_map(t *testing.T) {
+	fmt.Println(time.Now().UnixMicro())
 	//p := make([]float64, 5555555)
 	//for n := 1; n <= 250000; n++ {
 	//	if n == 1 {
