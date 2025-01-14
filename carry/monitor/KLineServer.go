@@ -14,7 +14,7 @@ var aggregatePool = &sync.Map{} // market*symbol*interval*HH:MM - *AggregateCand
 var lastRefreshTime = sync.Map{}
 
 func RefreshSettingMonitors(environment *model.Environment, settingMonitors []*model.SettingMonitor) {
-	environment.MonitorSettings = &sync.Map{}
+	environment.MonitorSettings = sync.Map{}
 	for _, monitor := range settingMonitors {
 		refreshTime, _ := lastRefreshTime.Load(monitor.Market)
 		if refreshTime == nil || refreshTime.(*time.Time).Add(time.Hour).Before(time.Now()) {

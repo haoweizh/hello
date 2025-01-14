@@ -85,7 +85,7 @@ const WsBinancePerp = `wss://fstream.binance.com`
 var AppDB *gorm.DB
 var AppRedis *redis.Client
 var AppConfig *Config
-var AppEnvironment = &Environment{WsManager: &WSManager{WSAgents: &sync.Map{}}, MonitorSettings: &sync.Map{},
+var AppEnvironment = &Environment{WsManager: &WSManager{WSAgents: &sync.Map{}}, MonitorSettings: sync.Map{},
 	ConnOrder: sync.Map{}, WSRespChan: make(chan WSResp, 100), CrossEqualing: false, RiskLimitsGate: sync.Map{}}
 
 var DialectTail = map[string]map[string]string{

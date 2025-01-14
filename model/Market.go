@@ -61,7 +61,7 @@ type Environment struct {
 	OrderIdOrders   sync.Map // orderId - *Order
 	RiskLimitsGate  sync.Map // accountKey * symbol - money in usdt
 	WSRespChan      chan WSResp
-	MonitorSettings *sync.Map // sync.Map[market]*sync.Map[symbol]*sync.Map[interval]*sync.Map[address]*MonitorSetting
+	MonitorSettings sync.Map // sync.Map[market]*sync.Map[symbol]*sync.Map[interval]*sync.Map[address]*MonitorSetting
 	WsManager       *WSManager
 	Markets         []string
 	Settings        []Setting
