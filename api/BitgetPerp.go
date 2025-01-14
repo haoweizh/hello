@@ -80,7 +80,6 @@ func _(account *model.Account, symbol string) (mode string) {
 		return
 	}
 	data := jsonData.GetPath(`data`, `posMode`).MustString()
-	fmt.Println(data)
 	return data
 }
 

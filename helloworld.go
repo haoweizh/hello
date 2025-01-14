@@ -31,7 +31,7 @@ func main() {
 	//})
 	go controller.ParameterServe()
 	//go model.AppEnvironment.HandleOldWSResp()
-	go model.HandleWSResp()
+	go model.AppEnvironment.HandleWSResp()
 	go util.LogChanHandler(model.AppConfig.Log, model.AppConfig.Port)
 	carry.Maintain()
 	select {}

@@ -210,7 +210,6 @@ func UpdateOrderDeal(market, orderId, status, msg string, dealAmount float64) {
 		data, _ := model.AppEnvironment.OrderIdOrders.Load(orderId)
 		if data != nil {
 			order = data.(*model.Order)
-			fmt.Println(fmt.Sprintf("update order deal amount %s %f -> %f", orderId, order.DealAmount, dealAmount))
 			break
 		} else {
 			time.Sleep(3 * time.Second)
