@@ -93,7 +93,7 @@ func (environment *Environment) HandleWSResp() {
 				continue
 			}
 			order := value.(*Order)
-			if len(strings.Trim(wsResp.OrderId, ` `)) > 4 {
+			if len(strings.Trim(wsResp.OrderId, ` `)) < 4 {
 				wsResp.Success = false
 			}
 			if wsResp.Success {

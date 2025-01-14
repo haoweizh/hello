@@ -65,7 +65,6 @@ var wsOrdUdtHandlerBybit = func(market, key string, msg []byte) {
 			model.CollateralHandler(key, false, collateral)
 		}
 	}
-
 }
 
 var wsOrderHandlerBybit = func(market, key string, event []byte) {
