@@ -231,7 +231,7 @@ var wsAccountHandlerOKEX = func(market, key string, event []byte) {
 			order := parseOrderOKEX(value.(map[string]interface{}))
 			wsResp := model.WSResp{RequestId: order.ClientOrdId, OrderId: order.OrderId, Success: true}
 			model.AppEnvironment.WSRespChan <- wsResp
-			fmt.Println(fmt.Sprintf(`get orders value %s %s`, order.OrderId, order.Status))
+			//fmt.Println(fmt.Sprintf(`get orders value %s %s`, order.OrderId, order.Status))
 			UpdateOrderDeal(market, order.OrderId, order.Status, ``, order.DealAmount)
 		}
 	}

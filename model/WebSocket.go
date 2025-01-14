@@ -186,8 +186,8 @@ func newTsChannel(url, tsCode string, wsType ChannelType) (newCreate bool, wsCon
 		if err != nil {
 			return false, nil, err
 		}
-		util.Log(util.LogLevelInfo, fmt.Sprintf("new ts channel %s %s _m_sub _m_pub", tsCode, wsType.String()))
 		util.StoreSyncMap(AppEnvironment.SpecialChans, wsConn, tsCode, wsType.String())
+		util.Log(util.LogLevelInfo, fmt.Sprintf("new ts channel %s %s _m_sub _m_pub %v %v", tsCode, wsType.String(), value, wsConn))
 		go wsConn.handle()
 		return true, wsConn, nil
 	} else if wsType == ChanTypeOrder {
