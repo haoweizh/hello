@@ -38,6 +38,7 @@ func MaintainConnsBinance(market string, accounts []*model.Account) {
 				if keyValue == nil {
 					continue
 				}
+				listenKey = keyValue.(string)
 				connTick, ok := util.LoadSyncMap(&model.AppEnvironment.ConnTick, market, account.Key)
 				if !ok || connTick == nil {
 					keys := make([]interface{}, 1)
@@ -61,7 +62,6 @@ func MaintainConnsBinance(market string, accounts []*model.Account) {
 						util.Log(util.LogLevelError, fmt.Sprintf("market %s  sub accout error %s", market, errSub.Error()))
 					}
 				}
-				listenKey = keyValue.(string)
 			} else {
 				//if value != nil {
 				//	value.(*model.WSConn).Close()

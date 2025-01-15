@@ -357,10 +357,10 @@ func WsPublicClient(market, url string, subscribes []interface{}, subHandler Sub
 			_ = subHandler(market, connection, stepSubscribes)
 			if newCreate {
 				publicHandler(market, stopChan, connection, msgHandler)
-				msgChans = append(msgChans, stopChan)
-				socketMap[connection] = true
 			}
 		}()
+		msgChans = append(msgChans, stopChan)
+		socketMap[connection] = true
 		time.Sleep(time.Millisecond * 50)
 	}
 	util.Log(util.LogLevelInfo,
