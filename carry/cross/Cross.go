@@ -891,7 +891,7 @@ var ProcessCross = func(setting *model.Setting, tick *model.BidAsk) {
 			}
 			lastOrder, _ := model.AppEnvironment.LastOrderMilli.Load(account.Key)
 			lastOrderRelate, _ := model.AppEnvironment.LastOrderMilli.Load(accountRelate.Key)
-			if ts1-lastOrder.(int64) < 60 || ts1-lastOrderRelate.(int64) < 60 {
+			if (lastOrder != nil && ts1-lastOrder.(int64) < 60) || (lastOrderRelate != nil && ts1-lastOrderRelate.(int64) < 60) {
 				continue
 			}
 			status, getStatus := util.LoadSyncMap(carryStatusMap, setting.Coin, setting.Market, setting.Symbol, account.Key)
