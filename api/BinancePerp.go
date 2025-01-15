@@ -53,21 +53,31 @@ func MaintainConnsBinance(market string, accounts []*model.Account) {
 				WsOrderServeBinance(account, market)
 			}
 			//每隔30秒订阅一次 是否有问题
-			connTick, ok := model.AppEnvironment.ConnTick.Load(market)
-			if ok && connTick != nil {
-				if listenKey != "" {
-					text := fmt.Sprintf(`{"method": "SUBSCRIBE", "params": ["%s"], "id": %d}`, listenKey, time.Now().Unix())
-					if errsub := SendToConnections(market, connTick.(map[*model.WSConn]bool), []byte(text)); errsub != nil {
-						util.Log(util.LogLevelError, fmt.Sprintf("market %s  sub accout error %s", market, errsub.Error()))
-					}
-				}
-			}
+			sendListenKeyWithMarketStream(listenKey, market, account.Key)
 			GetAccountFromWsAPI(account, wsAccountStatusV2, market)
 		}
 		time.Sleep(time.Second * 30)
 	}
 }
-
+func sendListenKeyWithMarketStream(listenKey, market, accountKey string) {
+	connTick, ok := util.LoadSyncMap(&model.AppEnvironment.ConnTick, market, accountKey)
+	if ok && connTick != nil {
+		if listenKey != "" {
+			text := fmt.Sprintf(`{"method": "SUBSCRIBE", "params": ["%s"], "id": %d}`, listenKey, time.Now().Unix())
+			if errsub := SendToConnections(market, connTick.(map[*model.WSConn]bool), []byte(text)); errsub != nil {
+				util.Log(util.LogLevelError, fmt.Sprintf("market %s  sub accout error %s", market, errsub.Error()))
+			}
+		}
+	} else {
+		keys := make([]interface{}, 1)
+		keys[0] = listenKey
+		socketMap, _, err := model.WsPublicClient(market, model.WsBinancePerp+`/stream`, keys, subscribeHandlerBinance, wsHandlerBinancePerp, wsStepBinance)
+		if err != nil {
+			util.Log(util.LogLevelError, fmt.Sprintf("market %s  sub accout error %s", market, err.Error()))
+		}
+		util.StoreSyncMap(&model.AppEnvironment.ConnTick, socketMap, market, accountKey)
+	}
+}
 func getMarketsBinancePerp(key, secret string) (marketInfos map[string]*model.MarketInfo) {
 	marketInfos = make(map[string]*model.MarketInfo)
 	client := futures.NewClient(key, secret)
