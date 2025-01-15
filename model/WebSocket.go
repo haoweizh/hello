@@ -141,10 +141,7 @@ func initChannel(account *Account, url, market string, wsType ChannelType) (newC
 	if AppConfig.SpecialChan == "1" && (account == nil || account.Index == 0) {
 		switch market {
 		case BinancePerp:
-			if url == WsBinancePerpApi || url == WsBinancePerp+`/stream` {
-				return newTsChannel(url, "bf", wsType)
-			}
-			return newWsGorillaChannel(url)
+			return newTsChannel(url, "bf", wsType)
 		case Gate:
 			//if url == gateWs.FuturesUsdtUrl {
 			//	return newTsChannel(url, "gate", wsType)
