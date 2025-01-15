@@ -470,13 +470,14 @@ func WsOrderServeBinance(account *model.Account, market string) {
 	}
 	_, listenKey := RenewListenKeyBinance(account, market)
 	msg := fmt.Sprintf(`%s/ws/%s`, streamUrl, listenKey)
-	connUpdate, errUpdate := model.WsPrivateClient(account, &model.AppEnvironment.ConnOrderUpdate, market, msg, wsOrderUpdateBinance)
-	if errUpdate != nil {
-		util.Log(util.LogLevelError, fmt.Sprintf(`fail to create order update ws %s %s`, market, errUpdate.Error()))
-	} else {
-		util.Log(util.LogLevelInfo, fmt.Sprintf("log in conn %s %s", market, msg))
-		util.StoreSyncMap(&model.AppEnvironment.ConnOrderUpdate, connUpdate, market, account.Key)
-	}
+	_ = msg
+	//connUpdate, errUpdate := model.WsPrivateClient(account, &model.AppEnvironment.ConnOrderUpdate, market, msg, wsOrderUpdateBinance)
+	//if errUpdate != nil {
+	//	util.Log(util.LogLevelError, fmt.Sprintf(`fail to create order update ws %s %s`, market, errUpdate.Error()))
+	//} else {
+	//	util.Log(util.LogLevelInfo, fmt.Sprintf("log in conn %s %s", market, msg))
+	//	util.StoreSyncMap(&model.AppEnvironment.ConnOrderUpdate, connUpdate, market, account.Key)
+	//}
 }
 
 func cancelOrderBinanceSpot(key, secret, market, symbol, orderId string) (suc bool, order *model.Order) {

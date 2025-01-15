@@ -29,17 +29,19 @@ func MaintainConnsBinance(market string, accounts []*model.Account) {
 	for _, account := range accounts {
 		model.AppEnvironment.PriConnecting.Store(market+account.Key, false)
 	}
+
 	for {
 		for _, account := range accounts {
+			listenKey := ""
 			value, _ := util.LoadSyncMap(&model.AppEnvironment.ConnOrder, market, account.Key)
-			valueUpdate, _ := util.LoadSyncMap(&model.AppEnvironment.ConnOrderUpdate, market, account.Key)
-			if value != nil && valueUpdate != nil {
+			if value != nil {
 				keyValue, _ := util.LoadSyncMap(&listenKeys, market, account.Key)
 				if keyValue != nil {
 					ts, _ := listenTime.Load(keyValue.(string))
 					if ts != nil && ts.(time.Time).Add(time.Minute*30).Before(time.Now()) {
 						ExtendListenKeyBinance(account, market, keyValue.(string))
 					}
+					listenKey = keyValue.(string)
 				}
 			} else {
 				//if value != nil {
@@ -49,6 +51,16 @@ func MaintainConnsBinance(market string, accounts []*model.Account) {
 				//	valueUpdate.(*model.WSConn).Close()
 				//}
 				WsOrderServeBinance(account, market)
+			}
+			//每隔30秒订阅一次 是否有问题
+			connTick, ok := model.AppEnvironment.ConnTick.Load(market)
+			if ok && connTick != nil {
+				if listenKey != "" {
+					text := fmt.Sprintf(`{"method": "SUBSCRIBE", "params": ["%s"], "id": %d}`, listenKey, time.Now().Unix())
+					if errsub := SendToConnections(market, connTick.(map[*model.WSConn]bool), []byte(text)); errsub != nil {
+						util.Log(util.LogLevelError, fmt.Sprintf("market %s  sub accout error %s", market, errsub.Error()))
+					}
+				}
 			}
 			GetAccountFromWsAPI(account, wsAccountStatusV2, market)
 		}
@@ -145,34 +157,59 @@ var wsHandlerBinancePerp = func(market string, conn *model.WSConn, event []byte)
 	if result.Get(`data`).MustMap() != nil {
 		result = result.Get(`data`)
 	}
-	dialectSymbol := result.Get(`s`).MustString()
-	success, _, standardSymbol := model.GetFromDialect(model.BinancePerp, model.MarketTypePerp, dialectSymbol)
-	if !success {
-		return
-	}
-	subscribe := result.Get(`e`).MustString()
-	updateId := result.Get(`u`).MustInt64()
-	var bidAsk *model.BidAsk
-	if strings.Contains(subscribe, `depthUpdate`) {
-		bidAsk = parseTickDepthBinancePerp(result, standardSymbol, updateId)
-	} else if strings.Contains(subscribe, `bookTicker`) {
-		bidAsk = parseBookBinancePerp(result, standardSymbol, updateId)
-	} else if strings.Contains(subscribe, `markPriceUpdate`) {
-		handleMarkPriceBinancePerp(model.AppEnvironment, result, standardSymbol)
-		return
-	}
-	if model.AppEnvironment.SetBidAsk(model.BinancePerp, standardSymbol, bidAsk) {
-		funcHandlers := GetFunctions(model.BinancePerp, standardSymbol)
-		if funcHandlers != nil {
-			funcHandlers.Range(func(function, value interface{}) bool {
-				setting := GetSetting(function.(string), model.BinancePerp, standardSymbol)
-				if setting != nil && value != nil && value.(model.CarryHandler) != nil {
-					go value.(model.CarryHandler)(setting, bidAsk)
-				}
-				return true
-			})
+	switch result.Get(`e`).MustString() {
+	case `ORDER_TRADE_UPDATE`:
+		orderId := strconv.Itoa(result.GetPath(`o`, `i`).MustInt())
+		dealAmount, _ := strconv.ParseFloat(result.GetPath(`o`, `z`).MustString(), 64)
+		status := model.GetOrderStatus(market, result.Get(`X`).MustString())
+		UpdateOrderDeal(market, orderId, status, string(event), dealAmount)
+	case `executionReport`:
+		orderId := strconv.Itoa(result.Get(`i`).MustInt())
+		dealAmount, _ := strconv.ParseFloat(result.Get(`z`).MustString(), 64)
+		status := model.GetOrderStatus(market, result.Get(`X`).MustString())
+		UpdateOrderDeal(market, orderId, status, string(event), dealAmount)
+		//case `ACCOUNT_UPDATE`:
+		//	collateral := &model.Collateral{AccountKey: key}
+		//	dataarray := resJson.GetPath(`a`, `B`).MustArray()
+		//	for _, v := range dataarray {
+		//		value := v.(map[string]interface{})
+		//		if value[`a`] != nil && value[`a`] == `USDT` {
+		//			collateral.Available, _ = strconv.ParseFloat(value[`cw`].(string), 64)
+		//		}
+		//	}
+		//	util.Log(util.LogLevelInfo, fmt.Sprintf("binance unified %s %f", collateral.AccountKey, collateral.Available))
+		//	model.CollateralHandler(collateral)
+	default:
+		dialectSymbol := result.Get(`s`).MustString()
+		success, _, standardSymbol := model.GetFromDialect(model.BinancePerp, model.MarketTypePerp, dialectSymbol)
+		if !success {
+			return
+		}
+		subscribe := result.Get(`e`).MustString()
+		updateId := result.Get(`u`).MustInt64()
+		var bidAsk *model.BidAsk
+		if strings.Contains(subscribe, `depthUpdate`) {
+			bidAsk = parseTickDepthBinancePerp(result, standardSymbol, updateId)
+		} else if strings.Contains(subscribe, `bookTicker`) {
+			bidAsk = parseBookBinancePerp(result, standardSymbol, updateId)
+		} else if strings.Contains(subscribe, `markPriceUpdate`) {
+			handleMarkPriceBinancePerp(model.AppEnvironment, result, standardSymbol)
+			return
+		}
+		if model.AppEnvironment.SetBidAsk(model.BinancePerp, standardSymbol, bidAsk) {
+			funcHandlers := GetFunctions(model.BinancePerp, standardSymbol)
+			if funcHandlers != nil {
+				funcHandlers.Range(func(function, value interface{}) bool {
+					setting := GetSetting(function.(string), model.BinancePerp, standardSymbol)
+					if setting != nil && value != nil && value.(model.CarryHandler) != nil {
+						go value.(model.CarryHandler)(setting, bidAsk)
+					}
+					return true
+				})
+			}
 		}
 	}
+
 }
 
 func parseBookBinancePerp(json *simplejson.Json, standardSymbol string, updateId int64) (bidAsk *model.BidAsk) {
