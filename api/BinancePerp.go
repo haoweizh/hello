@@ -54,6 +54,9 @@ func MaintainConnsBinance(market string, accounts []*model.Account) {
 				if ts != nil && ts.(time.Time).Add(time.Minute*30).Before(time.Now()) {
 					ExtendListenKeyBinance(account, market, keyValue.(string))
 					text := fmt.Sprintf(`{"method": "SUBSCRIBE", "params": ["%s"], "id": %d}`, listenKey, time.Now().Unix())
+					if connTick == nil {
+						continue
+					}
 					if errSub := SendToConnections(market, connTick.(map[*model.WSConn]bool), []byte(text)); errSub != nil {
 						util.Log(util.LogLevelError, fmt.Sprintf("market %s  sub accout error %s", market, errSub.Error()))
 					}
