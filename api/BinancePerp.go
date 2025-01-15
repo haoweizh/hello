@@ -47,10 +47,6 @@ func MaintainConnsBinance(market string, accounts []*model.Account) {
 					if err != nil {
 						util.Log(util.LogLevelError, fmt.Sprintf("market %s sub accout error %s", market, err.Error()))
 					} else {
-						text := fmt.Sprintf(`{"method": "SUBSCRIBE", "params": ["%s"], "id": %d}`, listenKey, time.Now().Unix())
-						if errSub := SendToConnections(market, connTick.(map[*model.WSConn]bool), []byte(text)); errSub != nil {
-							util.Log(util.LogLevelError, fmt.Sprintf("market %s  sub accout error %s", market, errSub.Error()))
-						}
 						util.StoreSyncMap(&model.AppEnvironment.ConnTick, socketMap, market, account.Key)
 					}
 				}
