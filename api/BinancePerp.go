@@ -60,13 +60,14 @@ func MaintainConnsBinance(market string, accounts []*model.Account) {
 	}
 }
 func sendListenKeyWithMarketStream(listenKey, market, accountKey string) {
+	if listenKey != "" {
+		return
+	}
 	connTick, ok := util.LoadSyncMap(&model.AppEnvironment.ConnTick, market, accountKey)
 	if ok && connTick != nil {
-		if listenKey != "" {
-			text := fmt.Sprintf(`{"method": "SUBSCRIBE", "params": ["%s"], "id": %d}`, listenKey, time.Now().Unix())
-			if errsub := SendToConnections(market, connTick.(map[*model.WSConn]bool), []byte(text)); errsub != nil {
-				util.Log(util.LogLevelError, fmt.Sprintf("market %s  sub accout error %s", market, errsub.Error()))
-			}
+		text := fmt.Sprintf(`{"method": "SUBSCRIBE", "params": ["%s"], "id": %d}`, listenKey, time.Now().Unix())
+		if errsub := SendToConnections(market, connTick.(map[*model.WSConn]bool), []byte(text)); errsub != nil {
+			util.Log(util.LogLevelError, fmt.Sprintf("market %s  sub accout error %s", market, errsub.Error()))
 		}
 	} else {
 		keys := make([]interface{}, 1)
