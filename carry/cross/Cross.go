@@ -455,7 +455,7 @@ func equalAccounts(doEqual bool, traceId int64) {
 			if market == model.Gate {
 				gateCm, _ := contractMarkets.Load(indexAccounts[market])
 				if gateCm != nil {
-					updateMoneyPerStep(i, gateCm.(*contractMarket))
+					updateMoneyPerStep(gateCm.(*contractMarket))
 				}
 			}
 		}
@@ -463,13 +463,13 @@ func equalAccounts(doEqual bool, traceId int64) {
 	util.Log(util.LogLevelInfo, fmt.Sprintf(`exit clearing cross all %d`, traceId))
 }
 
-func updateMoneyPerStep(index int, gateCm *contractMarket) {
+func updateMoneyPerStep(gateCm *contractMarket) {
 	value := api.GetCoinSettings(model.FunctionCross)
 	if value == nil {
 		return
 	}
 	value.Range(func(coin, settings interface{}) bool {
-		item, _ := util.LoadSyncMap(carryCoinMap, coin.(string), strconv.Itoa(index))
+		item, _ := util.LoadSyncMap(carryCoinMap, coin.(string), `0`)
 		if item == nil {
 			return true
 		}
@@ -492,7 +492,7 @@ func updateMoneyPerStep(index int, gateCm *contractMarket) {
 			carryCoin.CurrentStep = int((moneyInAll) / moneyRiskLimit)
 			carryCoin.MoneyPerStep = moneyRiskLimit
 			carryCoin.MoneyCurStep = moneyInAll - float64(carryCoin.CurrentStep)*carryCoin.MoneyPerStep
-			model.AppDB.Model(carryCoin).Where(`coin=? and account_index=?`, carryCoin.Coin, carryCoin.AccountIndex).Updates(
+			model.AppDB.Model(carryCoin).Where(`coin=? and account_index=?`, carryCoin.Coin, `0`).Updates(
 				map[string]interface{}{`current_step`: carryCoin.CurrentStep, `money_cur_step`: carryCoin.MoneyCurStep,
 					`holding`: carryCoin.Holding})
 			util.Log(util.LogLevelInfo, fmt.Sprintf(`update money per step %s %#v`, coin, carryCoin))
@@ -504,7 +504,7 @@ func updateMoneyPerStep(index int, gateCm *contractMarket) {
 
 func createCarryCoin(accounts map[string]*model.Account, index int, coin string, settings []*model.Setting) (carryCoin *model.CarryCoin) {
 	carryCoin = &model.CarryCoin{
-		AccountIndex: index,
+		AccountIndex: 0,
 		Coin:         coin,
 		CurrentStep:  0,
 		Holding:      0}
@@ -587,19 +587,19 @@ func equalAccount(i int, equalChan chan int, accounts map[string]*model.Account,
 						fmt.Sprintf(`%s holding %f`, coin, leftHolding))
 				}
 			}
-			valueCarryCoin, ok := util.LoadSyncMap(carryCoinMap, coin.(string), strconv.Itoa(i))
+			valueCarryCoin, ok := util.LoadSyncMap(carryCoinMap, coin.(string), `0`)
 			if !ok || valueCarryCoin == nil {
-				carryCoin := api.GetCarryCoin(coin.(string), i)
+				carryCoin := api.GetCarryCoin(coin.(string))
 				if carryCoin == nil {
 					carryCoin = createCarryCoin(accounts, i, coin.(string), settings.([]*model.Setting))
 					if carryCoin != nil {
-						util.StoreSyncMap(carryCoinMap, carryCoin, coin.(string), strconv.Itoa(i))
+						util.StoreSyncMap(carryCoinMap, carryCoin, coin.(string), `0`)
 						model.AppDB.Save(carryCoin)
 					} else {
 						util.Log(util.LogLevelError, fmt.Sprintf(`fail to create carry coin %v`, coin))
 					}
 				} else {
-					util.StoreSyncMap(carryCoinMap, carryCoin, coin.(string), strconv.Itoa(i))
+					util.StoreSyncMap(carryCoinMap, carryCoin, coin.(string), `0`)
 					util.Log(util.LogLevelInfo, fmt.Sprintf(`get a carry coin from db %v`, coin))
 				}
 			}
@@ -843,7 +843,7 @@ var ProcessCross = func(setting *model.Setting, tick *model.BidAsk) {
 	ts1 := time.Now().UnixMilli()
 	if tick == nil || tick.Asks == nil || tick.Bids == nil || setting == nil || setting.Valid == false || model.AppEnvironment.CrossEqualing ||
 		(model.AppConfig.Env != `test` && model.AppConfig.Handle != `1`) || settings == nil || len(settings) == 0 ||
-		time.Now().Minute() < 3 || ts1-model.AppEnvironment.LastOrderMilli < 100 {
+		time.Now().Minute() < 3 {
 		return
 	}
 	// 同一个coin cross之间互斥
@@ -889,9 +889,14 @@ var ProcessCross = func(setting *model.Setting, tick *model.BidAsk) {
 			if account == nil || accountRelate == nil {
 				continue
 			}
+			lastOrder, _ := model.AppEnvironment.LastOrderMilli.Load(account.Key)
+			lastOrderRelate, _ := model.AppEnvironment.LastOrderMilli.Load(accountRelate.Key)
+			if ts1-lastOrder.(int64) < 60 || ts1-lastOrderRelate.(int64) < 60 {
+				continue
+			}
 			status, getStatus := util.LoadSyncMap(carryStatusMap, setting.Coin, setting.Market, setting.Symbol, account.Key)
 			statusRelate, getRelate := util.LoadSyncMap(carryStatusMap, settingRelate.Coin, settingRelate.Market, settingRelate.Symbol, accountRelate.Key)
-			carryCoin, getCoin := util.LoadSyncMap(carryCoinMap, setting.Coin, strconv.Itoa(i))
+			carryCoin, getCoin := util.LoadSyncMap(carryCoinMap, setting.Coin, `0`)
 			if status == nil || statusRelate == nil || status == statusRelate || carryCoin == nil || !getStatus || !getRelate || !getCoin {
 				continue
 			}
@@ -903,9 +908,10 @@ var ProcessCross = func(setting *model.Setting, tick *model.BidAsk) {
 			if amount > 0 {
 				//nowTs := time.Now().UnixMilli()
 				placeCross(carryCoin.(*model.CarryCoin), statusBuy, statusSell, priceBuy, priceSell, amount)
-				util.Log(util.LogLevelInfo, fmt.Sprintf(`time mark coin %s %s %s <- %s %s amt %f ts %d`,
-					setting.Coin, statusBuy.Symbol, statusBuy.Market, statusSell.Symbol, statusSell.Market, amount, ts1))
-				model.AppEnvironment.LastOrderMilli = time.Now().UnixMilli()
+				//util.Log(util.LogLevelInfo, fmt.Sprintf(`time mark coin %s %s %s <- %s %s amt %f ts %d`,
+				//	setting.Coin, statusBuy.Symbol, statusBuy.Market, statusSell.Symbol, statusSell.Market, amount, ts1))
+				model.AppEnvironment.LastOrderMilli.Store(statusBuy.Account.Key, time.Now().UnixMilli())
+				model.AppEnvironment.LastOrderMilli.Store(statusSell.Account.Key, time.Now().UnixMilli())
 				return
 			}
 		}

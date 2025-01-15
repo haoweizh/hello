@@ -569,7 +569,7 @@ func holdPage(c *gin.Context) {
 		}
 	}
 	c.HTML(http.StatusOK, `hold.gohtml`, gin.H{`marketValue`: marketValues,
-		`trade`: tradeInfo, `orders`: orders, `holdings`: cross.GetHoldings(indexStr, queryAccounts)})
+		`trade`: tradeInfo, `orders`: orders, `holdings`: cross.GetHoldings(queryAccounts)})
 }
 
 func crossRefresh(c *gin.Context) {
