@@ -68,7 +68,7 @@ type Environment struct {
 	CrossEqualing   bool
 	PriConnecting   sync.Map // accountKey * market - bool
 	SpecialChans    sync.Map // tsCode * wsType *WSConn
-	LastOrderMilli  int64    // last order time in million-seconds
+	LastOrderMilli  sync.Map // account.Key - last order time in million-seconds
 }
 
 type MarkPriceInfo struct {
