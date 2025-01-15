@@ -250,8 +250,10 @@ func publicHandler(market string, stopChan chan struct{}, connection *WSConn, ms
 	for {
 		select {
 		case <-stopChan:
-			util.Log(util.LogLevelInfo, "get stop struct, return")
-			return
+			if connection.WSType == ChanTypeWS {
+				util.Log(util.LogLevelInfo, "get stop struct, return")
+				return
+			}
 		default:
 			if connection.WSType == ChanTypeWS {
 				//msgType, message, err := connection.conn.Read(context.Background())
@@ -355,11 +357,11 @@ func WsPublicClient(market, url string, subscribes []interface{}, subHandler Sub
 			_ = subHandler(market, connection, stepSubscribes)
 			if newCreate {
 				publicHandler(market, stopChan, connection, msgHandler)
+				msgChans = append(msgChans, stopChan)
+				socketMap[connection] = true
 			}
 		}()
-		msgChans = append(msgChans, stopChan)
-		socketMap[connection] = true
-		time.Sleep(time.Millisecond * 100)
+		time.Sleep(time.Millisecond * 50)
 	}
 	util.Log(util.LogLevelInfo,
 		fmt.Sprintf(`ws client add conns %s sockets %d msgChans %d`, market, len(socketMap), len(msgChans)))
