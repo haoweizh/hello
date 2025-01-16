@@ -121,13 +121,15 @@ func generateMonitorMsg(index int, coin string, score, scoreRelate float64, carr
 
 // checkTradeLine 返回limit=0表示无限制
 func checkTradeLine(statusBuy, statusSell *model.CarryStatus, carryCoin *model.CarryCoin, priceBuy, priceSell, score float64) (valid bool, limit float64) {
-	if (statusBuy.Account.CrossStyle == crossGrid || statusSell.Account.CrossStyle == crossGrid) && carryCoin == nil {
+	buyCrossStyle := model.AppConfig.GetCrossStyles()[statusBuy.Account.Index]
+	sellCrossStyle := model.AppConfig.GetCrossStyles()[statusSell.Account.Index]
+	if (buyCrossStyle == crossGrid || sellCrossStyle == crossGrid) && carryCoin == nil {
 		return
 	}
 	crossLimit := openValueLimit / priceBuy * statusBuy.Setting.GridAmount
 	if statusBuy.Holding*priceBuy >= -1*model.SmallHolding && statusSell.Holding*priceSell <= model.SmallHolding { // 开仓
-		if statusBuy.Account.CrossStyle == crossGrid {
-			if carryCoin.CurrentStep >= len(stepScores)-2 {
+		if buyCrossStyle == crossGrid {
+			if carryCoin.CurrentStep < 0 || carryCoin.CurrentStep >= len(stepScores)-2 {
 				return false, 0
 			}
 			currentStep := carryCoin.CurrentStep
@@ -144,7 +146,7 @@ func checkTradeLine(statusBuy, statusSell *model.CarryStatus, carryCoin *model.C
 			return score > statusBuy.TradeLineBuy && score > statusSell.TradeLineSell, crossLimit
 		}
 	} else if statusBuy.Holding*priceBuy < -1*model.SmallHolding && statusSell.Holding*priceSell > model.SmallHolding { // 平仓
-		if statusBuy.Account.CrossStyle == crossGrid {
+		if buyCrossStyle == crossGrid {
 			limit = math.Min(math.Abs(statusBuy.Holding)*statusBuy.Setting.GridAmount, statusSell.Holding*statusSell.Setting.GridAmount)
 			var closeLimit float64
 			currentStep := carryCoin.CurrentStep
@@ -157,6 +159,9 @@ func checkTradeLine(statusBuy, statusSell *model.CarryStatus, carryCoin *model.C
 				statusBuy.TradeLineBuy = 0.001
 				statusSell.TradeLineSell = 0.001
 				return score > 0.001, limit
+			}
+			if currentStep < 0 || currentStep > len(stepScores)-2 {
+				return false, 0
 			}
 			statusBuy.TradeLineBuy = -1 * stepScores[currentStep]
 			statusSell.TradeLineSell = -1 * stepScores[currentStep]
@@ -176,7 +181,7 @@ func checkTradeLine(statusBuy, statusSell *model.CarryStatus, carryCoin *model.C
 		} else if statusSell.Holding*priceSell > model.SmallHolding {
 			limit = statusSell.Holding * statusSell.Setting.GridAmount
 		}
-		if statusBuy.Account.CrossStyle == crossGrid {
+		if buyCrossStyle == crossGrid {
 			statusBuy.TradeLineBuy = swapScore
 			statusSell.TradeLineSell = swapScore
 			return score > swapScore, math.Min(limit, crossLimit)

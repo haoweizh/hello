@@ -29,10 +29,10 @@ type Config struct {
 }
 
 type Account struct {
-	Index                                                              int // 账户索引
-	Market, Key, Secret, FtxSubAccount, CrossStyle                     string
-	CarryClose, IsUnified                                              bool
-	CarryRate, GateLeverMax, GateLeverMin, GateRiskLimit, MoneyPerStep float64
+	Index                                                int // 账户索引
+	Market, Key, Secret, FtxSubAccount                   string
+	CarryClose, IsUnified                                bool
+	CarryRate, GateLeverMax, GateLeverMin, GateRiskLimit float64
 }
 
 var appAccounts []map[string]*Account // account index/map/account
@@ -55,6 +55,14 @@ func (config *Config) GetAccountFromKeyIndex(market, key string, index int) (acc
 		}
 	}
 	return nil
+}
+
+func (config *Config) GetCrossStyles() (crossStyles []string) {
+	return strings.Split(config.CrossStyle, `,`)
+}
+
+func (config *Config) GetMoneyPerStep() (moneyPerStep []string) {
+	return strings.Split(config.MoneyPerStep, `,`)
 }
 
 func (config *Config) GetAccounts(market string) []*Account {
@@ -116,8 +124,7 @@ func (config *Config) GetAccounts(market string) []*Account {
 	}
 	accounts := make([]*Account, len(keys))
 	for i := 0; i < len(keys); i++ {
-		account := &Account{Key: keys[i], Secret: secrets[i], Index: i, Market: market, IsUnified: isUnified, CrossStyle: crossStyles[i]}
-		account.MoneyPerStep, _ = strconv.ParseFloat(moneyPerSteps[i], 64)
+		account := &Account{Key: keys[i], Secret: secrets[i], Index: i, Market: market, IsUnified: isUnified}
 		//if market == Ftx {
 		//	account.FtxSubAccount = ftxSubAccounts[i]
 		//}

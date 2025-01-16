@@ -7,6 +7,7 @@ import (
 	"hello/util"
 	"math"
 	"sort"
+	"strconv"
 	"strings"
 	"time"
 )
@@ -452,10 +453,10 @@ func equalAccounts(doEqual bool, traceId int64) {
 				liquidateSmallContracts(indexAccounts[market], market)
 			}
 			account := indexAccounts[market]
-			if market == model.Gate && account != nil && account.CrossStyle == crossGrid {
+			if market == model.Gate && account != nil && model.AppConfig.GetCrossStyles()[i] == crossGrid {
 				gateCm, _ := contractMarkets.Load(account.Key)
 				if gateCm != nil {
-					updateMoneyPerStep(gateCm.(*contractMarket))
+					updateMoneyPerStep(account, gateCm.(*contractMarket))
 				}
 			}
 		}
@@ -463,7 +464,7 @@ func equalAccounts(doEqual bool, traceId int64) {
 	util.Log(util.LogLevelInfo, fmt.Sprintf(`exit clearing cross all %d`, traceId))
 }
 
-func updateMoneyPerStep(gateCm *contractMarket) {
+func updateMoneyPerStep(account *model.Account, gateCm *contractMarket) {
 	value := api.GetCoinSettings(model.FunctionCross)
 	if value == nil {
 		return
@@ -478,6 +479,11 @@ func updateMoneyPerStep(gateCm *contractMarket) {
 		if gateCm.positions == nil || gateCm.positions[symbol] == nil {
 			return true
 		}
+		status, _ := util.LoadSyncMap(carryStatusMap, coin.(string), model.Gate, symbol, account.Key)
+		if status == nil {
+			return true
+		}
+		gateStatus := status.(*model.CarryStatus)
 		pos := gateCm.positions[symbol]
 		price := pos.EntryPrice
 		if price == 0 {
@@ -489,7 +495,7 @@ func updateMoneyPerStep(gateCm *contractMarket) {
 		}
 		moneyRiskLimit := pos.RiskLimit * price / 20
 		if moneyRiskLimit < carryCoin.MoneyPerStep {
-			moneyInAll := carryCoin.Holding*price + carryCoin.MoneyCurStep
+			moneyInAll := carryCoin.Holding*price/gateStatus.Setting.PriceX + carryCoin.MoneyCurStep
 			carryCoin.CurrentStep = int((moneyInAll) / moneyRiskLimit)
 			carryCoin.MoneyPerStep = moneyRiskLimit
 			carryCoin.MoneyCurStep = moneyInAll - float64(carryCoin.CurrentStep)*carryCoin.MoneyPerStep
@@ -502,51 +508,6 @@ func updateMoneyPerStep(gateCm *contractMarket) {
 		}
 		return true
 	})
-	return
-}
-
-func createCarryCoin(accounts map[string]*model.Account, index int, coin string, settings []*model.Setting) (carryCoin *model.CarryCoin) {
-	carryCoin = &model.CarryCoin{
-		AccountIndex: 0,
-		Coin:         coin,
-		CurrentStep:  0,
-		Holding:      0}
-	bidHolding := 0.0
-	price := 0.0
-	var priceSetting *model.Setting
-	for _, setting := range settings {
-		if price == 0 {
-			_, price = api.GetPriceForce(setting.Symbol, setting.Market)
-			if price > 0 {
-				priceSetting = setting
-			}
-		}
-		account := accounts[setting.Market]
-		if account == nil {
-			continue
-		}
-		if carryCoin.MoneyPerStep == 0 {
-			carryCoin.MoneyPerStep = account.MoneyPerStep
-		}
-		value, get := util.LoadSyncMap(carryStatusMap, setting.Coin, setting.Market, setting.Symbol, account.Key)
-		if value == nil || !get {
-			util.Log(util.LogLevelError, fmt.Sprintf(`store carry nil coin %s %s %s %s`, setting.Coin, setting.Market, setting.Symbol, accounts[setting.Market].Key))
-			return nil
-		}
-		status := value.(*model.CarryStatus)
-		if status.Holding > 0 {
-			bidHolding += status.Holding * status.Setting.GridAmount
-		}
-	}
-	carryCoin.Holding = bidHolding
-	if priceSetting != nil {
-		moneyInAll := bidHolding * price / priceSetting.GridAmount
-		carryCoin.CurrentStep = int(math.Floor(moneyInAll / carryCoin.MoneyPerStep))
-		carryCoin.MoneyCurStep = moneyInAll - float64(carryCoin.CurrentStep)*carryCoin.MoneyPerStep
-	} else {
-		carryCoin = nil
-	}
-	util.Log(util.LogLevelInfo, fmt.Sprintf(`create carry coin account index %d %#v`, index, carryCoin))
 	return
 }
 
@@ -590,20 +551,26 @@ func equalAccount(i int, equalChan chan int, accounts map[string]*model.Account,
 						fmt.Sprintf(`%s holding %f`, coin, leftHolding))
 				}
 			}
-			valueCarryCoin, ok := util.LoadSyncMap(carryCoinMap, coin.(string), `0`)
-			if !ok || valueCarryCoin == nil {
-				carryCoin := api.GetCarryCoin(coin.(string))
-				if carryCoin == nil {
-					carryCoin = createCarryCoin(accounts, i, coin.(string), settings.([]*model.Setting))
-					if carryCoin != nil {
+			if model.AppConfig.GetCrossStyles()[i] == crossGrid {
+				_, _, _, _, bidHolding, price, _ := getHolding(equalStatuses)
+				if price == 0 {
+					return true
+				}
+				valueCarryCoin, ok := util.LoadSyncMap(carryCoinMap, coin.(string), `0`)
+				if !ok || valueCarryCoin == nil {
+					carryCoin := api.GetCarryCoin(coin.(string))
+					if carryCoin == nil {
+						moneyPerStep, _ := strconv.ParseFloat(model.AppConfig.GetMoneyPerStep()[i], 64)
+						carryCoin = &model.CarryCoin{Coin: coin.(string), MoneyPerStep: moneyPerStep}
 						util.StoreSyncMap(carryCoinMap, carryCoin, coin.(string), `0`)
 						model.AppDB.Save(carryCoin)
 					} else {
-						util.Log(util.LogLevelError, fmt.Sprintf(`fail to create carry coin %v`, coin))
+						carryCoin.Holding = bidHolding
+						util.StoreSyncMap(carryCoinMap, carryCoin, coin.(string), `0`)
+						util.Log(util.LogLevelInfo, fmt.Sprintf(`get a carry coin from db %v`, coin))
 					}
 				} else {
-					util.StoreSyncMap(carryCoinMap, carryCoin, coin.(string), `0`)
-					util.Log(util.LogLevelInfo, fmt.Sprintf(`get a carry coin from db %v`, coin))
+					valueCarryCoin.(*model.CarryCoin).Holding = bidHolding
 				}
 			}
 			return true
@@ -619,7 +586,7 @@ func equalAccount(i int, equalChan chan int, accounts map[string]*model.Account,
 //		1.获取到的是经过gridAmount 和priceX调整过后的price和amount
 //	 2.获得到的价格是经过funding rate加权后的价格，实际下单时要进行还原
 func getHolding(statuses []*model.CarryStatus) (bids, asks model.Ticks, statusMap map[string]*model.CarryStatus,
-	holding, price float64, holdStr string) {
+	holding, bidHolding, price float64, holdStr string) {
 	bids = model.Ticks{}
 	asks = model.Ticks{}
 	statusMap = make(map[string]*model.CarryStatus)
@@ -627,6 +594,9 @@ func getHolding(statuses []*model.CarryStatus) (bids, asks model.Ticks, statusMa
 		if status == nil {
 			util.Log(util.LogLevelError, `warning: fail to get one status`)
 			return
+		}
+		if status.Holding > 0 {
+			bidHolding += status.Holding
 		}
 		holding += status.Holding * status.Setting.GridAmount
 		holdStr += fmt.Sprintf(`[%s %s %f]`, status.Market, status.Symbol, status.Holding)
@@ -655,12 +625,12 @@ func getHolding(statuses []*model.CarryStatus) (bids, asks model.Ticks, statusMa
 			status.Setting.Valid = true
 		}
 	}
-	return bids, asks, statusMap, holding, price, holdStr
+	return bids, asks, statusMap, holding, bidHolding, price, holdStr
 }
 
 // settings []*model.Setting, coinStatus map[string]map[string]map[string]*CarryStatus
 func equalCoin(index int, coin string, statuses []*model.CarryStatus) (isEqual bool, holding float64, errMsg string) {
-	bids, asks, statusMap, holdingValue, holdingPrice, holdStr := getHolding(statuses)
+	bids, asks, statusMap, holdingValue, _, holdingPrice, holdStr := getHolding(statuses)
 	util.Log(util.LogLevelInfo, fmt.Sprintf(`compare holding %s status num index %d %d %s`, coin, index, len(statuses), holdStr))
 	if math.IsNaN(holdingValue) {
 		util.Log(util.LogLevelError, `hold value is NaN `)
@@ -1019,7 +989,7 @@ func placeCross(carryCoin *model.CarryCoin, statusBuy, statusSell *model.CarrySt
 	if marketType == model.MarketTypeSpot {
 		amountBuy = amountBuy * 0.9995
 	}
-	if carryCoin != nil && statusBuy.Account.CrossStyle == crossGrid {
+	if carryCoin != nil && model.AppConfig.GetCrossStyles()[statusBuy.Account.Index] == crossGrid {
 		carryCoin.AddTrade(statusBuy, statusSell, priceBuy, priceSell, amountSell)
 	}
 	placeStatus(statusBuy, priceBuy, amountBuy)

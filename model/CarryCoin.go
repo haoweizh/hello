@@ -62,6 +62,10 @@ func (carryCoin *CarryCoin) AddTrade(statusBuy, statusSell *CarryStatus, priceBu
 			carryCoin.MoneyCurStep = 0
 			carryCoin.CurrentStep = 0
 			util.Log(util.LogLevelInfo, fmt.Sprintf(`add trade deal close no holding %#v amount %f price %f`, carryCoin, amountSell, priceSell))
+			if carryCoin.Holding < 0 {
+				util.Log(util.LogLevelInfo, fmt.Sprintf(`add trade holding %f liquidate %f`, carryCoin.Holding, amountSell*statusSell.Setting.GridAmount))
+				carryCoin.Holding = 0
+			}
 		}
 	}
 	if change {
