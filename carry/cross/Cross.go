@@ -840,7 +840,6 @@ var ProcessCross = func(setting *model.Setting, tick *model.BidAsk) {
 			settings = value.([]*model.Setting)
 		}
 	}
-	tsMark := time.Now().UnixMicro()
 	ts1 := time.Now().UnixMilli()
 	if tick == nil || tick.Asks == nil || tick.Bids == nil || setting == nil || setting.Valid == false || model.AppEnvironment.CrossEqualing ||
 		(model.AppConfig.Env != `test` && model.AppConfig.Handle != `1`) || settings == nil || len(settings) == 0 ||
@@ -852,6 +851,7 @@ var ProcessCross = func(setting *model.Setting, tick *model.BidAsk) {
 	if !replaced {
 		return
 	}
+	//tsMark := time.Now().UnixMicro()
 	defer coinCrossing.Store(setting.Coin, false)
 	tickLimit := 50
 	switch tick.Bids[0].Market {
@@ -909,8 +909,8 @@ var ProcessCross = func(setting *model.Setting, tick *model.BidAsk) {
 			if amount > 0 {
 				//nowTs := time.Now().UnixMilli()
 				placeCross(carryCoin.(*model.CarryCoin), statusBuy, statusSell, priceBuy, priceSell, amount)
-				util.Log(util.LogLevelInfo, fmt.Sprintf(`time mark coin %s %s %s <- %s %s amt %f ts %d`,
-					setting.Coin, statusBuy.Symbol, statusBuy.Market, statusSell.Symbol, statusSell.Market, amount, tsMark))
+				//util.Log(util.LogLevelInfo, fmt.Sprintf(`time mark coin %s %s %s <- %s %s amt %f ts %d`,
+				//	setting.Coin, statusBuy.Symbol, statusBuy.Market, statusSell.Symbol, statusSell.Market, amount, tsMark))
 				model.AppEnvironment.LastOrderMilli.Store(statusBuy.Account.Key, time.Now().UnixMilli())
 				model.AppEnvironment.LastOrderMilli.Store(statusSell.Account.Key, time.Now().UnixMilli())
 				return
