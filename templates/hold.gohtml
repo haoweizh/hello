@@ -62,28 +62,42 @@
     {{range $i, $value := $.orders}}
         <tr>
             {{$orderSide := index $value 4}}
-            {{if eq $orderSide "buy"}}
-                <td bgcolor="#00FF00">{{index $value 0}}</td>
-                <td bgcolor="#00FF00">{{index $value 1}}</td>
-                <td bgcolor="#00FF00">{{index $value 2}}</td>
-                <td bgcolor="#00FF00">{{index $value 3}}</td>
-                <td bgcolor="#00FF00">{{index $value 4}}</td>
-                <td bgcolor="#00FF00">{{index $value 5}}</td>
-                <td bgcolor="#00FF00">{{index $value 6}}</td>
-                <td bgcolor="#00FF00">{{index $value 7}}</td>
-                <td bgcolor="#00FF00">{{index $value 8}}</td>
-                <td bgcolor="#00FF00">{{index $value 9}}</td>
+            {{$refreshType := index $value 8}}
+            {{if eq $refreshType "cross"}}
+                {{if eq $orderSide "buy"}}
+                    <td bgcolor="#00FF00">{{index $value 0}}</td>
+                    <td bgcolor="#00FF00">{{index $value 1}}</td>
+                    <td bgcolor="#00FF00">{{index $value 2}}</td>
+                    <td bgcolor="#00FF00">{{index $value 3}}</td>
+                    <td bgcolor="#00FF00">{{index $value 4}}</td>
+                    <td bgcolor="#00FF00">{{index $value 5}}</td>
+                    <td bgcolor="#00FF00">{{index $value 6}}</td>
+                    <td bgcolor="#00FF00">{{index $value 7}}</td>
+                    <td bgcolor="#00FF00">{{index $value 8}}</td>
+                    <td bgcolor="#00FF00">{{index $value 9}}</td>
+                {{else}}
+                    <td>{{index $value 0}}</td>
+                    <td>{{index $value 1}}</td>
+                    <td>{{index $value 2}}</td>
+                    <td>{{index $value 3}}</td>
+                    <td>{{index $value 4}}</td>
+                    <td>{{index $value 5}}</td>
+                    <td>{{index $value 6}}</td>
+                    <td>{{index $value 7}}</td>
+                    <td>{{index $value 8}}</td>
+                    <td>{{index $value 9}}</td>
+                {{end}}
             {{else}}
-                <td>{{index $value 0}}</td>
-                <td>{{index $value 1}}</td>
-                <td>{{index $value 2}}</td>
-                <td>{{index $value 3}}</td>
-                <td>{{index $value 4}}</td>
-                <td>{{index $value 5}}</td>
-                <td>{{index $value 6}}</td>
-                <td>{{index $value 7}}</td>
-                <td>{{index $value 8}}</td>
-                <td>{{index $value 9}}</td>
+                <td bgcolor="#FF0000">{{index $value 0}}</td>
+                <td bgcolor="#FF0000">{{index $value 1}}</td>
+                <td bgcolor="#FF0000">{{index $value 2}}</td>
+                <td bgcolor="#FF0000">{{index $value 3}}</td>
+                <td bgcolor="#FF0000">{{index $value 4}}</td>
+                <td bgcolor="#FF0000">{{index $value 5}}</td>
+                <td bgcolor="#FF0000">{{index $value 6}}</td>
+                <td bgcolor="#FF0000">{{index $value 7}}</td>
+                <td bgcolor="#FF0000">{{index $value 8}}</td>
+                <td bgcolor="#FF0000">{{index $value 9}}</td>
             {{end}}
         </tr>
     {{end}}

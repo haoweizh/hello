@@ -452,7 +452,8 @@ func equalAccounts(doEqual bool, traceId int64) {
 			if doEqual {
 				liquidateSmallContracts(indexAccounts[market], market)
 			}
-			if market == model.Gate {
+			account := indexAccounts[market]
+			if market == model.Gate && account != nil && account.CrossStyle == crossGrid {
 				gateCm, _ := contractMarkets.Load(indexAccounts[market])
 				if gateCm != nil {
 					updateMoneyPerStep(gateCm.(*contractMarket))
@@ -487,6 +488,7 @@ func updateMoneyPerStep(gateCm *contractMarket) {
 			return true
 		}
 		moneyRiskLimit := pos.RiskLimit * price / 20
+		util.Log(util.LogLevelInfo, fmt.Sprintf(`gate rist limit %s %f %f<%f`, symbol, pos.RiskLimit, moneyRiskLimit, carryCoin.MoneyPerStep))
 		if moneyRiskLimit < carryCoin.MoneyPerStep {
 			moneyInAll := carryCoin.MoneyPerStep*float64(carryCoin.CurrentStep) + carryCoin.MoneyCurStep
 			carryCoin.CurrentStep = int((moneyInAll) / moneyRiskLimit)
