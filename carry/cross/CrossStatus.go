@@ -299,9 +299,11 @@ func GetHoldings(accounts map[string]*model.Account) (holding [][]interface{}) {
 		value, _ := util.LoadSyncMap(carryCoinMap, coin, `0`)
 		currentStep := 0
 		moneyCurStep := 0.0
+		moneyPerStep := 0.0
 		if value != nil {
 			currentStep = value.(*model.CarryCoin).CurrentStep
 			moneyCurStep = value.(*model.CarryCoin).MoneyCurStep
+			moneyPerStep = value.(*model.CarryCoin).MoneyPerStep
 			//util.Log(util.LogLevelError, fmt.Sprintf(`success get carry coin %d %f`, currentStep, moneyCurStep))
 			//} else {
 			//util.Log(util.LogLevelError, fmt.Sprintf(`fail to get carry coin %s %s`, coin, indexStr))
@@ -310,6 +312,7 @@ func GetHoldings(accounts map[string]*model.Account) (holding [][]interface{}) {
 		holding[i] = append(holding[i], price)
 		holding[i] = append(holding[i], currentStep)
 		holding[i] = append(holding[i], moneyCurStep)
+		holding[i] = append(holding[i], moneyPerStep)
 	}
 	return
 }

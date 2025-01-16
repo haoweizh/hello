@@ -101,6 +101,7 @@
     <th>信息</th>
     <th>curStep</th>
     <th>MoneyCurStep</th>
+    <th>MoneyPerStep</th>
     {{range $i, $value := $.holdings}}
         <tr>
             {{$valid := index $value 5}}
@@ -116,6 +117,7 @@
                 <td bgcolor="#00FF00">{{index $value 6}}</td>
                 <td bgcolor="#00FF00">{{index $value 9}}</td>
                 <td bgcolor="#00FF00">{{index $value 10}}</td>
+                <td bgcolor="#00FF00">{{index $value 11}}</td>
             {{else if eq $valid "extra"}}
                 <td bgcolor="#FF0000">{{index $value 0}}</td>
                 <td bgcolor="#FF0000">{{index $value 1}}</td>
@@ -128,6 +130,7 @@
                 <td bgcolor="#FF0000">{{index $value 6}}</td>
                 <td bgcolor="#FF0000">{{index $value 9}}</td>
                 <td bgcolor="#FF0000">{{index $value 10}}</td>
+                <td bgcolor="#FF0000">{{index $value 11}}</td>
             {{else if eq $valid "removed"}}
                 <td bgcolor="#0000FF">{{index $value 0}}</td>
                 <td bgcolor="#0000FF">{{index $value 1}}</td>
@@ -140,6 +143,7 @@
                 <td bgcolor="#0000FF">{{index $value 6}}</td>
                 <td bgcolor="#0000FF">{{index $value 9}}</td>
                 <td bgcolor="#0000FF">{{index $value 10}}</td>
+                <td bgcolor="#0000FF">{{index $value 11}}</td>
             {{else}}
                 <td>{{index $value 0}}</td>
                 <td>{{index $value 1}}</td>
@@ -152,6 +156,7 @@
                 <td>{{index $value 6}}</td>
                 <td>{{index $value 9}}</td>
                 <td>{{index $value 10}}</td>
+                <td>{{index $value 11}}</td>
             {{end}}
         </tr>
     {{end}}
