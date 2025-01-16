@@ -7,7 +7,6 @@ import (
 	"hello/util"
 	"math"
 	"sort"
-	"strconv"
 	"strings"
 	"time"
 )
@@ -959,6 +958,42 @@ func breakMarkPrice(account *model.Account, setting *model.Setting, price float6
 	return false
 }
 
+//func placeOKPair() {
+//if statusBuy.Market == model.OKEX && statusSell.Market == model.OKEX {
+//	requestId := strconv.FormatInt(time.Now().UnixMicro(), 10)[3:]
+//	clientOrdIdBuy := requestId + `b`
+//	clientOrdIdSell := requestId + `s`
+//	orderBuy := &model.Order{OrderSide: model.OrderSideBuy, OrderType: model.OrderTypeLimit, Market: model.OKEX,
+//		Symbol: statusBuy.Symbol, Price: priceBuy, Amount: amountBuy, RefreshType: model.FunctionCross, OrderTime: util.GetNow(),
+//		UnfilledQuantity: amountBuy, AccountIndex: statusBuy.Account.Index, Status: model.CarryStatusWorking, Function: model.Open,
+//		OrderId: clientOrdIdBuy, ClientOrdId: clientOrdIdBuy, LineBuy: statusBuy.TradeLineBuy, LineSell: statusSell.TradeLineSell}
+//	orderSell := &model.Order{OrderSide: model.OrderSideSell, OrderType: model.OrderTypeLimit, Market: model.OKEX,
+//		Symbol: statusSell.Symbol, Price: priceSell, Amount: amountSell, RefreshType: model.FunctionCross, OrderTime: util.GetNow(),
+//		UnfilledQuantity: amountSell, AccountIndex: statusSell.Account.Index, Status: model.CarryStatusWorking, Function: model.Open,
+//		OrderId: clientOrdIdSell, ClientOrdId: clientOrdIdSell, LineBuy: statusSell.TradeLineBuy, LineSell: statusSell.TradeLineSell}
+//	if statusBuy.Holding*-1 >= amountBuy {
+//		orderBuy.Function = model.Close
+//	}
+//	if statusSell.Holding >= amountSell {
+//		orderSell.Function = model.Close
+//	}
+//	orderBuy.Coin = statusBuy.Setting.Coin
+//	orderSell.Coin = statusSell.Setting.Coin
+//	success, msg := api.PlacePairOKEX(statusBuy.Account, requestId, statusBuy.Symbol, statusSell.Symbol, model.OrderTypeLimit,
+//		priceBuy, priceSell, amountBuy, amountSell)
+//	if success {
+//		model.AppEnvironment.ReqIdOrders.Store(requestId+model.OrderSideBuy, orderBuy)
+//		model.AppEnvironment.ReqIdOrders.Store(requestId+model.OrderSideSell, orderSell)
+//		model.AppDB.Save(orderBuy)
+//		model.AppDB.Save(orderSell)
+//	} else {
+//		orderBuy.Status, orderSell.Status = model.CarryStatusFail, model.CarryStatusFail
+//		orderBuy.ErrCode, orderSell.ErrCode = msg, msg
+//	}
+//} else {
+//}
+//}
+
 func placeCross(carryCoin *model.CarryCoin, statusBuy, statusSell *model.CarryStatus, priceBuy, priceSell, amount float64) {
 	_, marketType, _, _ := model.GetFromStandard(statusBuy.Market, statusBuy.Symbol)
 	if marketType == model.MarketTypeSpot {
@@ -970,43 +1005,10 @@ func placeCross(carryCoin *model.CarryCoin, statusBuy, statusSell *model.CarrySt
 	score := (priceSell - priceBuy) / math.Max(priceBuy, priceSell)
 	amountBuy := amount / statusBuy.Setting.GridAmount
 	amountSell := amount / statusSell.Setting.GridAmount
-	if statusBuy.Market == model.OKEX && statusSell.Market == model.OKEX {
-		requestId := strconv.FormatInt(time.Now().UnixMicro(), 10)[3:]
-		clientOrdIdBuy := requestId + `b`
-		clientOrdIdSell := requestId + `s`
-		orderBuy := &model.Order{OrderSide: model.OrderSideBuy, OrderType: model.OrderTypeLimit, Market: model.OKEX,
-			Symbol: statusBuy.Symbol, Price: priceBuy, Amount: amountBuy, RefreshType: model.FunctionCross, OrderTime: util.GetNow(),
-			UnfilledQuantity: amountBuy, AccountIndex: statusBuy.Account.Index, Status: model.CarryStatusWorking, Function: model.Open,
-			OrderId: clientOrdIdBuy, ClientOrdId: clientOrdIdBuy, LineBuy: statusBuy.TradeLineBuy, LineSell: statusSell.TradeLineSell}
-		orderSell := &model.Order{OrderSide: model.OrderSideSell, OrderType: model.OrderTypeLimit, Market: model.OKEX,
-			Symbol: statusSell.Symbol, Price: priceSell, Amount: amountSell, RefreshType: model.FunctionCross, OrderTime: util.GetNow(),
-			UnfilledQuantity: amountSell, AccountIndex: statusSell.Account.Index, Status: model.CarryStatusWorking, Function: model.Open,
-			OrderId: clientOrdIdSell, ClientOrdId: clientOrdIdSell, LineBuy: statusSell.TradeLineBuy, LineSell: statusSell.TradeLineSell}
-		if statusBuy.Holding*-1 >= amountBuy {
-			orderBuy.Function = model.Close
-		}
-		if statusSell.Holding >= amountSell {
-			orderSell.Function = model.Close
-		}
-		orderBuy.Coin = statusBuy.Setting.Coin
-		orderSell.Coin = statusSell.Setting.Coin
-		success, msg := api.PlacePairOKEX(statusBuy.Account, requestId, statusBuy.Symbol, statusSell.Symbol, model.OrderTypeLimit,
-			priceBuy, priceSell, amountBuy, amountSell)
-		if success {
-			model.AppEnvironment.ReqIdOrders.Store(requestId+model.OrderSideBuy, orderBuy)
-			model.AppEnvironment.ReqIdOrders.Store(requestId+model.OrderSideSell, orderSell)
-			model.AppDB.Save(orderBuy)
-			model.AppDB.Save(orderSell)
-		} else {
-			orderBuy.Status, orderSell.Status = model.CarryStatusFail, model.CarryStatusFail
-			orderBuy.ErrCode, orderSell.ErrCode = msg, msg
-		}
-	} else {
-		go api.PlaceOrder(statusBuy.Account, model.OrderSideBuy, model.OrderTypeLimit, statusBuy.Market,
-			statusBuy.Symbol, ``, model.FunctionCross, priceBuy, priceBuy, amountBuy, true, PostOrderCross)
-		go api.PlaceOrder(statusSell.Account, model.OrderSideSell, model.OrderTypeLimit, statusSell.Market,
-			statusSell.Symbol, ``, model.FunctionCross, priceSell, priceSell, amountSell, true, PostOrderCross)
-	}
+	go api.PlaceOrder(statusBuy.Account, model.OrderSideBuy, model.OrderTypeLimit, statusBuy.Market,
+		statusBuy.Symbol, ``, model.FunctionCross, priceBuy, priceBuy, amountBuy, true, PostOrderCross)
+	go api.PlaceOrder(statusSell.Account, model.OrderSideSell, model.OrderTypeLimit, statusSell.Market,
+		statusSell.Symbol, ``, model.FunctionCross, priceSell, priceSell, amountSell, true, PostOrderCross)
 	util.Log(util.LogLevelInfo, fmt.Sprintf(
 		`place cross %s %s -> %s %s at %f %f amount %f %f %f score %f hold %f buy %f hold %f sell %f`,
 		statusSell.Market, statusSell.Symbol, statusBuy.Market, statusBuy.Symbol, priceSell, priceBuy, amount, amountBuy,
