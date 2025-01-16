@@ -214,8 +214,11 @@ func calcAmount(index int, coin string, carryStatus, carryStatusRelate *model.Ca
 	//if score > 0.01 && util.DoDebug {
 	//	model.AppMetric.AddCarry(mark, score, 0)
 	//}
+	timeMark := time.Now().UnixNano()
 	valid, amountLimit := checkTradeLine(carryStatusRelate, carryStatus, carryCoin, tickRelate.Asks[0].Price, tick.Bids[0].Price, score)
 	if valid {
+		timeMark = time.Now().UnixNano() - timeMark
+		util.Log(util.LogLevelInfo, fmt.Sprintf("time time nano %d", timeMark))
 		statusSell = carryStatus
 		statusBuy = carryStatusRelate
 		priceSell = tick.Bids[0].Price
