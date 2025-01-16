@@ -147,10 +147,9 @@ var wsHandlerBinanceSpot = func(market string, conn *model.WSConn, event []byte)
 		util.Log(util.LogLevelError, `wsHandlerBinanceSpot binance fail to unmarshal json `+wsErr.Error())
 		return
 	}
-	//id := result.Get(`id`).MustInt()
-	//if id > 0 {
-	//	subIdBinance.Store(id, false)
-	//}
+	if result.Get(`data`).MustMap() != nil {
+		result = result.Get(`data`)
+	}
 	subscribe, _ := result.Get("stream").String()
 	result = result.Get(`data`)
 	//data := new(binance.WsBookTickerEvent)
@@ -382,35 +381,35 @@ func parseOrderBinanceSpot(market string, orderJson *simplejson.Json) (order *mo
 	return order
 }
 
-var wsOrderUpdateBinance = func(market, key string, msg []byte) {
-	resJson, _ := util.NewJSON(msg)
-	if resJson == nil {
-		return
-	}
-	switch resJson.Get(`e`).MustString() {
-	case `ORDER_TRADE_UPDATE`:
-		orderId := strconv.Itoa(resJson.GetPath(`o`, `i`).MustInt())
-		dealAmount, _ := strconv.ParseFloat(resJson.GetPath(`o`, `z`).MustString(), 64)
-		status := model.GetOrderStatus(market, resJson.Get(`X`).MustString())
-		UpdateOrderDeal(market, orderId, status, string(msg), dealAmount)
-	case `executionReport`:
-		orderId := strconv.Itoa(resJson.Get(`i`).MustInt())
-		dealAmount, _ := strconv.ParseFloat(resJson.Get(`z`).MustString(), 64)
-		status := model.GetOrderStatus(market, resJson.Get(`X`).MustString())
-		UpdateOrderDeal(market, orderId, status, string(msg), dealAmount)
-		//case `ACCOUNT_UPDATE`:
-		//	collateral := &model.Collateral{AccountKey: key}
-		//	dataarray := resJson.GetPath(`a`, `B`).MustArray()
-		//	for _, v := range dataarray {
-		//		value := v.(map[string]interface{})
-		//		if value[`a`] != nil && value[`a`] == `USDT` {
-		//			collateral.Available, _ = strconv.ParseFloat(value[`cw`].(string), 64)
-		//		}
-		//	}
-		//	util.Log(util.LogLevelInfo, fmt.Sprintf("binance unified %s %f", collateral.AccountKey, collateral.Available))
-		//	model.CollateralHandler(collateral)
-	}
-}
+//var wsOrderUpdateBinance = func(market, key string, msg []byte) {
+//	resJson, _ := util.NewJSON(msg)
+//	if resJson == nil {
+//		return
+//	}
+//	switch resJson.Get(`e`).MustString() {
+//	case `ORDER_TRADE_UPDATE`:
+//		orderId := strconv.Itoa(resJson.GetPath(`o`, `i`).MustInt())
+//		dealAmount, _ := strconv.ParseFloat(resJson.GetPath(`o`, `z`).MustString(), 64)
+//		status := model.GetOrderStatus(market, resJson.Get(`X`).MustString())
+//		UpdateOrderDeal(market, orderId, status, string(msg), dealAmount)
+//	case `executionReport`:
+//		orderId := strconv.Itoa(resJson.Get(`i`).MustInt())
+//		dealAmount, _ := strconv.ParseFloat(resJson.Get(`z`).MustString(), 64)
+//		status := model.GetOrderStatus(market, resJson.Get(`X`).MustString())
+//		UpdateOrderDeal(market, orderId, status, string(msg), dealAmount)
+//		//case `ACCOUNT_UPDATE`:
+//		//	collateral := &model.Collateral{AccountKey: key}
+//		//	dataarray := resJson.GetPath(`a`, `B`).MustArray()
+//		//	for _, v := range dataarray {
+//		//		value := v.(map[string]interface{})
+//		//		if value[`a`] != nil && value[`a`] == `USDT` {
+//		//			collateral.Available, _ = strconv.ParseFloat(value[`cw`].(string), 64)
+//		//		}
+//		//	}
+//		//	util.Log(util.LogLevelInfo, fmt.Sprintf("binance unified %s %f", collateral.AccountKey, collateral.Available))
+//		//	model.CollateralHandler(collateral)
+//	}
+//}
 
 var wsActHandlerBinance = func(market, key string, event []byte) {
 	responseJson, err := util.NewJSON(event)
