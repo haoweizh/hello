@@ -507,7 +507,6 @@ func getBalanceBybit(key string, secret string) (success bool, balances []*model
 	param := map[string]interface{}{"accountType": "UNIFIED"}
 	httpResp, httpErr := SignedRequestBybit(key, secret, http.MethodGet, bybitRestUrl, "/v5/account/wallet-balance", param)
 	balanceResp := &dtos.BybitBalanceResp{}
-	fmt.Println(string(httpResp))
 	jsonErr := json.Unmarshal(httpResp, balanceResp)
 	if balanceResp == nil || balanceResp.RetCode != 0 {
 		util.Log(util.LogLevelError, fmt.Sprintf(
