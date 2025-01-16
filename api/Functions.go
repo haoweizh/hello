@@ -987,6 +987,7 @@ func InitCrossMarketInfos(markets []string) {
 				if settingsDbMap[fmt.Sprintf(`%s_%s_%s`, model.FunctionCross, info.Market, info.Symbol)] == nil {
 					setting := &model.Setting{
 						Valid:            true,
+						Liquidated:       true,
 						Function:         model.FunctionCross,
 						WSType:           model.WSTypeTicker,
 						Market:           info.Market,
@@ -1003,6 +1004,7 @@ func InitCrossMarketInfos(markets []string) {
 			if settingsDbMap[fmt.Sprintf(`%s_%s_%s`, model.FunctionCross, infos[0].Market, infos[0].Symbol)] == nil {
 				setting := &model.Setting{
 					Valid:            true,
+					Liquidated:       true,
 					Function:         model.FunctionCross,
 					WSType:           model.WSTypeTicker,
 					Market:           infos[0].Market,

@@ -507,6 +507,7 @@ func getBalanceBybit(key string, secret string) (success bool, balances []*model
 	param := map[string]interface{}{"accountType": "UNIFIED"}
 	httpResp, httpErr := SignedRequestBybit(key, secret, http.MethodGet, bybitRestUrl, "/v5/account/wallet-balance", param)
 	balanceResp := &dtos.BybitBalanceResp{}
+	fmt.Println(string(httpResp))
 	jsonErr := json.Unmarshal(httpResp, balanceResp)
 	if balanceResp == nil || balanceResp.RetCode != 0 {
 		util.Log(util.LogLevelError, fmt.Sprintf(
@@ -528,7 +529,7 @@ func getBalanceBybit(key string, secret string) (success bool, balances []*model
 				canBorrow, _ := strconv.ParseFloat(coinInfo.AvailableToBorrow, 64)
 				holdAmount, _ := strconv.ParseFloat(coinInfo.WalletBalance, 64)
 				if coinInfo.Coin == "USDT" {
-					holdAmount, _ = strconv.ParseFloat(coinInfo.AvailableToWithdraw, 64)
+					holdAmount, _ = strconv.ParseFloat(coinInfo.WalletBalance, 64)
 				}
 				balance.Amount = holdAmount
 				balance.AvailableWithBorrow = math.Max(0, balance.Amount) + canBorrow
