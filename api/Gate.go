@@ -610,7 +610,12 @@ func WSOrderServeGate(account *model.Account, marketType string) {
 	if !replaced {
 		return
 	}
-	defer model.AppEnvironment.PriConnecting.Store(model.Gate+marketType+account.Key, false)
+	defer func() {
+		select {
+		case <-time.After(time.Second * 30):
+		}
+		model.AppEnvironment.PriConnecting.Store(model.Gate+marketType+account.Key, false)
+	}()
 	ts := time.Now().Unix()
 	hash := hmac.New(sha512.New, []byte(account.Secret))
 	var conn, connUpdate *model.WSConn

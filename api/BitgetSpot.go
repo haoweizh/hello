@@ -128,7 +128,12 @@ func WsOrderServeBitget(market string, account *model.Account) {
 	if !replaced {
 		return
 	}
-	defer model.AppEnvironment.PriConnecting.Store(market+account.Key, false)
+	defer func() {
+		select {
+		case <-time.After(time.Second * 30):
+		}
+		model.AppEnvironment.PriConnecting.Store(market+account.Key, false)
+	}()
 	conn, err := model.WsPrivateClient(account, &model.AppEnvironment.ConnOrder, market, bitgetPrivate, wsOrderConnHandlerBitget)
 	if err != nil {
 		util.Log(util.LogLevelError, "can not create web socket "+err.Error())

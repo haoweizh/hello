@@ -25,9 +25,8 @@ const wsPrivateOKEX = `wss://ws.okx.com:8443/ws/v5/private`
 const wsStepOKEX = 50
 const ParamArrayOkex = `OK_ARRAY`
 const chanelOKEX = `bbo-tbt` //`books5`
-var lastSameTime = make(map[string]int64)
-var lastCarryTime = int64(0)
-
+//var lastSameTime = make(map[string]int64)
+//var lastCarryTime = int64(0)
 // var wrongs = make(map[string]bool)
 // var wrongLock sync.Mutex
 
@@ -321,7 +320,12 @@ func WsOrderServeOKEX(account *model.Account) {
 	if !replaced {
 		return
 	}
-	defer model.AppEnvironment.PriConnecting.Store(model.OKEX+account.Key, false)
+	defer func() {
+		select {
+		case <-time.After(time.Second * 30):
+		}
+		model.AppEnvironment.PriConnecting.Store(model.OKEX+account.Key, false)
+	}()
 	util.Log(util.LogLevelInfo, fmt.Sprintf("okex order serve %s", account.Key))
 	conn, err := model.WsPrivateClient(account, &model.AppEnvironment.ConnOrder, model.OKEX, wsPrivateOKEX, wsAccountHandlerOKEX)
 	if err != nil {
@@ -560,74 +564,76 @@ func sendSignRequestOKEX(key, secret, method, path string, param, body map[strin
 	return responseBody, err
 }
 
-func getWSOrderArgOKEX(account *model.Account, requestId, symbol, orderSide, orderType string, price, amount float64) (args map[string]interface{}) {
-	priceFormat, decimal := model.FormatPrice(model.OKEX, symbol, price)
-	priceStr := util.CutTailZero(strconv.FormatFloat(priceFormat, 'f', decimal, 64))
-	formattedAmount := model.GetAmountInMarket(model.OKEX, symbol, amount, price, false)
-	amountStrPerp := util.CutTailZero(fmt.Sprintf(`%f`, formattedAmount))
-	if orderType == model.OrderTypeMarket {
-		usdAmount, _ := strconv.ParseFloat(amountStrPerp, 64)
-		amountStrPerp = util.CutTailZero(fmt.Sprintf(`%f`, usdAmount*price))
-	}
-	_, _, _, dialectSymbol := model.GetFromStandard(model.OKEX, symbol)
-	args = map[string]interface{}{`instId`: dialectSymbol, `tdMode`: `cross`, `side`: orderSide,
-		`sz`: amountStrPerp, `ordType`: orderType, `px`: priceStr, `tag`: OKEXTag}
-	if orderType == model.OrderTypeStop || orderType == model.OrderTypeTrailStop {
-		args[`algoClOrdId`] = fmt.Sprintf(`%d%s%d%s`, account.Index, OKSeparator, time.Now().Nanosecond(), orderSide)
-	} else {
-		args[`clOrdId`] = fmt.Sprintf(`%d%s%d%s`, account.Index, OKSeparator, time.Now().Nanosecond(), orderSide)
-	}
-	args[`clOrdId`] = requestId + orderSide
-	return args
-}
+// getWSOrderArgOKEX
+//func _(account *model.Account, requestId, symbol, orderSide, orderType string, price, amount float64) (args map[string]interface{}) {
+//	priceFormat, decimal := model.FormatPrice(model.OKEX, symbol, price)
+//	priceStr := util.CutTailZero(strconv.FormatFloat(priceFormat, 'f', decimal, 64))
+//	formattedAmount := model.GetAmountInMarket(model.OKEX, symbol, amount, price, false)
+//	amountStrPerp := util.CutTailZero(fmt.Sprintf(`%f`, formattedAmount))
+//	if orderType == model.OrderTypeMarket {
+//		usdAmount, _ := strconv.ParseFloat(amountStrPerp, 64)
+//		amountStrPerp = util.CutTailZero(fmt.Sprintf(`%f`, usdAmount*price))
+//	}
+//	_, _, _, dialectSymbol := model.GetFromStandard(model.OKEX, symbol)
+//	args = map[string]interface{}{`instId`: dialectSymbol, `tdMode`: `cross`, `side`: orderSide,
+//		`sz`: amountStrPerp, `ordType`: orderType, `px`: priceStr, `tag`: OKEXTag}
+//	if orderType == model.OrderTypeStop || orderType == model.OrderTypeTrailStop {
+//		args[`algoClOrdId`] = fmt.Sprintf(`%d%s%d%s`, account.Index, OKSeparator, time.Now().Nanosecond(), orderSide)
+//	} else {
+//		args[`clOrdId`] = fmt.Sprintf(`%d%s%d%s`, account.Index, OKSeparator, time.Now().Nanosecond(), orderSide)
+//	}
+//	args[`clOrdId`] = requestId + orderSide
+//	return args
+//}
 
-func PlacePairOKEX(account *model.Account, requestId, symbolBuy, symbolSell, orderType string, priceBuy, priceSell,
-	amountBuy, amountSell float64) (success bool, errMsg string) {
-	if amountBuy == 0 || amountSell == 0 || priceBuy == 0 || priceSell == 0 {
-		errMsg = fmt.Sprintf(`error: wrong PlacePairOKEX buy %f at %f sell %f at %f`, amountBuy, priceBuy, amountSell, priceSell)
-		util.Log(util.LogLevelError, errMsg)
-		return false, errMsg
-	}
-	now := time.Now().UnixNano()
-	if time.Duration(now-lastCarryTime)/time.Millisecond < 50 {
-		errMsg = symbolBuy + ` ignore carry for last time < 50ms`
-		util.Log(util.LogLevelInfo, errMsg)
-		return false, errMsg
-	} else if time.Duration(now-lastSameTime[symbolBuy])/time.Millisecond < 100 {
-		errMsg = symbolBuy + ` ignore carry for same pair last time < 200ms`
-		util.Log(util.LogLevelInfo, errMsg)
-		return false, errMsg
-	}
-	lastSameTime[symbolBuy] = now
-	lastSameTime[symbolSell] = now
-	lastCarryTime = now
-	subscribeArgs := []map[string]interface{}{
-		getWSOrderArgOKEX(account, requestId, symbolBuy, model.OrderSideBuy, orderType, priceBuy, amountBuy),
-		getWSOrderArgOKEX(account, requestId, symbolSell, model.OrderSideSell, orderType, priceSell, amountSell)}
-	subscribeMap := make(map[string]interface{})
-	subscribeMap[`args`] = subscribeArgs
-	subscribeMap[`id`] = requestId
-	subscribeMap["op"] = "batch-orders"
-	msg := util.JsonEncodeToByte(subscribeMap)
-	value, _ := util.LoadSyncMap(&model.AppEnvironment.ConnOrder, model.OKEX, account.Key)
-	if value == nil {
-		errMsg = fmt.Sprintf(`fail to get connection %s`, account.Key)
-		util.Log(util.LogLevelError, errMsg)
-		return false, errMsg
-	}
-	util.Log(util.LogLevelInfo, fmt.Sprintf(`place pair %s`, msg))
-	if model.AppConfig.Env != `test` {
-		err := value.(*model.WSConn).WriteMsg(msg)
-		if err != nil {
-			errMsg = fmt.Sprintf(`-test ok ws-fail to send order ws %s return %s`, account.Key, err.Error())
-			util.Log(util.LogLevelError, errMsg)
-			return false, errMsg
-		} else {
-			util.Log(util.LogLevelInfo, fmt.Sprintf(`-test ok ws- success send ws order %s %s`, account.Key, msg))
-		}
-	}
-	return true, ``
-}
+// PlacePairOKEX
+//func _(account *model.Account, requestId, symbolBuy, symbolSell, orderType string, priceBuy, priceSell,
+//	amountBuy, amountSell float64) (success bool, errMsg string) {
+//	if amountBuy == 0 || amountSell == 0 || priceBuy == 0 || priceSell == 0 {
+//		errMsg = fmt.Sprintf(`error: wrong PlacePairOKEX buy %f at %f sell %f at %f`, amountBuy, priceBuy, amountSell, priceSell)
+//		util.Log(util.LogLevelError, errMsg)
+//		return false, errMsg
+//	}
+//	now := time.Now().UnixNano()
+//	if time.Duration(now-lastCarryTime)/time.Millisecond < 50 {
+//		errMsg = symbolBuy + ` ignore carry for last time < 50ms`
+//		util.Log(util.LogLevelInfo, errMsg)
+//		return false, errMsg
+//	} else if time.Duration(now-lastSameTime[symbolBuy])/time.Millisecond < 100 {
+//		errMsg = symbolBuy + ` ignore carry for same pair last time < 200ms`
+//		util.Log(util.LogLevelInfo, errMsg)
+//		return false, errMsg
+//	}
+//	lastSameTime[symbolBuy] = now
+//	lastSameTime[symbolSell] = now
+//	lastCarryTime = now
+//	subscribeArgs := []map[string]interface{}{
+//		getWSOrderArgOKEX(account, requestId, symbolBuy, model.OrderSideBuy, orderType, priceBuy, amountBuy),
+//		getWSOrderArgOKEX(account, requestId, symbolSell, model.OrderSideSell, orderType, priceSell, amountSell)}
+//	subscribeMap := make(map[string]interface{})
+//	subscribeMap[`args`] = subscribeArgs
+//	subscribeMap[`id`] = requestId
+//	subscribeMap["op"] = "batch-orders"
+//	msg := util.JsonEncodeToByte(subscribeMap)
+//	value, _ := util.LoadSyncMap(&model.AppEnvironment.ConnOrder, model.OKEX, account.Key)
+//	if value == nil {
+//		errMsg = fmt.Sprintf(`fail to get connection %s`, account.Key)
+//		util.Log(util.LogLevelError, errMsg)
+//		return false, errMsg
+//	}
+//	util.Log(util.LogLevelInfo, fmt.Sprintf(`place pair %s`, msg))
+//	if model.AppConfig.Env != `test` {
+//		err := value.(*model.WSConn).WriteMsg(msg)
+//		if err != nil {
+//			errMsg = fmt.Sprintf(`-test ok ws-fail to send order ws %s return %s`, account.Key, err.Error())
+//			util.Log(util.LogLevelError, errMsg)
+//			return false, errMsg
+//		} else {
+//			util.Log(util.LogLevelInfo, fmt.Sprintf(`-test ok ws- success send ws order %s %s`, account.Key, msg))
+//		}
+//	}
+//	return true, ``
+//}
 
 // orderType: move_order_stop 只支持立即触发
 // amount、price
