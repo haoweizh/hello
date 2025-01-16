@@ -150,27 +150,16 @@ var wsHandlerBinanceSpot = func(market string, conn *model.WSConn, event []byte)
 	if result.Get(`data`).MustMap() != nil {
 		result = result.Get(`data`)
 	}
-	subscribe, _ := result.Get("stream").String()
-	result = result.Get(`data`)
-	//data := new(binance.WsBookTickerEvent)
-	//wsErr := json.Unmarshal(event, &data)
 	if result == nil {
 		return
 	}
 	dialectSymbol := result.Get(`s`).MustString()
 	updateId := result.Get(`u`).MustInt64()
-	if strings.Contains(subscribe, `@depth`) {
-		updateId = result.Get(`lastUpdateId`).MustInt64()
-	}
 	success, _, standardSymbol := model.GetFromDialect(market, model.MarketTypeSpot, dialectSymbol)
 	if !success {
 		return
 	}
-	if strings.Contains(subscribe, `@depth`) {
-		handleDepthBinance(model.AppEnvironment, result, market, standardSymbol, updateId)
-	} else if strings.Contains(subscribe, `@bookTicker`) {
-		handleTickerBinance(model.AppEnvironment, result, market, standardSymbol, updateId)
-	}
+	handleTickerBinance(model.AppEnvironment, result, market, standardSymbol, updateId)
 }
 
 //var subIdBinance sync.Map
@@ -217,7 +206,8 @@ func handleTickerBinance(environment *model.Environment, json *simplejson.Json, 
 	}
 }
 
-func handleDepthBinance(environment *model.Environment, json *simplejson.Json, market, standardSymbol string, updateId int64) {
+// handleDepthBinance
+func _(environment *model.Environment, json *simplejson.Json, market, standardSymbol string, updateId int64) {
 	now := int(util.GetNowUnixMillion())
 	bidAsk := model.BidAsk{UpdateId: updateId, Ts: now, TsReceived: now}
 	var bids, asks []interface{}
