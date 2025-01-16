@@ -443,13 +443,13 @@ func WsOrderServeBinance(account *model.Account, market string) {
 	}
 	defer model.AppEnvironment.PriConnecting.Store(market+account.Key, false)
 	apiUrl := ``
-	streamUrl := ``
+	//streamUrl := ``
 	if market == model.BinanceSpot {
 		apiUrl = wsBinanceSpotApi
-		streamUrl = wsBinance
+		//streamUrl = wsBinance
 	} else if market == model.BinancePerp {
 		apiUrl = model.WsBinancePerpApi
-		streamUrl = model.WsBinancePerp
+		//streamUrl = model.WsBinancePerp
 	}
 	conn, err := model.WsPrivateClient(account, &model.AppEnvironment.ConnOrder, market, apiUrl, wsActHandlerBinance)
 	if err != nil {
@@ -457,9 +457,10 @@ func WsOrderServeBinance(account *model.Account, market string) {
 	} else {
 		util.StoreSyncMap(&model.AppEnvironment.ConnOrder, conn, market, account.Key)
 	}
-	_, listenKey := RenewListenKeyBinance(account, market)
-	msg := fmt.Sprintf(`%s/ws/%s`, streamUrl, listenKey)
-	_ = msg
+	RenewListenKeyBinance(account, market)
+	//_, listenKey :=
+	//msg := fmt.Sprintf(`%s/ws/%s`, streamUrl, listenKey)
+	//_ = msg
 	//connUpdate, errUpdate := model.WsPrivateClient(account, &model.AppEnvironment.ConnOrderUpdate, market, msg, wsOrderUpdateBinance)
 	//if errUpdate != nil {
 	//	util.Log(util.LogLevelError, fmt.Sprintf(`fail to create order update ws %s %s`, market, errUpdate.Error()))
