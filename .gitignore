@@ -56,3 +56,5 @@ myapp/.firebase
 myapp/.eslintcache
 
 myapp/build
+/lib/libucli_ffi.dylib
+/libucli_ffi.dylib
