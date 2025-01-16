@@ -488,15 +488,16 @@ func updateMoneyPerStep(gateCm *contractMarket) {
 			return true
 		}
 		moneyRiskLimit := pos.RiskLimit * price / 20
-		util.Log(util.LogLevelInfo, fmt.Sprintf(`gate rist limit %s %f %f<%f`, symbol, pos.RiskLimit, moneyRiskLimit, carryCoin.MoneyPerStep))
 		if moneyRiskLimit < carryCoin.MoneyPerStep {
-			moneyInAll := carryCoin.MoneyPerStep*float64(carryCoin.CurrentStep) + carryCoin.MoneyCurStep
+			moneyInAll := carryCoin.Holding*price + carryCoin.MoneyCurStep
 			carryCoin.CurrentStep = int((moneyInAll) / moneyRiskLimit)
 			carryCoin.MoneyPerStep = moneyRiskLimit
 			carryCoin.MoneyCurStep = moneyInAll - float64(carryCoin.CurrentStep)*carryCoin.MoneyPerStep
+			util.Log(util.LogLevelInfo, fmt.Sprintf(`gate rist limit %s %f %f<%f price %f in all %f`,
+				symbol, pos.RiskLimit, moneyRiskLimit, carryCoin.MoneyPerStep, price, moneyInAll))
 			model.AppDB.Model(carryCoin).Where(`coin=? and account_index=?`, carryCoin.Coin, `0`).Updates(
 				map[string]interface{}{`current_step`: carryCoin.CurrentStep, `money_cur_step`: carryCoin.MoneyCurStep,
-					`holding`: carryCoin.Holding})
+					`money_per_step`: carryCoin.MoneyPerStep})
 			util.Log(util.LogLevelInfo, fmt.Sprintf(`update money per step %s %#v`, coin, carryCoin))
 		}
 		return true
