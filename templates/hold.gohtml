@@ -61,8 +61,8 @@
     <th>err code</th>
     {{range $i, $value := $.orders}}
         <tr>
-            {{$status := index $value 10}}
-            {{if eq $status "working"}}
+            {{$orderSide := index $value 4}}
+            {{if eq $orderSide "buy"}}
                 <td bgcolor="#00FF00">{{index $value 0}}</td>
                 <td bgcolor="#00FF00">{{index $value 1}}</td>
                 <td bgcolor="#00FF00">{{index $value 2}}</td>
