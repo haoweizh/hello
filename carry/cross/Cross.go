@@ -493,9 +493,9 @@ func updateMoneyPerStep(account *model.Account, gateCm *contractMarket) {
 			util.Log(util.LogLevelInfo, fmt.Sprintf(`gate rist limit 0 price %s %s`, symbol, coin.(string)))
 			return true
 		}
-		moneyRiskLimit := pos.RiskLimit * price / 20
+		moneyRiskLimit := pos.RiskLimit / 20
 		if moneyRiskLimit < carryCoin.MoneyPerStep {
-			moneyInAll := carryCoin.Holding*price/gateStatus.Setting.PriceX + carryCoin.MoneyCurStep
+			moneyInAll := carryCoin.Holding * price / gateStatus.Setting.PriceX
 			carryCoin.CurrentStep = int((moneyInAll) / moneyRiskLimit)
 			carryCoin.MoneyPerStep = moneyRiskLimit
 			carryCoin.MoneyCurStep = moneyInAll - float64(carryCoin.CurrentStep)*carryCoin.MoneyPerStep
@@ -504,9 +504,9 @@ func updateMoneyPerStep(account *model.Account, gateCm *contractMarket) {
 			model.AppDB.Model(carryCoin).Where(`coin=? and account_index=?`, carryCoin.Coin, `0`).Updates(
 				map[string]interface{}{`current_step`: carryCoin.CurrentStep, `money_cur_step`: carryCoin.MoneyCurStep,
 					`money_per_step`: carryCoin.MoneyPerStep, `holding`: carryCoin.Holding})
-			util.Log(util.LogLevelInfo, fmt.Sprintf(`update money per step %s %#v`, coin, carryCoin))
+			util.Log(util.LogLevelInfo, fmt.Sprintf(`update money per step %s %f`, coin, carryCoin.Holding))
 		} else {
-			moneyInAll := carryCoin.Holding*price/gateStatus.Setting.PriceX + carryCoin.MoneyCurStep
+			moneyInAll := carryCoin.Holding * price / gateStatus.Setting.PriceX
 			carryCoin.CurrentStep = int((moneyInAll) / carryCoin.MoneyPerStep)
 			carryCoin.MoneyCurStep = moneyInAll - float64(carryCoin.CurrentStep)*carryCoin.MoneyPerStep
 			util.Log(util.LogLevelInfo, fmt.Sprintf(`gate rist limit %s %f %f<%f price %f in all %f`,
@@ -514,7 +514,7 @@ func updateMoneyPerStep(account *model.Account, gateCm *contractMarket) {
 			model.AppDB.Model(carryCoin).Where(`coin=? and account_index=?`, carryCoin.Coin, `0`).Updates(
 				map[string]interface{}{`current_step`: carryCoin.CurrentStep, `money_cur_step`: carryCoin.MoneyCurStep,
 					`money_per_step`: carryCoin.MoneyPerStep, `holding`: carryCoin.Holding})
-			util.Log(util.LogLevelInfo, fmt.Sprintf(`update money per step %s %#v`, coin, carryCoin))
+			util.Log(util.LogLevelInfo, fmt.Sprintf(`update money per step %s %f`, coin, carryCoin.Holding))
 		}
 		return true
 	})
