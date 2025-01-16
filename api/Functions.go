@@ -807,7 +807,6 @@ func MustPlaceOrder(account *model.Account, orderSide, orderType, market, symbol
 // amount:如果是限价单或市价卖单，amount是左侧币种的数量，如果是市价买单，amount是右测币种的数量
 func PlaceOrder(account *model.Account, orderSide, orderType, market, symbol, orderParam, funcType string, price, triggerPrice,
 	amount float64, isWs bool, postOrder model.PostOrder) (order *model.Order) {
-	start := util.GetNowUnixMillion()
 	markSide := model.OrderSideBuy
 	switch orderSide {
 	case model.OrderSideBuy, model.OrderSideLiquidateShort:
@@ -833,10 +832,6 @@ func PlaceOrder(account *model.Account, orderSide, orderType, market, symbol, or
 	if market == model.BitgetPerp || market == model.BitgetSpot {
 		isWs = false
 	}
-	if isWs {
-		model.AppEnvironment.ReqIdOrders.Store(order.ClientOrdId, order)
-		util.Log(util.LogLevelInfo, fmt.Sprintf(`store order %s %s %s %s %s %#v`, market, coin, symbol, orderSide, order.ClientOrdId, order))
-	}
 	switch market {
 	case model.BitgetPerp:
 		placeOrderBitgetPerp(account, isWs, order, orderSide, orderType, orderParam, symbol, price, amount)
@@ -853,6 +848,10 @@ func PlaceOrder(account *model.Account, orderSide, orderType, market, symbol, or
 	case model.Bybit:
 		placeOrderBybit(account, isWs, order, orderParam)
 	}
+	if isWs {
+		model.AppEnvironment.ReqIdOrders.Store(order.ClientOrdId, order)
+		util.Log(util.LogLevelInfo, fmt.Sprintf(`store order %s %s %s %s %s %#v`, market, coin, symbol, orderSide, order.ClientOrdId, order))
+	}
 	if !isWs || order.Status != model.CarryStatusWorking {
 		if order.OrderId == "0" || strings.Trim(order.OrderId, ` `) == "" {
 			order.Status = model.CarryStatusFail
@@ -860,10 +859,9 @@ func PlaceOrder(account *model.Account, orderSide, orderType, market, symbol, or
 		} else if order.Status == `` {
 			order.Status = model.CarryStatusWorking
 		}
-		end := util.GetNowUnixMillion()
 		util.Log(util.LogLevelInfo, fmt.Sprintf(
-			`...%s %s %s return order at %d distance %d %s %s price %f %f amount %f %f trigger %f %f id %s`,
-			orderSide, market, symbol, end, end-start, order.Status, order.ErrCode, price, order.Price, amount, order.Amount,
+			`...%s %s %s return order at %s %s price %f %f amount %f %f trigger %f %f id %s`,
+			orderSide, market, symbol, order.Status, order.ErrCode, price, order.Price, amount, order.Amount,
 			triggerPrice, order.TriggerPrice, order.OrderId))
 		if postOrder != nil {
 			if order.Status != model.CarryStatusFail {

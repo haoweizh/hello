@@ -715,24 +715,33 @@ func remove(value *sync.Map) {
 	fmt.Println(`remove 2`)
 }
 
-func Test_map(t *testing.T) {
-	fmt.Println(time.Now().UnixMicro())
-	//p := make([]float64, 5555555)
-	//for n := 1; n <= 250000; n++ {
-	//	if n == 1 {
-	//		p[n] = 0.001
-	//	} else {
-	//		p[n] = p[n-1] + 0.001 + 0.0001*float64(n-1)
-	//		fmt.Println(fmt.Sprintf(`%f`, p[n]))
-	//	}
-	//	if p[n] > 0.2 {
-	//		break
-	//	}
-	//}
+func Test_CalcGridLine(t *testing.T) {
+	p := make([]float64, 5555555)
+	for n := 1; n <= 250000; n++ {
+		if n == 1 {
+			p[n] = 0.001
+		} else {
+			p[n] = p[n-1] + 0.001 + 0.0001*float64(n-1)
+			fmt.Println(fmt.Sprintf(`%f`, p[n]))
+		}
+		if p[n] > 0.2 {
+			break
+		}
+	}
+}
 
+func Test_map(t *testing.T) {
 	valueMap := &sync.Map{}
 	util.StoreSyncMap(valueMap, 1, `1`, `2`)
 	util.StoreSyncMap(valueMap, 2, `1`, `3`)
+	for i := 0; i < 10000; i++ {
+		valueMap.Store(i, i)
+	}
+	tm := time.Now().UnixMicro()
+	//for i := 0; i < 10000; i++ {
+	valueMap.CompareAndSwap(1, 1, 2)
+	//}
+	fmt.Println(fmt.Sprintf("%d", time.Now().UnixMicro()-tm))
 	value, ok := util.LoadSyncMap(valueMap, `1`, `2`)
 	fmt.Println(ok)
 	fmt.Println(fmt.Sprintf(`%v`, value))
