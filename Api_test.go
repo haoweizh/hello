@@ -92,7 +92,7 @@ func Test_ws(t *testing.T) {
 
 func Test_getCommonMarketInfos(t *testing.T) {
 	model.NewConfig()
-	market := model.BinanceSpot
+	market := model.Bybit
 	account := model.AppConfig.GetAccounts(market)[0]
 	_, _, total, _ := api.GetBalances(account.Key, account.Secret, market)
 	fmt.Println(total)
@@ -618,10 +618,9 @@ func Test_WSOKPair(t *testing.T) {
 
 func Test_transferInner(t *testing.T) {
 	model.NewConfig()
-	market := model.Gate
-	accounts := model.AppConfig.GetAccounts(market)
-	fmt.Println(accounts)
-	suc, bals, total, _ := api.GetBalances(model.AppConfig.GateKey, model.AppConfig.GateSecret, model.Gate)
+	market := model.Bybit
+	account := model.AppConfig.GetAccounts(market)[0]
+	suc, bals, total, _ := api.GetBalances(account.Key, account.Secret, market)
 	fmt.Println(fmt.Sprintf(`%#v total %f`, suc, total))
 	for _, bal := range bals {
 		api.TransferGate(model.AppConfig.GateKey, model.AppConfig.GateSecret, `MAIN_UMFUTURE`, bal.Coin, bal.Amount)

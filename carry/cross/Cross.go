@@ -156,8 +156,8 @@ func createFromPosition(account *model.Account, setting *model.Setting, valueLim
 	switch setting.Market {
 	case model.OKEX, model.Gate:
 		if cm.mmr < 1.5 {
-			util.Log(util.LogLevelError, fmt.Sprintf(`do revert true %s %s %s mmr %f`,
-				account.Key, setting.Market, setting.Symbol, cm.mmr))
+			util.Log(util.LogLevelError, fmt.Sprintf(`do revert true %d %s %s mmr %f`,
+				account.Index, setting.Market, setting.Symbol, cm.mmr))
 			doRevert = true
 		}
 	case model.Bybit, model.BitgetPerp, model.BinancePerp:
@@ -170,8 +170,8 @@ func createFromPosition(account *model.Account, setting *model.Setting, valueLim
 	if cm.contractValueInU/handledActValueInU > rateLimitPosition || valueInUsd > valueLimit ||
 		valueInUsd/handledActValueInU > rateLimitHolding || (cm.collateralsAvailable < MarginULowLimit && cm.collateralsAvailable/handledActValueInU < 0.05) ||
 		(setting.Market == model.BitgetPerp && (len(cm.positions) > model.BitgetPosLimit && carryStatus.Holding == 0)) {
-		util.Log(util.LogLevelError, fmt.Sprintf(`do revert true %s %s value big %f %f %f %f %f %f margin u %f pos len %d`,
-			setting.Market, setting.Symbol, cm.contractValueInU, handledActValueInU, rateLimitPosition, valueInUsd, valueLimit, rateLimitHolding, cm.contractValueInU, len(cm.positions)))
+		util.Log(util.LogLevelError, fmt.Sprintf(`do revert true %d %s %s value big %f %f %f %f %f %f margin u %f pos len %d`,
+			account.Index, setting.Market, setting.Symbol, cm.contractValueInU, handledActValueInU, rateLimitPosition, valueInUsd, valueLimit, rateLimitHolding, cm.contractValueInU, len(cm.positions)))
 		doRevert = true
 	}
 	return carryStatus, doRevert
@@ -235,8 +235,8 @@ func createFromBalance(account *model.Account, setting *model.Setting, valueLimi
 		doRevert = true
 	}
 	if doRevert {
-		util.Log(util.LogLevelError, fmt.Sprintf(`do revert true %s %s value big balance u %f<%f || %f>0.2 %f`,
-			setting.Market, setting.Symbol, sm.availableU, usdLowLine, carryStatus.RateInAll, valueLimit))
+		util.Log(util.LogLevelError, fmt.Sprintf(`do revert true %d %s %s value big balance u %f<%f || %f>0.2 %f`,
+			account.Index, setting.Market, setting.Symbol, sm.availableU, usdLowLine, carryStatus.RateInAll, valueLimit))
 	}
 	return carryStatus, doRevert
 }
