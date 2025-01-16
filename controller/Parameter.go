@@ -424,14 +424,12 @@ func holdPage(c *gin.Context) {
 		if account != nil {
 			inAllSpot, contractAccountValue, holdingSpot, holdingFuture, unrealizedPnl :=
 				cross.GetCrossMarketValue(account.Key, account.Secret, account.Market, force == `true`)
-			if account.Market != model.BinanceSpot {
-				marketValues = append(marketValues, []string{account.Market,
-					strconv.FormatFloat(inAllSpot, 'f', 0, 64),
-					strconv.FormatFloat(contractAccountValue, 'f', 0, 64),
-					strconv.FormatFloat(holdingSpot, 'f', 0, 64),
-					strconv.FormatFloat(holdingFuture, 'f', 0, 64),
-					strconv.FormatFloat(unrealizedPnl, 'f', 0, 64)})
-			}
+			marketValues = append(marketValues, []string{account.Market,
+				strconv.FormatFloat(inAllSpot, 'f', 0, 64),
+				strconv.FormatFloat(contractAccountValue, 'f', 0, 64),
+				strconv.FormatFloat(holdingSpot, 'f', 0, 64),
+				strconv.FormatFloat(holdingFuture, 'f', 0, 64),
+				strconv.FormatFloat(unrealizedPnl, 'f', 0, 64)})
 			if account.Market != model.BinanceSpot && account.Market != model.BitgetSpot {
 				inAll[0] += contractAccountValue
 			}
@@ -510,8 +508,9 @@ func holdPage(c *gin.Context) {
 	orders := make([][]string, 0)
 	location, _ := time.LoadLocation("Asia/Shanghai")
 	carryRows, _ = model.AppDB.Model(model.Order{}).Select(`order_id,market,symbol,order_time,order_side,price,amount,price*abs(amount),refresh_type,err_code,status`).
-		Where(`account_index=? and (err_code!=? or client_ord_id=order_id or (order_side=? and fee>?and price/fee>?) or (order_side=? and fee>?and fee/price>?))`,
-			indexStr, ``, model.OrderSideBuy, 0, 1.2, model.OrderSideSell, 0, 1.2).Order(`order_time desc`).Limit(100).Rows()
+		//Where(`account_index=? and (err_code!=? or client_ord_id=order_id or (order_side=? and fee>?and price/fee>?) or (order_side=? and fee>?and fee/price>?))`,
+		//	indexStr, ``, model.OrderSideBuy, 0, 1.2, model.OrderSideSell, 0, 1.2).Order(`order_time desc`).Limit(100).Rows()
+		Where(`account_index=?`, indexStr).Order(`order_time desc`).Limit(500).Rows()
 	if carryRows != nil {
 		for carryRows.Next() {
 			var orderId, market, symbol, orderSide, refreshType, errCode, status string

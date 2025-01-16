@@ -859,9 +859,7 @@ var ProcessCross = func(setting *model.Setting, tick *model.BidAsk) {
 		tickLimit = 25
 	case model.BitgetSpot, model.BitgetPerp:
 		tickLimit = 25
-	case model.BinanceSpot:
-		tickLimit = 2
-	case model.BinancePerp:
+	case model.BinanceSpot, model.BinancePerp:
 		tickLimit = 15
 	case model.OKEX:
 		tickLimit = 60
