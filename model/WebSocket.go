@@ -143,8 +143,10 @@ func (wsConn *WSConn) WriteJson(body map[string]interface{}) (err error) {
 func initChannel(account *Account, url, market string, wsType ChannelType) (newCreate bool, wsConn *WSConn, err error) {
 	if AppConfig.SpecialChan == "1" && (account == nil || account.Index == 0) {
 		switch market {
-		case BinanceSpot, BinancePerp:
+		case BinancePerp:
 			return newTsChannel(url, "bf", wsType)
+		case BinanceSpot:
+			return newTsChannel(url, "bs", wsType)
 		case Gate:
 			//if url == gateWs.FuturesUsdtUrl {
 			//	return newTsChannel(url, "gate", wsType)
