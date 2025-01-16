@@ -456,7 +456,7 @@ func equalAccounts(doEqual bool, traceId int64) {
 			if market == model.Gate && account != nil && model.AppConfig.GetCrossStyles()[i] == crossGrid {
 				gateCm, _ := contractMarkets.Load(account.Key)
 				if gateCm != nil {
-					updateMoneyPerStep(account, gateCm.(*contractMarket))
+					updateMoneyPerStep(gateCm.(*contractMarket))
 				}
 			}
 		}
@@ -464,7 +464,7 @@ func equalAccounts(doEqual bool, traceId int64) {
 	util.Log(util.LogLevelInfo, fmt.Sprintf(`exit clearing cross all %d`, traceId))
 }
 
-func updateMoneyPerStep(account *model.Account, gateCm *contractMarket) {
+func updateMoneyPerStep(gateCm *contractMarket) {
 	value := api.GetCoinSettings(model.FunctionCross)
 	if value == nil {
 		return
@@ -479,11 +479,11 @@ func updateMoneyPerStep(account *model.Account, gateCm *contractMarket) {
 		if gateCm.positions == nil || gateCm.positions[symbol] == nil {
 			return true
 		}
-		status, _ := util.LoadSyncMap(carryStatusMap, coin.(string), model.Gate, symbol, account.Key)
-		if status == nil {
-			return true
-		}
-		gateStatus := status.(*model.CarryStatus)
+		//status, _ := util.LoadSyncMap(carryStatusMap, coin.(string), model.Gate, symbol, account.Key)
+		//if status == nil {
+		//	return true
+		//}
+		//gateStatus := status.(*model.CarryStatus)
 		pos := gateCm.positions[symbol]
 		price := pos.EntryPrice
 		if price == 0 {
@@ -495,7 +495,7 @@ func updateMoneyPerStep(account *model.Account, gateCm *contractMarket) {
 		}
 		moneyRiskLimit := pos.RiskLimit / 20
 		if moneyRiskLimit < carryCoin.MoneyPerStep {
-			moneyInAll := carryCoin.Holding * price / gateStatus.Setting.PriceX
+			moneyInAll := carryCoin.MoneyPerStep*float64(carryCoin.CurrentStep) + carryCoin.MoneyCurStep
 			carryCoin.CurrentStep = int((moneyInAll) / moneyRiskLimit)
 			carryCoin.MoneyPerStep = moneyRiskLimit
 			carryCoin.MoneyCurStep = moneyInAll - float64(carryCoin.CurrentStep)*carryCoin.MoneyPerStep
@@ -503,18 +503,8 @@ func updateMoneyPerStep(account *model.Account, gateCm *contractMarket) {
 				symbol, pos.RiskLimit, moneyRiskLimit, carryCoin.MoneyPerStep, price, moneyInAll))
 			model.AppDB.Model(carryCoin).Where(`coin=? and account_index=?`, carryCoin.Coin, `0`).Updates(
 				map[string]interface{}{`current_step`: carryCoin.CurrentStep, `money_cur_step`: carryCoin.MoneyCurStep,
-					`money_per_step`: carryCoin.MoneyPerStep, `holding`: carryCoin.Holding})
-			util.Log(util.LogLevelInfo, fmt.Sprintf(`update money per step %s %f`, coin, carryCoin.Holding))
-		} else {
-			moneyInAll := carryCoin.Holding * price / gateStatus.Setting.PriceX
-			carryCoin.CurrentStep = int((moneyInAll) / carryCoin.MoneyPerStep)
-			carryCoin.MoneyCurStep = moneyInAll - float64(carryCoin.CurrentStep)*carryCoin.MoneyPerStep
-			util.Log(util.LogLevelInfo, fmt.Sprintf(`gate rist limit %s %f %f<%f price %f in all %f`,
-				symbol, pos.RiskLimit, moneyRiskLimit, carryCoin.MoneyPerStep, price, moneyInAll))
-			model.AppDB.Model(carryCoin).Where(`coin=? and account_index=?`, carryCoin.Coin, `0`).Updates(
-				map[string]interface{}{`current_step`: carryCoin.CurrentStep, `money_cur_step`: carryCoin.MoneyCurStep,
-					`money_per_step`: carryCoin.MoneyPerStep, `holding`: carryCoin.Holding})
-			util.Log(util.LogLevelInfo, fmt.Sprintf(`update money per step %s %f`, coin, carryCoin.Holding))
+					`money_per_step`: carryCoin.MoneyPerStep})
+			util.Log(util.LogLevelInfo, fmt.Sprintf(`update money per step %s`, coin))
 		}
 		return true
 	})
@@ -575,12 +565,9 @@ func equalAccount(i int, equalChan chan int, accounts map[string]*model.Account,
 						util.StoreSyncMap(carryCoinMap, carryCoin, coin.(string), `0`)
 						model.AppDB.Save(carryCoin)
 					} else {
-						carryCoin.Holding = bidHolding
 						util.StoreSyncMap(carryCoinMap, carryCoin, coin.(string), `0`)
-						util.Log(util.LogLevelInfo, fmt.Sprintf(`get a carry coin from db %v %f`, coin, bidHolding))
+						util.Log(util.LogLevelInfo, fmt.Sprintf(`get a carry coin from db %v %f value %f`, coin, bidHolding, bidHolding*price))
 					}
-				} else {
-					valueCarryCoin.(*model.CarryCoin).Holding = bidHolding
 				}
 			}
 			return true
