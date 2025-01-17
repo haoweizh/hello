@@ -461,7 +461,6 @@ var wsPriHandlerGatePerp = func(market, key string, msg []byte) {
 				}
 				model.AppEnvironment.WSRespChan <- wsResp
 			}
-
 		} else if channel == `futures.login` {
 			if result == `200` {
 				ts = time.Now().Unix()
@@ -549,7 +548,6 @@ var wsPriHandlerGateSpot = func(market, key string, msg []byte) {
 				}
 				model.AppEnvironment.WSRespChan <- wsResp
 			}
-
 		} else if channel == `spot.login` {
 			if result == `200` {
 				if valueSpot == nil {
