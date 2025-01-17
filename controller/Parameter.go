@@ -512,7 +512,7 @@ func holdPage(c *gin.Context) {
 		//	indexStr, ``, model.OrderSideBuy, 0, 1.2, model.OrderSideSell, 0, 1.2).Order(`order_time desc`).Limit(100).Rows()
 		Where(`account_index=? and refresh_type!=? and ((client_ord_id=order_id and order_time<?) or status=? or refresh_type!=?)`,
 			indexStr, `liquidate`, time.Now().Add(-time.Minute*2), `fail`, model.FunctionCross).
-		Order(`order_time desc`).Limit(100).Rows()
+		Order(`order_time desc`).Limit(300).Rows()
 	if carryRows != nil {
 		for carryRows.Next() {
 			var orderId, market, symbol, orderSide, refreshType, errCode, status string
