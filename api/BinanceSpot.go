@@ -284,11 +284,13 @@ func placeOrderBinanceSpot(account *model.Account, isWs bool, order *model.Order
 			"timeInForce": "GTC","price": "%s","quantity": "%s","apiKey": "%s","signature": "%s","timestamp": %d, "newClientOrderId": "%s"}}`,
 			order.ClientOrdId, dialectSymbol, orderSide, strings.ToUpper(orderType), priceStr, amountStr, account.Key,
 			hex.EncodeToString(hash.Sum(nil)), ts, order.ClientOrdId)
-		value, _ := util.LoadSyncMap(&model.AppEnvironment.ConnOrder, model.BinanceSpot, account.Key)
+		connKey := getPrivateConnKey(model.BinanceSpot, account.Key, ``)
+		value, _ := model.AppEnvironment.ConnOrder.Load(connKey)
 		if value == nil {
 			order.Status = model.CarryStatusFail
 		} else {
 			if err := value.(*model.WSConn).WriteMsg([]byte(msg)); err != nil {
+				model.AppEnvironment.ConnOrder.Delete(connKey)
 				order.Status = model.CarryStatusFail
 				util.Log(util.LogLevelError, fmt.Sprintf(`fail to place binancespot order return: %s`, err.Error()))
 			}
@@ -456,11 +458,12 @@ func WsOrderServeBinance(account *model.Account, market string) {
 		apiUrl = model.WsBinancePerpApi
 		//streamUrl = model.WsBinancePerp
 	}
-	conn, err := model.WsPrivateClient(account, &model.AppEnvironment.ConnOrder, market, apiUrl, wsActHandlerBinance)
+	connKey := getPrivateConnKey(market, account.Key, ``)
+	conn, err := model.WsPrivateClient(account, &model.AppEnvironment.ConnOrder, connKey, market, apiUrl, wsActHandlerBinance)
 	if err != nil {
 		util.Log(util.LogLevelError, fmt.Sprintf(`fail to create account ws %s %s`, market, err.Error()))
 	} else {
-		util.StoreSyncMap(&model.AppEnvironment.ConnOrder, conn, market, account.Key)
+		model.AppEnvironment.ConnOrder.Store(connKey, conn)
 	}
 	RenewListenKeyBinance(account, market)
 	//_, listenKey :=
@@ -763,12 +766,14 @@ func GetAccountFromWsAPI(account *model.Account, method, market string) {
 	hash := hmac.New(sha256.New, []byte(account.Secret))
 	hash.Write([]byte(param.Encode()))
 	msg := fmt.Sprintf(`{"id": "%s","method": "%s","params":{"apiKey": "%s","signature": "%s","timestamp": %d}}`, requestId, accountMethodMap[method], account.Key, hex.EncodeToString(hash.Sum(nil)), ts)
-	value, _ := util.LoadSyncMap(&model.AppEnvironment.ConnOrder, market, account.Key)
+	connKey := getPrivateConnKey(market, account.Key, ``)
+	value, _ := model.AppEnvironment.ConnOrder.Load(connKey)
 	Status := "true"
 	if value == nil {
 		Status = model.CarryStatusFail
 	} else {
 		if err := value.(*model.WSConn).WriteMsg([]byte(msg)); err != nil {
+			model.AppEnvironment.ConnOrder.Delete(connKey)
 			Status = model.CarryStatusFail
 			util.Log(util.LogLevelError, fmt.Sprintf(`fail to get account status return: %s`, err.Error()))
 		}

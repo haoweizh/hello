@@ -56,10 +56,12 @@ func maintainConnsOKEX(accounts []*model.Account) {
 				continue
 			}
 			success := true
-			value, ConnOrderOk := util.LoadSyncMap(&model.AppEnvironment.ConnOrder, model.OKEX, account.Key)
+			connKey := getPrivateConnKey(model.OKEX, account.Key, ``)
+			value, ConnOrderOk := model.AppEnvironment.ConnOrder.Load(connKey)
 			if ConnOrderOk {
 				if value != nil {
 					if err := value.(*model.WSConn).WriteMsg([]byte(`ping`)); err != nil {
+						model.AppEnvironment.ConnOrder.Delete(connKey)
 						util.Log(util.LogLevelError, "-test ok ws-okex server ping client error "+err.Error())
 						success = false
 						//value.(*model.WSConn).Close()
@@ -189,38 +191,40 @@ var wsAccountHandlerOKEX = func(market, key string, event []byte) {
 	if err != nil || responseJson == nil {
 		return
 	}
+	connKey := getPrivateConnKey(market, key, ``)
+	value, success := model.AppEnvironment.ConnOrder.Load(connKey)
 	if responseJson.Get(`code`).MustString() == `60011` {
 		util.Log(util.LogLevelInfo, fmt.Sprintf("okex 60011 login error %s", string(event)))
-		value, success := util.LoadSyncMap(&model.AppEnvironment.ConnOrder, market, key)
 		if !success || value == nil {
 			return
 		}
 		account := model.AppConfig.GetAccountFromKeyIndex(model.OKEX, key, -1)
 		if account != nil {
-			wsLogInOKEX(account, value.(*model.WSConn))
+			if !wsLogInOKEX(account, value.(*model.WSConn)) {
+				model.AppEnvironment.ConnOrder.Delete(connKey)
+			}
 		}
 		return
 	}
 	if responseJson.Get(`event`).MustString() == `login` && responseJson.Get(`code`).MustString() == `0` {
-		//fmt.Println(`log in success `)
-		value, success := util.LoadSyncMap(&model.AppEnvironment.ConnOrder, market, key)
 		if !success || value == nil {
 			return
 		}
 		err = value.(*model.WSConn).WriteJson(map[string]interface{}{"op": "subscribe", "args": []interface{}{map[string]string{"channel": "orders", "instType": "SPOT"}}})
 		if err != nil {
 			util.Log(util.LogLevelError, fmt.Sprintf(`fail to sub %s spot order update`, market))
-			util.DelSyncMap(&model.AppEnvironment.ConnOrder, market, key)
+			model.AppEnvironment.ConnOrder.Delete(connKey)
 			return
 		}
 		err = value.(*model.WSConn).WriteJson(map[string]interface{}{"op": "subscribe", "args": []interface{}{map[string]string{"channel": "orders", "instType": "SWAP"}}})
 		if err != nil {
 			util.Log(util.LogLevelError, fmt.Sprintf(`fail to sub %s swap order update`, market))
-			util.DelSyncMap(&model.AppEnvironment.ConnOrder, market, key)
+			model.AppEnvironment.ConnOrder.Delete(connKey)
 			return
 		}
 		err = value.(*model.WSConn).WriteJson(map[string]interface{}{"op": "subscribe", "args": []interface{}{map[string]string{"channel": "account", "ccy": "USDT"}}})
 		if err != nil {
+			model.AppEnvironment.ConnOrder.Delete(connKey)
 			util.Log(util.LogLevelError, fmt.Sprintf(`fail to sub %s  account channel ccy USDT update`, market))
 		}
 	}
@@ -326,13 +330,14 @@ func WsOrderServeOKEX(account *model.Account) {
 		}
 		model.AppEnvironment.PriConnecting.Store(model.OKEX+account.Key, false)
 	}()
-	util.Log(util.LogLevelInfo, fmt.Sprintf("okex order serve %s", account.Key))
-	conn, err := model.WsPrivateClient(account, &model.AppEnvironment.ConnOrder, model.OKEX, wsPrivateOKEX, wsAccountHandlerOKEX)
+	connKey := getPrivateConnKey(model.OKEX, account.Key, ``)
+	util.Log(util.LogLevelInfo, fmt.Sprintf("okex order serve %s", connKey))
+	conn, err := model.WsPrivateClient(account, &model.AppEnvironment.ConnOrder, connKey, model.OKEX, wsPrivateOKEX, wsAccountHandlerOKEX)
 	if err != nil {
 		util.Log(util.LogLevelError, "can not create web socket "+err.Error())
 	} else if conn != nil {
 		if wsLogInOKEX(account, conn) {
-			util.StoreSyncMap(&model.AppEnvironment.ConnOrder, conn, model.OKEX, account.Key)
+			model.AppEnvironment.ConnOrder.Store(connKey, conn)
 		}
 	}
 }
@@ -698,12 +703,14 @@ func placeOrderOKEX(account *model.Account, isWs bool, order *model.Order, order
 		wsOrderMsg := util.JsonEncodeToByte(subscribeMap)
 		util.Log(util.LogLevelInfo, `ws order `+string(wsOrderMsg))
 		order.Status = model.CarryStatusWorking
-		value, _ := util.LoadSyncMap(&model.AppEnvironment.ConnOrder, model.OKEX, account.Key)
+		connKey := getPrivateConnKey(model.OKEX, account.Key, ``)
+		value, _ := model.AppEnvironment.ConnOrder.Load(connKey)
 		if value == nil {
 			util.Log(util.LogLevelError, fmt.Sprintf(`fail to get private connection when place okex order %s`, account.Key))
 			order.Status = model.CarryStatusFail
 		} else {
 			if err := value.(*model.WSConn).WriteMsg(wsOrderMsg); err != nil {
+				model.AppEnvironment.ConnOrder.Delete(connKey)
 				util.Log(util.LogLevelError, fmt.Sprintf(`fail to send ws place okex order %s %s return %s`, account.Key, order.Symbol, err.Error()))
 				order.Status = model.CarryStatusFail
 			} else {

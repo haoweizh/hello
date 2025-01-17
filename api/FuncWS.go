@@ -147,6 +147,16 @@ func CreateWSTick(environment *model.Environment, market string) (
 	return socketMap, channels
 }
 
+func getPrivateConnKey(market, accountKey, marketType string) string {
+	switch market {
+	case model.BinanceSpot, model.BinancePerp, model.BitgetSpot, model.BitgetPerp, model.OKEX, model.Bybit:
+		return fmt.Sprintf(`%s*%s`, market, accountKey)
+	case model.Gate:
+		return fmt.Sprintf(`%s*%s*%s`, market, accountKey, marketType)
+	}
+	return ``
+}
+
 func HandleWsOrderConnFail(account *model.Account, market string, order *model.Order) {
 	//兼容非order通道
 	if order != nil {

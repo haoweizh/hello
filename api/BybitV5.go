@@ -30,14 +30,15 @@ var wsOrdUdtHandlerBybit = func(market, key string, msg []byte) {
 		return
 	}
 	if responseJson.Get(`op`).MustString() == `auth` && responseJson.Get(`success`).MustBool() {
-		value, _ := util.LoadSyncMap(&model.AppEnvironment.ConnOrderUpdate, market, key)
+		connKey := getPrivateConnKey(market, key, ``)
+		value, _ := model.AppEnvironment.ConnOrderUpdate.Load(connKey)
 		if value == nil {
 			return
 		}
 		//新增wallet通道
 		err := value.(*model.WSConn).WriteMsg([]byte(`{"op":"subscribe","args": ["order","wallet"]}`))
 		if err != nil {
-			util.DelSyncMap(&model.AppEnvironment.ConnOrderUpdate, market, key)
+			model.AppEnvironment.ConnOrderUpdate.Delete(connKey)
 		}
 	}
 	if responseJson.Get(`topic`).MustString() == `order` {
@@ -105,9 +106,11 @@ func maintainConnsBybit(accounts []*model.Account) {
 			}
 			success := true
 			errMsg := ``
-			connOrder, _ := util.LoadSyncMap(&model.AppEnvironment.ConnOrder, model.Bybit, account.Key)
+			connKey := getPrivateConnKey(model.Bybit, account.Key, ``)
+			connOrder, _ := model.AppEnvironment.ConnOrder.Load(connKey)
 			if connOrder != nil {
 				if err := connOrder.(*model.WSConn).WriteMsg(pingMsg); err != nil {
+					model.AppEnvironment.ConnOrder.Delete(connKey)
 					errMsg += err.Error()
 					success = false
 					util.Log(util.LogLevelError, "-ws-bybit trade ws ping client error "+err.Error())
@@ -115,11 +118,12 @@ func maintainConnsBybit(accounts []*model.Account) {
 			} else {
 				success = false
 			}
-			connOrderUpdate, _ := util.LoadSyncMap(&model.AppEnvironment.ConnOrderUpdate, model.Bybit, account.Key)
+			connOrderUpdate, _ := model.AppEnvironment.ConnOrderUpdate.Load(connKey)
 			if connOrderUpdate != nil {
 				if err := connOrderUpdate.(*model.WSConn).WriteMsg(pingMsg); err != nil {
 					errMsg += err.Error()
 					success = false
+					model.AppEnvironment.ConnOrderUpdate.Delete(connKey)
 					util.Log(util.LogLevelError, "ws-bybit order update ws ping client error "+err.Error())
 				}
 			} else {
@@ -177,20 +181,21 @@ func WsOrderServeBybit(account *model.Account) {
 		}
 		model.AppEnvironment.PriConnecting.Store(model.Bybit+account.Key, false)
 	}()
-	connOrder, errOrder := model.WsPrivateClient(account, &model.AppEnvironment.ConnOrder, model.Bybit, bybitTradeWsUrl, wsOrderHandlerBybit)
+	connKey := getPrivateConnKey(model.Bybit, account.Key, ``)
+	connOrder, errOrder := model.WsPrivateClient(account, &model.AppEnvironment.ConnOrder, connKey, model.Bybit, bybitTradeWsUrl, wsOrderHandlerBybit)
 	if errOrder != nil {
 		util.Log(util.LogLevelError, "bybit can not create ws order "+errOrder.Error())
 	} else if connOrder != nil {
 		if WsLogInBybit(account, connOrder) {
-			util.StoreSyncMap(&model.AppEnvironment.ConnOrder, connOrder, model.Bybit, account.Key)
+			model.AppEnvironment.ConnOrder.Store(connKey, connOrder)
 		}
 	}
-	connOrderUpdate, errOrderUpdate := model.WsPrivateClient(account, &model.AppEnvironment.ConnOrderUpdate, model.Bybit, bybitStreamUrl+`/v5/private`, wsOrdUdtHandlerBybit)
+	connOrderUpdate, errOrderUpdate := model.WsPrivateClient(account, &model.AppEnvironment.ConnOrderUpdate, connKey, model.Bybit, bybitStreamUrl+`/v5/private`, wsOrdUdtHandlerBybit)
 	if errOrderUpdate != nil {
 		util.Log(util.LogLevelError, "bybit can not create ws order update"+errOrderUpdate.Error())
 	} else if connOrderUpdate != nil {
 		if WsLogInBybit(account, connOrderUpdate) {
-			util.StoreSyncMap(&model.AppEnvironment.ConnOrderUpdate, connOrderUpdate, model.Bybit, account.Key)
+			model.AppEnvironment.ConnOrderUpdate.Store(connKey, connOrderUpdate)
 		}
 	}
 }
@@ -781,13 +786,15 @@ func placeOrderBybit(account *model.Account, isWs bool, order *model.Order, orde
 	} else {
 		param["category"] = "spot"
 	}
-	value, _ := util.LoadSyncMap(&model.AppEnvironment.ConnOrder, model.Bybit, account.Key)
+	connKey := getPrivateConnKey(model.Bybit, account.Key, ``)
+	value, _ := model.AppEnvironment.ConnOrder.Load(connKey)
 	if isWs {
 		if value != nil {
 			msgMap := map[string]interface{}{"reqId": order.ClientOrdId, `op`: "order.create", "args": []interface{}{param},
 				"header": map[string]string{"X-BAPI-TIMESTAMP": fmt.Sprintf(`%d`, time.Now().UnixMilli())}}
 			msg := util.JsonEncodeToByte(msgMap)
 			if err := value.(*model.WSConn).WriteMsg(msg); err != nil {
+				model.AppEnvironment.ConnOrder.Delete(connKey)
 				order.Status = model.CarryStatusFail
 				util.Log(util.LogLevelError, fmt.Sprintf(`fail to place bybit ws order %s %s`, string(msg), err.Error()))
 			}

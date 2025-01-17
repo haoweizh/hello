@@ -33,10 +33,12 @@ func maintainConnsBitget(market string, accounts []*model.Account) {
 		}
 		for _, account := range accounts {
 			success := false
-			valueUpdate, _ := util.LoadSyncMap(&model.AppEnvironment.ConnOrder, market, account.Key)
+			connKey := getPrivateConnKey(market, account.Key, ``)
+			valueUpdate, _ := model.AppEnvironment.ConnOrder.Load(connKey)
 			if valueUpdate != nil {
 				if err := valueUpdate.(*model.WSConn).WriteMsg([]byte(`ping`)); err != nil {
 					//valueUpdate.(*model.WSConn).Close()
+					model.AppEnvironment.ConnOrder.Delete(connKey)
 					util.Log(util.LogLevelError, fmt.Sprintf("order update conn maintain error %s %s", market, err.Error()))
 				} else {
 					success = true
@@ -51,11 +53,6 @@ func maintainConnsBitget(market string, accounts []*model.Account) {
 }
 
 var wsOrderConnHandlerBitget = func(market, key string, event []byte) {
-	value, _ := util.LoadSyncMap(&model.AppEnvironment.ConnOrder, market, key)
-	if value == nil {
-		util.Log(util.LogLevelError, fmt.Sprintf("ignore msg %s %s", market, string(event)))
-		return
-	}
 	resJson, _ := util.NewJSON(event)
 	if resJson == nil {
 		return
@@ -69,13 +66,19 @@ var wsOrderConnHandlerBitget = func(market, key string, event []byte) {
 	respEvent := resJson.Get(`event`).MustString()
 	code := resJson.Get(`code`).MustInt()
 	if respEvent == `login` && code == 0 {
+		connKey := getPrivateConnKey(market, key, ``)
+		value, _ := model.AppEnvironment.ConnOrder.Load(connKey)
+		if value == nil {
+			util.Log(util.LogLevelError, fmt.Sprintf("ignore msg %s %s", market, string(event)))
+			return
+		}
 		subStr := fmt.Sprintf(`{"op":"subscribe","args":[{"instType": "%s","channel":"orders","instId":"default"}]}`, instType)
 		//登录成功后新增账户订阅
 		if market == model.BitgetPerp {
 			subStr = fmt.Sprintf(`{"op":"subscribe","args":[{"instType": "%s","channel":"orders","instId":"default"},{"instType":"%s","channel":"account","coin":"default"},{"instType":"%s","channel":"positions","instId":"default"}]}`, instType, instType, instType)
 		}
 		if err := value.(*model.WSConn).WriteMsg([]byte(subStr)); err != nil {
-			util.DelSyncMap(&model.AppEnvironment.ConnOrder, market, key)
+			model.AppEnvironment.ConnOrder.Delete(connKey)
 		}
 	} else if respEvent == `trade` && code == 0 {
 	}
@@ -134,12 +137,13 @@ func WsOrderServeBitget(market string, account *model.Account) {
 		}
 		model.AppEnvironment.PriConnecting.Store(market+account.Key, false)
 	}()
-	conn, err := model.WsPrivateClient(account, &model.AppEnvironment.ConnOrder, market, bitgetPrivate, wsOrderConnHandlerBitget)
+	connKey := getPrivateConnKey(market, account.Key, ``)
+	conn, err := model.WsPrivateClient(account, &model.AppEnvironment.ConnOrder, connKey, market, bitgetPrivate, wsOrderConnHandlerBitget)
 	if err != nil {
 		util.Log(util.LogLevelError, "can not create web socket "+err.Error())
 	} else if conn != nil {
 		if wsLoginBitget(account, conn) {
-			util.StoreSyncMap(&model.AppEnvironment.ConnOrder, conn, market, account.Key)
+			model.AppEnvironment.ConnOrder.Store(connKey, conn)
 		}
 	}
 }
@@ -346,11 +350,13 @@ func placeOrderBitgetSpot(account *model.Account, isWs bool, order *model.Order,
 		msg := fmt.Sprintf(`{"op":"trade","args":[{"id":"%s","instType":"SPOT","instId":"%s","channel":"place-order","params":{
 			"orderType":"%s","side":"%s","size":"%s","price":"%s","force":"gtc","clientOid":"%s"}}]}`,
 			order.ClientOrdId, dialectSymbol, orderType, orderSide, amountStr, priceStr, order.ClientOrdId)
-		value, _ := util.LoadSyncMap(&model.AppEnvironment.ConnOrder, model.BitgetSpot, account.Key)
+		connKey := getPrivateConnKey(model.BitgetSpot, account.Key, model.MarketTypeSpot)
+		value, _ := model.AppEnvironment.ConnOrder.Load(connKey)
 		if value == nil {
 			order.Status = model.CarryStatusFail
 		} else {
 			if err := value.(*model.WSConn).WriteMsg([]byte(msg)); err != nil {
+				model.AppEnvironment.ConnOrder.Delete(connKey)
 				order.Status = model.CarryStatusFail
 				util.Log(util.LogLevelError, fmt.Sprintf(`fail to place bitgetSpot order return: %s`, err.Error()))
 			}

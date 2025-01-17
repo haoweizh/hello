@@ -32,7 +32,8 @@ func MaintainConnsBinance(market string, accounts []*model.Account) {
 	for {
 		for _, account := range accounts {
 			listenKey := ""
-			value, _ := util.LoadSyncMap(&model.AppEnvironment.ConnOrder, market, account.Key)
+			connKey := getPrivateConnKey(market, account.Key, ``)
+			value, _ := model.AppEnvironment.ConnOrder.Load(connKey)
 			if value != nil {
 				keyValue, _ := util.LoadSyncMap(&listenKeys, market, account.Key)
 				if keyValue == nil {
@@ -386,11 +387,13 @@ func placeOrderBinancePerp(account *model.Account, isWS bool, order *model.Order
 			"price": "%s","quantity": "%s","apiKey": "%s","signature": "%s","timestamp": %d, "newClientOrderId":"%s","reduceOnly":"%s"}}`,
 			order.ClientOrdId, dialectSymbol, orderSide, strings.ToUpper(orderType), priceStr, amountStr, account.Key,
 			hex.EncodeToString(hash.Sum(nil)), ts, order.ClientOrdId, fmt.Sprintf("%v", reduceOnly))
-		value, _ := util.LoadSyncMap(&model.AppEnvironment.ConnOrder, model.BinancePerp, account.Key)
+		connKey := getPrivateConnKey(model.BinancePerp, account.Key, ``)
+		value, _ := model.AppEnvironment.ConnOrder.Load(connKey)
 		if value == nil {
 			order.Status = model.CarryStatusFail
 		} else {
 			if err := value.(*model.WSConn).WriteMsg([]byte(msg)); err != nil {
+				model.AppEnvironment.ConnOrder.Delete(connKey)
 				order.Status = model.CarryStatusFail
 				util.Log(util.LogLevelError,
 					fmt.Sprintf(`placeOrderBinancePerp fail to place binanceperp order return: %s`, err.Error()))

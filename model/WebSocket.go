@@ -46,6 +46,7 @@ func (ct ChannelType) String() string {
 
 type WSConn struct {
 	conn   *websocket.Conn
+	Closed bool
 	WSChan chan []byte
 	//默认ws 使用ws  ChanTypeMarket 使用特殊通道market WSTypeOrder使用特殊通道order
 	WSType           ChannelType
@@ -58,6 +59,7 @@ type WSConn struct {
 
 func (wsConn *WSConn) Close() {
 	if wsConn.WSType == ChanTypeWS {
+		wsConn.Closed = true
 		util.Log(util.LogLevelInfo, fmt.Sprintf("close websocket connection %s", wsConn.WSType.String()))
 		//close(wsConn.WSChan)
 		err := wsConn.conn.Close()
@@ -73,11 +75,11 @@ func (wsConn *WSConn) handle() {
 	for {
 		msg := <-wsConn.WSChan
 		if len(wsConn.WSChan) > 10 {
-			util.Log(util.LogLevelError, fmt.Sprintf(`wsConn wait list 10 %#v`, wsConn))
+			util.Log(util.LogLevelError, fmt.Sprintf(`wsConn wait list 10 %s %#v`, string(msg), wsConn))
 			continue
 		}
 		//if strings.Contains(string(msg), `order`) {
-		//util.Log(util.LogLevelInfo, fmt.Sprintf("time mark after %d %s", time.Now().UnixMicro(), string(msg)))
+		util.Log(util.LogLevelInfo, fmt.Sprintf("time mark after %s %d %s", wsConn.WSType.String(), time.Now().UnixMicro(), string(msg)))
 		//}
 		var err error
 		if wsConn.WSType == ChanTypeWS {
@@ -97,13 +99,14 @@ func (wsConn *WSConn) handle() {
 			}
 		}
 		if err != nil {
+			wsConn.Closed = true
 			util.Log(util.LogLevelError, `handle ws err `+err.Error())
 		}
 	}
 }
 
 func (wsConn *WSConn) WriteMsg(msg []byte) (err error) {
-	if wsConn.conn == nil && wsConn.WSType == ChanTypeWS {
+	if (wsConn.conn == nil && wsConn.WSType == ChanTypeWS) || wsConn.Closed {
 		return fmt.Errorf(`nil conn`)
 	}
 	//if strings.Contains(string(msg), `order`) {
@@ -287,8 +290,8 @@ func publicHandler(market string, stopChan chan struct{}, connection *WSConn, ms
 	}
 }
 
-func WsPrivateClient(account *Account, connMap *sync.Map, market, url string, accountMsgHandler AccountMsgHandler) (connection *WSConn, err error) {
-	util.Log(util.LogLevelInfo, market+` create account channel `+url)
+func WsPrivateClient(account *Account, connMap *sync.Map, connKey, market, url string, accountMsgHandler AccountMsgHandler) (connection *WSConn, err error) {
+	util.Log(util.LogLevelInfo, fmt.Sprintf(` create account channel %s %d %s`, market, account.Index, url))
 	newCreate := false
 	newCreate, connection, err = initChannel(account, url, market, ChanTypeOrder)
 	if !newCreate {
@@ -305,13 +308,12 @@ func WsPrivateClient(account *Account, connMap *sync.Map, market, url string, ac
 		}()
 		for {
 			if connection.WSType == ChanTypeWS {
-				//_, message, readErr := connection.conn.Read(context.Background())
 				_, message, readErr := connection.conn.ReadMessage()
 				if readErr != nil {
-					value, _ := util.LoadSyncMap(connMap, market, account.Key)
+					value, _ := connMap.Load(connKey)
 					if value != nil && value == connection.conn {
-						util.Log(util.LogLevelError, fmt.Sprintf(`delete connect %s %s %v`, market, account.Key, value))
-						util.DelSyncMap(connMap, market, account.Key)
+						util.Log(util.LogLevelError, fmt.Sprintf(`delete connect %s %v`, connKey, value))
+						connMap.Delete(connKey)
 					}
 					util.Log(util.LogLevelError, fmt.Sprintf(`%s %s can not read from account ws: %s`, market, url, readErr.Error()))
 					return

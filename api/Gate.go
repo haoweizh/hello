@@ -410,13 +410,15 @@ var wsPriHandlerGatePerp = func(market, key string, msg []byte) {
 	ts := responseJson.Get(`time_ms`).MustInt64()
 	result := responseJson.GetPath(`header`, `status`).MustString()
 	if channel == `futures.ping` {
-		valueFuture, _ := util.LoadSyncMap(&model.AppEnvironment.ConnOrder, model.Gate, model.MarketTypePerp, key)
+		connKey := getPrivateConnKey(model.Gate, key, model.MarketTypePerp)
+		valueFuture, _ := model.AppEnvironment.ConnOrder.Load(connKey)
 		if valueFuture == nil {
 			return
 		}
 		err := valueFuture.(*model.WSConn).WriteMsg([]byte(fmt.Sprintf(
 			`{"time" : %d, "channel" : "futures.pong"}`, time.Now().Unix())))
 		if err != nil {
+			model.AppEnvironment.ConnOrder.Delete(connKey)
 			return
 		}
 		util.Log(util.LogLevelError, fmt.Sprintf(`gate futures order pong from %s`, string(msg)))
@@ -469,13 +471,14 @@ var wsPriHandlerGatePerp = func(market, key string, msg []byte) {
 				sign := hex.EncodeToString(hashFuture.Sum(nil))
 				msgSend := fmt.Sprintf(`{"time":%d,"channel":"futures.orders","event":"subscribe","payload":["!all"],
 					"auth":{"method":"api_key","KEY":"%s","SIGN":"%s"}}`, ts, key, sign)
-				valueFuture, _ := util.LoadSyncMap(&model.AppEnvironment.ConnOrder, model.Gate, model.MarketTypePerp, key)
+				connKey := getPrivateConnKey(model.Gate, key, model.MarketTypePerp)
+				valueFuture, _ := model.AppEnvironment.ConnOrder.Load(connKey)
 				if valueFuture == nil {
 					return
 				}
 				err := valueFuture.(*model.WSConn).WriteMsg([]byte(msgSend))
 				if err != nil {
-					util.DelSyncMap(&model.AppEnvironment.ConnOrder, model.Gate, model.MarketTypePerp, key, channel)
+					model.AppEnvironment.ConnOrder.Delete(connKey)
 				}
 			}
 		}
@@ -493,14 +496,16 @@ var wsPriHandlerGateSpot = func(market, key string, msg []byte) {
 	channel := responseJson.Get(`channel`).MustString()
 	//ts := responseJson.Get(`time_ms`).MustInt64()
 	result := responseJson.GetPath(`header`, `status`).MustString()
+	connKey := getPrivateConnKey(model.Gate, key, model.MarketTypeSpot)
+	valueSpot, _ := model.AppEnvironment.ConnOrder.Load(connKey)
 	if channel == `spot.ping` {
-		valueSpot, _ := util.LoadSyncMap(&model.AppEnvironment.ConnOrder, model.Gate, model.MarketTypeSpot, key)
 		if valueSpot == nil {
 			return
 		}
 		err := valueSpot.(*model.WSConn).WriteMsg([]byte(fmt.Sprintf(
 			`{"time" : %d, "channel" : "spot.pong"}`, time.Now().Unix())))
 		if err != nil {
+			model.AppEnvironment.ConnOrder.Delete(connKey)
 			return
 		}
 	} else if channel == `spot.orders` {
@@ -533,14 +538,13 @@ var wsPriHandlerGateSpot = func(market, key string, msg []byte) {
 			model.AppEnvironment.WSRespChan <- wsResp
 		} else if channel == `spot.login` {
 			if result == `200` {
-				valueSpot, _ := util.LoadSyncMap(&model.AppEnvironment.ConnOrder, model.Gate, model.MarketTypeSpot, key)
 				if valueSpot == nil {
 					return
 				}
 				msgSend := fmt.Sprintf(`{"time":%d,"channel":"spot.orders","event":"subscribe","payload":["!all"]}`, time.Now().Unix())
 				err := valueSpot.(*model.WSConn).WriteMsg([]byte(msgSend))
 				if err != nil {
-					util.DelSyncMap(&model.AppEnvironment.ConnOrder, model.Gate, model.MarketTypeSpot, key, channel)
+					model.AppEnvironment.ConnOrder.Delete(connKey)
 				}
 			}
 		}
@@ -569,10 +573,12 @@ func maintainConnsGate(accounts []*model.Account) {
 		}
 		for _, account := range accounts {
 			successSpot := true
-			wsSpot, _ := util.LoadSyncMap(&model.AppEnvironment.ConnOrder, model.Gate, model.MarketTypeSpot, account.Key)
+			connKeySpot := getPrivateConnKey(model.Gate, account.Key, model.MarketTypeSpot)
+			wsSpot, _ := model.AppEnvironment.ConnOrder.Load(connKeySpot)
 			if wsSpot != nil {
 				if err := wsSpot.(*model.WSConn).WriteMsg([]byte(fmt.Sprintf(`{"time": %d, "channel" : "spot.ping"}`, time.Now().Unix()))); err != nil {
 					successSpot = false
+					model.AppEnvironment.ConnOrder.Delete(connKeySpot)
 					//wsSpot.(*model.WSConn).Close()
 					util.Log(util.LogLevelError, fmt.Sprintf("send account spot ping message err:%s %s", model.Gate, err.Error()))
 				}
@@ -582,11 +588,12 @@ func maintainConnsGate(accounts []*model.Account) {
 			if !successSpot {
 				WSOrderServeGate(account, model.MarketTypeSpot)
 			}
-			time.Sleep(time.Second * 2)
 			successPerp := true
-			wsFuture, _ := util.LoadSyncMap(&model.AppEnvironment.ConnOrder, model.Gate, model.MarketTypePerp, account.Key)
+			connKeyPerp := getPrivateConnKey(model.Gate, account.Key, model.MarketTypePerp)
+			wsFuture, _ := model.AppEnvironment.ConnOrder.Load(connKeyPerp)
 			if wsFuture != nil {
 				if err := wsFuture.(*model.WSConn).WriteMsg([]byte(fmt.Sprintf(`{"time": %d, "channel" : "futures.ping"}`, time.Now().Unix()))); err != nil {
+					model.AppEnvironment.ConnOrder.Delete(connKeyPerp)
 					util.Log(util.LogLevelError, fmt.Sprintf("send account futures ping message err:%s %s", model.Gate, err.Error()))
 					//wsFuture.(*model.WSConn).Close()
 					successPerp = false
@@ -621,13 +628,14 @@ func WSOrderServeGate(account *model.Account, marketType string) {
 	var conn, connUpdate *model.WSConn
 	var err, errUpdate error
 	logInCode := ``
+	connKey := getPrivateConnKey(model.Gate, account.Key, marketType)
 	if marketType == model.MarketTypeSpot {
 		logInCode = `spot`
-		conn, err = model.WsPrivateClient(account, &model.AppEnvironment.ConnOrder, model.Gate, gateWs.BaseUrl, wsPriHandlerGateSpot)
+		conn, err = model.WsPrivateClient(account, &model.AppEnvironment.ConnOrder, connKey, model.Gate, gateWs.BaseUrl, wsPriHandlerGateSpot)
 	} else if marketType == model.MarketTypePerp {
 		logInCode = `futures`
-		conn, err = model.WsPrivateClient(account, &model.AppEnvironment.ConnOrder, model.Gate, gateWs.FuturesUsdtUrl, wsPriHandlerGatePerp)
-		connUpdate, errUpdate = model.WsPrivateClient(account, &model.AppEnvironment.ConnOrderUpdate, model.Gate, unifiedUrlGate, wsPriHandlerGateUnified)
+		conn, err = model.WsPrivateClient(account, &model.AppEnvironment.ConnOrder, connKey, model.Gate, gateWs.FuturesUsdtUrl, wsPriHandlerGatePerp)
+		connUpdate, errUpdate = model.WsPrivateClient(account, &model.AppEnvironment.ConnOrderUpdate, connKey, model.Gate, unifiedUrlGate, wsPriHandlerGateUnified)
 		if errUpdate != nil {
 			util.Log(util.LogLevelError, fmt.Sprintf("gate wsAccount unified connect err: %s %s", errUpdate.Error(), account.Key))
 			return
@@ -650,7 +658,7 @@ func WSOrderServeGate(account *model.Account, marketType string) {
 	}
 	util.Log(util.LogLevelInfo, fmt.Sprintf("log in conn %s %s %s", model.Gate, marketType, msg))
 	if marketType == model.MarketTypeSpot {
-		util.StoreSyncMap(&model.AppEnvironment.ConnOrder, conn, model.Gate, marketType, account.Key)
+		model.AppEnvironment.ConnOrder.Store(connKey, conn)
 	} else if connUpdate != nil {
 		hash = hmac.New(sha512.New, []byte(account.Secret))
 		ts = time.Now().Unix()
@@ -662,8 +670,8 @@ func WSOrderServeGate(account *model.Account, marketType string) {
 			util.Log(util.LogLevelError, fmt.Sprintf("send account unified login message err: %s %s %s", model.Gate, marketType, err.Error()))
 			return
 		}
-		util.StoreSyncMap(&model.AppEnvironment.ConnOrder, conn, model.Gate, marketType, account.Key)
-		util.StoreSyncMap(&model.AppEnvironment.ConnOrderUpdate, connUpdate, model.Gate, marketType, account.Key)
+		model.AppEnvironment.ConnOrder.Store(connKey, conn)
+		model.AppEnvironment.ConnOrderUpdate.Store(connKey, conn)
 	}
 }
 
@@ -1161,9 +1169,11 @@ func placeOrderGate(account *model.Account, isWs bool, order *model.Order, order
 			reqMap := map[string]interface{}{`time`: ts, `channel`: `spot.order_place`, `event`: `api`,
 				`payload`: map[string]interface{}{`req_id`: order.ClientOrdId, `req_param`: param}}
 			wsOrderMsg := util.JsonEncodeToByte(reqMap)
-			value, _ := util.LoadSyncMap(&model.AppEnvironment.ConnOrder, model.Gate, model.MarketTypeSpot, account.Key)
+			connKey := getPrivateConnKey(model.Gate, account.Key, model.MarketTypeSpot)
+			value, _ := model.AppEnvironment.ConnOrder.Load(connKey)
 			if value != nil {
 				if err := value.(*model.WSConn).WriteMsg(wsOrderMsg); err != nil {
+					model.AppEnvironment.ConnOrder.Delete(connKey)
 					order.Status = model.CarryStatusFail
 					util.Log(util.LogLevelError, fmt.Sprintf(`fail to order gate ws %s %s`, string(wsOrderMsg), err.Error()))
 				}
@@ -1218,9 +1228,11 @@ func placeOrderGate(account *model.Account, isWs bool, order *model.Order, order
 			reqMap := map[string]interface{}{`time`: ts, `channel`: `futures.order_place`, `event`: `api`,
 				`payload`: map[string]interface{}{`req_id`: order.ClientOrdId, `req_param`: param}}
 			wsOrderMsg := util.JsonEncodeToByte(reqMap)
-			value, _ := util.LoadSyncMap(&model.AppEnvironment.ConnOrder, model.Gate, model.MarketTypePerp, account.Key)
+			connKey := getPrivateConnKey(model.Gate, account.Key, model.MarketTypePerp)
+			value, _ := model.AppEnvironment.ConnOrder.Load(connKey)
 			if value != nil {
 				if err := value.(*model.WSConn).WriteMsg(wsOrderMsg); err != nil {
+					model.AppEnvironment.ConnOrder.Delete(connKey)
 					order.Status = model.CarryStatusFail
 					util.Log(util.LogLevelError, fmt.Sprintf(`fail to order gate ws %s %s`, string(wsOrderMsg), err.Error()))
 				}

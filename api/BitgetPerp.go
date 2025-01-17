@@ -305,11 +305,13 @@ func placeOrderBitgetPerp(account *model.Account, isWs bool, order *model.Order,
 		msg := fmt.Sprintf(`{"args":[{"channel":"place-order","id":"%s","instId":"%s","instType":"USDT-FUTURES","params":{
 			"orderType":"%s","side":"%s","size":"%s","price":"%s","marginCoin":"USDT","force":"gtc","marginMode":"crossed","clientOid":"%s"}}],"op":"trade"}`,
 			order.ClientOrdId, dialectSymbol, orderType, orderSide, amountStr, priceStr, order.ClientOrdId)
-		value, _ := util.LoadSyncMap(&model.AppEnvironment.ConnOrder, model.BitgetPerp, account.Key)
+		connKey := getPrivateConnKey(model.BitgetPerp, account.Key, model.MarketTypePerp)
+		value, _ := model.AppEnvironment.ConnOrder.Load(connKey)
 		if value == nil {
 			order.Status = model.CarryStatusFail
 		} else {
 			if err := value.(*model.WSConn).WriteMsg([]byte(msg)); err != nil {
+				model.AppEnvironment.ConnOrder.Delete(connKey)
 				order.Status = model.CarryStatusFail
 				util.Log(util.LogLevelError, fmt.Sprintf(`fail to place bitgetPerp order return: %s`, err.Error()))
 			}
