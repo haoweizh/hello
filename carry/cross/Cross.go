@@ -1058,7 +1058,9 @@ func placeStatus(status *model.CarryStatus, price float64, amount float64) {
 }
 
 func handleCross(account *model.Account, order *model.Order) {
-	time.Sleep(time.Minute)
+	if order.Status == model.CarryStatusWorking {
+		time.Sleep(time.Minute)
+	}
 	value, _ := model.AppEnvironment.OrderIdOrders.Load(order.OrderId)
 	if value == nil {
 		return
@@ -1208,6 +1210,7 @@ var PostOrderCross = func(order *model.Order) {
 				status.TradeLineBuy = 1
 				status.LimitBuy = 0
 			}
+			status.Setting.Valid = false
 			util.Log(util.LogLevelError, fmt.Sprintf(`set trade line 1 fail order %s %s %s %s %s %s %s`,
 				setting.Coin, setting.Market, setting.Symbol, account.Key, order.OrderId, order.ErrCode, order.OrderTime.Format(time.DateTime)))
 		}
