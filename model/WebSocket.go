@@ -106,7 +106,7 @@ func (wsConn *WSConn) handle() {
 }
 
 func (wsConn *WSConn) WriteMsg(msg []byte) (err error) {
-	if (wsConn.conn == nil && wsConn.WSType == ChanTypeWS) || wsConn.Closed {
+	if (wsConn.conn == nil || wsConn.Closed) && wsConn.WSType == ChanTypeWS {
 		return fmt.Errorf(`nil conn`)
 	}
 	//if strings.Contains(string(msg), `order`) {
