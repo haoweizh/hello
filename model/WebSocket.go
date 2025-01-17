@@ -154,9 +154,10 @@ func initChannel(account *Account, url, market string, wsType ChannelType) (newC
 		case Gate:
 			if url == gateWs.FuturesUsdtUrl {
 				return newTsChannel(url, "gf", wsType)
-			} else {
+			} else if url == gateWs.BaseUrl {
 				return newTsChannel(url, "gs", wsType)
 			}
+			return newWsGorillaChannel(url)
 		case OKEX:
 			return newTsChannel(url, "ok", wsType)
 		default:

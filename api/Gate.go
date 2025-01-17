@@ -22,8 +22,6 @@ import (
 var apiClientsGate = make(map[string]*gateApi.APIClient)
 var apiCtxGate = make(map[string]context.Context)
 
-const unifiedUrlGate = `wss://ws.gate.io/v4/ws/unified`
-
 const wsStepGate = 50
 
 func getClientGate(key, secret string) (apiClient *gateApi.APIClient, ctx context.Context) {
@@ -635,7 +633,7 @@ func WSOrderServeGate(account *model.Account, marketType string) {
 	} else if marketType == model.MarketTypePerp {
 		logInCode = `futures`
 		conn, err = model.WsPrivateClient(account, &model.AppEnvironment.ConnOrder, connKey, model.Gate, gateWs.FuturesUsdtUrl, wsPriHandlerGatePerp)
-		connUpdate, errUpdate = model.WsPrivateClient(account, &model.AppEnvironment.ConnOrderUpdate, connKey, model.Gate, unifiedUrlGate, wsPriHandlerGateUnified)
+		connUpdate, errUpdate = model.WsPrivateClient(account, &model.AppEnvironment.ConnOrderUpdate, connKey, model.Gate, model.UnifiedUrlGate, wsPriHandlerGateUnified)
 		if errUpdate != nil {
 			util.Log(util.LogLevelError, fmt.Sprintf("gate wsAccount unified connect err: %s %s", errUpdate.Error(), account.Key))
 			return
