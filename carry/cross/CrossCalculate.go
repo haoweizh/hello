@@ -126,6 +126,9 @@ func checkTradeLine(statusBuy, statusSell *model.CarryStatus, carryCoin *model.C
 	if (buyCrossStyle == crossGrid || sellCrossStyle == crossGrid) && carryCoin == nil {
 		return
 	}
+	if statusBuy.TradeLineBuy == 1 || statusSell.TradeLineSell == 1 {
+		return
+	}
 	crossLimit := openValueLimit / priceBuy * statusBuy.Setting.GridAmount
 	if statusBuy.Holding*priceBuy >= -1*model.SmallHolding && statusSell.Holding*priceSell <= model.SmallHolding { // 开仓
 		if buyCrossStyle == crossGrid {

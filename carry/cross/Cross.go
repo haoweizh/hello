@@ -114,9 +114,17 @@ func createFromPosition(account *model.Account, setting *model.Setting, valueLim
 	if price > 0 {
 		limitAmount = math.Min(handledActValueInU/5, cm.collateralsAvailable) / price
 		if setting.Market == model.Gate {
-			riskLimit, loaded := util.LoadSyncMap(&model.AppEnvironment.RiskLimitsGate, account.Key, setting.Symbol)
+			item, loaded := util.LoadSyncMap(&model.AppEnvironment.RiskLimitsGate, account.Key, setting.Symbol)
 			if loaded {
-				limitAmount = math.Min(limitAmount, riskLimit.(float64))
+				riskLimit := 0.9 * item.(float64) / price
+				holding := 0.0
+				if cm.positions[setting.Symbol] != nil {
+					holding = cm.positions[setting.Symbol].Holding
+					riskLimit -= math.Abs(cm.positions[setting.Symbol].Holding)
+				}
+				limitAmount = math.Min(limitAmount, riskLimit)
+				util.Log(util.LogLevelInfo, fmt.Sprintf(`set limit %s risk %f %f holding %f`,
+					setting.Symbol, riskLimit, limitAmount, holding))
 			}
 		}
 		availableAmount = cm.collateralsAvailable / price
@@ -243,7 +251,7 @@ func createFromBalance(account *model.Account, setting *model.Setting, valueLimi
 }
 
 // absentRevert: 当cm或sm中没有这个symbol时，是否设置成revert模式
-func initStatus(account *model.Account, setting *model.Setting) (status *model.CarryStatus) {
+func initStatus(account *model.Account, setting *model.Setting, dirtyInit bool) (status *model.CarryStatus) {
 	if setting == nil {
 		return
 	}
@@ -293,12 +301,12 @@ func initStatus(account *model.Account, setting *model.Setting) (status *model.C
 	}
 	status.LimitBuy = math.Min(status.LimitBuy, status.AvailableBuy)
 	status.LimitSell = math.Min(status.LimitSell, status.AvailableSell)
-	initTradeLine(account, setting, status, doRevert)
+	initTradeLine(account, setting, status, doRevert, dirtyInit)
 	util.StoreSyncMap(carryStatusMap, status, setting.Coin, setting.Market, setting.Symbol, account.Key)
 	return
 }
 
-func initTradeLine(account *model.Account, setting *model.Setting, status *model.CarryStatus, doRevert bool) {
+func initTradeLine(account *model.Account, setting *model.Setting, status *model.CarryStatus, doRevert, dirtyInit bool) {
 	standardScoreBuy := math.Max(standardScoreOpen, setting.OpenShortMargin)
 	standardScoreSell := math.Max(standardScoreOpen, setting.OpenShortMargin)
 	getTick, ticks := model.AppEnvironment.GetBidAsk(setting.Market, setting.Symbol)
@@ -327,10 +335,12 @@ func initTradeLine(account *model.Account, setting *model.Setting, status *model
 		standardScoreSell = setting.CloseShortMargin
 		status.LimitSell = math.Min(status.LimitSell, status.Holding)
 	}
-	status.TradeLineBuy = math.Max(standardScoreBuy*(0.5+jumpBuy*status.RateInAll), lowestScore)
-	status.TradeLineSell = math.Max(standardScoreSell*(0.5+jumpSell*status.RateInAll), lowestScore)
-	status.TradeLineBuy *= account.CarryRate
-	status.TradeLineSell *= account.CarryRate
+	if !dirtyInit {
+		status.TradeLineBuy = math.Max(standardScoreBuy*(0.5+jumpBuy*status.RateInAll), lowestScore) * account.CarryRate
+	}
+	if !dirtyInit {
+		status.TradeLineSell = math.Max(standardScoreSell*(0.5+jumpSell*status.RateInAll), lowestScore) * account.CarryRate
+	}
 	//tradeLineExtra := getTradeLineExtra(setting.Coin, setting.CloseShortMargin)
 	//if tradeLineExtra != nil {
 	//	status.TradeLineBuy += tradeLineExtra.buyExtra
@@ -529,7 +539,7 @@ func equalAccount(i int, equalChan chan int, accounts map[string]*model.Account,
 					util.Log(util.LogLevelError, `can not equal`)
 					continue
 				}
-				equalStatuses[j] = initStatus(account, setting)
+				equalStatuses[j] = initStatus(account, setting, false)
 				if equalStatuses[j] == nil {
 					util.Log(util.LogLevelError, fmt.Sprintf(`store carry nil coin %s %s %s %s %d`,
 						setting.Coin, setting.Market, setting.Symbol, account.Key, account.Index))
@@ -965,8 +975,8 @@ func breakMarkPrice(account *model.Account, setting *model.Setting, price float6
 //}
 
 func placeCross(carryCoin *model.CarryCoin, statusBuy, statusSell *model.CarryStatus, priceBuy, priceSell, amount float64) {
-	_, marketType, _, _ := model.GetFromStandard(statusBuy.Market, statusBuy.Symbol)
-	if marketType == model.MarketTypeSpot {
+	_, marketTypeBuy, _, _ := model.GetFromStandard(statusBuy.Market, statusBuy.Symbol)
+	if marketTypeBuy == model.MarketTypeSpot {
 		priceBuy = priceBuy * (1 + crossSpotBuySlide)
 	} else {
 		priceBuy = priceBuy * (1 + crossSlide)
@@ -984,9 +994,7 @@ func placeCross(carryCoin *model.CarryCoin, statusBuy, statusSell *model.CarrySt
 		statusSell.Market, statusSell.Symbol, statusBuy.Market, statusBuy.Symbol, priceSell, priceBuy, amount, amountBuy,
 		amountSell, score, statusBuy.Holding, statusBuy.TradeLineBuy, statusSell.Holding, statusSell.TradeLineSell))
 	// 买入现货时要交手续费，故而实际到手少于下单量，校准以免未来买单时数量不足
-	recordSpotBuy := false
-	if marketType == model.MarketTypeSpot {
-		recordSpotBuy = true
+	if marketTypeBuy == model.MarketTypeSpot {
 		amountBuy = amountBuy * 0.9995
 		util.Log(util.LogLevelInfo, fmt.Sprintf(`spot buy amount before %d %s %s now %f %f buy %f sell %f`,
 			statusBuy.Account.Index, statusBuy.Market, statusBuy.Symbol, statusBuy.LimitSell, statusBuy.AvailableSell, amountBuy, amountSell))
@@ -996,9 +1004,13 @@ func placeCross(carryCoin *model.CarryCoin, statusBuy, statusSell *model.CarrySt
 	}
 	placeStatus(statusBuy, priceBuy, amountBuy)
 	placeStatus(statusSell, priceSell, -1*amountSell)
-	if recordSpotBuy {
-		util.Log(util.LogLevelInfo, fmt.Sprintf(`spot buy amount after %d %s %s now %f %f`,
-			statusBuy.Account.Index, statusBuy.Market, statusBuy.Symbol, statusBuy.LimitSell, statusBuy.AvailableSell))
+	if marketTypeBuy == model.MarketTypeSpot {
+		value, _ := util.LoadSyncMap(carryStatusMap, statusBuy.Setting.Coin, statusBuy.Market, statusBuy.Symbol, statusBuy.Account.Key)
+		if value != nil {
+			statusBuy = value.(*model.CarryStatus)
+			util.Log(util.LogLevelInfo, fmt.Sprintf(`spot buy amount after %d %s %s now %f %f`,
+				statusBuy.Account.Index, statusBuy.Market, statusBuy.Symbol, statusBuy.LimitSell, statusBuy.AvailableSell))
+		}
 	}
 }
 
@@ -1054,7 +1066,7 @@ func placeStatus(status *model.CarryStatus, price float64, amount float64) {
 		}
 	}
 	account := model.AppConfig.GetAccountFromKeyIndex(status.Market, status.Account.Key, -1)
-	initStatus(account, status.Setting)
+	initStatus(account, status.Setting, true)
 }
 
 func handleCross(account *model.Account, order *model.Order) {
@@ -1210,7 +1222,6 @@ var PostOrderCross = func(order *model.Order) {
 				status.TradeLineBuy = 1
 				status.LimitBuy = 0
 			}
-			status.Setting.Valid = false
 			util.Log(util.LogLevelError, fmt.Sprintf(`set trade line 1 fail order %s %s %s %s %s %s %s`,
 				setting.Coin, setting.Market, setting.Symbol, account.Key, order.OrderId, order.ErrCode, order.OrderTime.Format(time.DateTime)))
 		}
