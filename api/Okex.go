@@ -14,6 +14,7 @@ import (
 	"net/url"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 )
 
@@ -294,7 +295,13 @@ var wsAccountHandlerOKEX = func(market, key string, event []byte) {
 	}
 }
 
+var loginTimeOk sync.Map // accountKey - time in seconds
 func wsLogInOKEX(account *model.Account, conn *model.WSConn) (success bool) {
+	ts, _ := loginTimeOk.Load(account.Key)
+	if ts != nil && time.Now().Unix()-ts.(int64) < 15 {
+		util.Log(util.LogLevelInfo, fmt.Sprintf("okex login too fast %s %d", account.Key, ts))
+		return
+	}
 	loginMap := make(map[string]interface{})
 	loginMap[`op`] = `login`
 	timestamp := time.Now().Unix()
@@ -307,6 +314,7 @@ func wsLogInOKEX(account *model.Account, conn *model.WSConn) (success bool) {
 	loginMap[`args`] = loginArray
 	msg := util.JsonEncodeToByte(loginMap)
 	if err := conn.WriteMsg(msg); err != nil {
+		loginTimeOk.Store(account.Key, time.Now().Unix())
 		util.Log(util.LogLevelError, fmt.Sprintf(
 			`fail to login okex ws: %s return %s`, account.Key, err.Error()))
 	} else {
