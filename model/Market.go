@@ -103,6 +103,7 @@ func (environment *Environment) HandleWSResp() {
 			} else {
 				order.Status = CarryStatusFail
 				order.ErrCode = wsResp.Msg
+				environment.OrderIdOrders.Store(wsResp.RequestId, order)
 			}
 			environment.ReqIdOrders.Delete(wsResp.RequestId)
 			util.Log(util.LogLevelInfo, fmt.Sprintf(`del request store order %s %s %s %s %s %d %#v`,
