@@ -314,10 +314,10 @@ func wsLogInOKEX(account *model.Account, conn *model.WSConn) (success bool) {
 	loginMap[`args`] = loginArray
 	msg := util.JsonEncodeToByte(loginMap)
 	if err := conn.WriteMsg(msg); err != nil {
-		loginTimeOk.Store(account.Key, time.Now().Unix())
 		util.Log(util.LogLevelError, fmt.Sprintf(
 			`fail to login okex ws: %s return %s`, account.Key, err.Error()))
 	} else {
+		loginTimeOk.Store(account.Key, time.Now().Unix())
 		success = true
 		util.Log(util.LogLevelInfo, fmt.Sprintf("log in conn %s %s", model.OKEX, string(msg)))
 	}
