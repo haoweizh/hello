@@ -106,7 +106,7 @@ func createFromPosition(account *model.Account, setting *model.Setting, valueLim
 	cm := value.(*contractMarket)
 	handledActValueInU := cm.accountValueInU
 	if setting.Market == model.Gate {
-		handledActValueInU = 0.7 * cm.accountValueInU
+		handledActValueInU = 0.6 * cm.accountValueInU
 	}
 	_, price := api.GetPriceForce(setting.Symbol, setting.Market)
 	limitAmount := 0.0
@@ -123,8 +123,8 @@ func createFromPosition(account *model.Account, setting *model.Setting, valueLim
 					riskLimit -= math.Abs(cm.positions[setting.Symbol].Holding)
 				}
 				limitAmount = math.Min(limitAmount, riskLimit)
-				util.Log(util.LogLevelInfo, fmt.Sprintf(`set limit %s risk %f %f holding %f`,
-					setting.Symbol, riskLimit, limitAmount, holding))
+				util.Log(util.LogLevelInfo, fmt.Sprintf(`set limit %s risk %f %f holding %f price %f`,
+					setting.Symbol, riskLimit, limitAmount, holding, price))
 			}
 		}
 		availableAmount = cm.collateralsAvailable / price
@@ -203,7 +203,7 @@ func createFromBalance(account *model.Account, setting *model.Setting, valueLimi
 	sm := value.(*spotMarket)
 	handledActValueInU := sm.accountValueInU
 	if setting.Market == model.Gate {
-		handledActValueInU *= 0.7
+		handledActValueInU *= 0.6
 	}
 	limitBuy, limitSell, availableBuy := 0.0, 0.0, 0.0
 	if price > 0 {
@@ -996,22 +996,22 @@ func placeCross(carryCoin *model.CarryCoin, statusBuy, statusSell *model.CarrySt
 	// 买入现货时要交手续费，故而实际到手少于下单量，校准以免未来买单时数量不足
 	if marketTypeBuy == model.MarketTypeSpot {
 		amountBuy = amountBuy * 0.9995
-		util.Log(util.LogLevelInfo, fmt.Sprintf(`spot buy amount before %d %s %s now %f %f buy %f sell %f`,
-			statusBuy.Account.Index, statusBuy.Market, statusBuy.Symbol, statusBuy.LimitSell, statusBuy.AvailableSell, amountBuy, amountSell))
+		//util.Log(util.LogLevelInfo, fmt.Sprintf(`spot buy amount before %d %s %s now %f %f buy %f sell %f`,
+		//	statusBuy.Account.Index, statusBuy.Market, statusBuy.Symbol, statusBuy.LimitSell, statusBuy.AvailableSell, amountBuy, amountSell))
 	}
 	if carryCoin != nil && model.AppConfig.GetCrossStyles()[statusBuy.Account.Index] == crossGrid {
 		carryCoin.AddTrade(statusBuy, statusSell, priceBuy, priceSell, amountSell)
 	}
 	placeStatus(statusBuy, priceBuy, amountBuy)
 	placeStatus(statusSell, priceSell, -1*amountSell)
-	if marketTypeBuy == model.MarketTypeSpot {
-		value, _ := util.LoadSyncMap(carryStatusMap, statusBuy.Setting.Coin, statusBuy.Market, statusBuy.Symbol, statusBuy.Account.Key)
-		if value != nil {
-			statusBuy = value.(*model.CarryStatus)
-			util.Log(util.LogLevelInfo, fmt.Sprintf(`spot buy amount after %d %s %s now %f %f`,
-				statusBuy.Account.Index, statusBuy.Market, statusBuy.Symbol, statusBuy.LimitSell, statusBuy.AvailableSell))
-		}
-	}
+	//if marketTypeBuy == model.MarketTypeSpot {
+	//	value, _ := util.LoadSyncMap(carryStatusMap, statusBuy.Setting.Coin, statusBuy.Market, statusBuy.Symbol, statusBuy.Account.Key)
+	//	if value != nil {
+	//		statusBuy = value.(*model.CarryStatus)
+	//		util.Log(util.LogLevelInfo, fmt.Sprintf(`spot buy amount after %d %s %s now %f %f`,
+	//			statusBuy.Account.Index, statusBuy.Market, statusBuy.Symbol, statusBuy.LimitSell, statusBuy.AvailableSell))
+	//	}
+	//}
 }
 
 func placeStatus(status *model.CarryStatus, price float64, amount float64) {
