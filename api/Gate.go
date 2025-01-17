@@ -444,11 +444,16 @@ var wsPriHandlerGatePerp = func(market, key string, msg []byte) {
 		channel = responseJson.GetPath(`header`, `channel`).MustString()
 		if channel == `futures.order_place` {
 			if responseJson.GetPath(`header`, `status`).MustString() == `400` { //AUTHENTICATION_FAILED Not login
-				account := model.AppConfig.GetAccountFromKeyIndex(model.Gate, key, -1)
-				if valueFuture == nil {
-					return
+				requestId := responseJson.Get(`request_id`).MustString()
+				wsResp := model.WSResp{RequestId: requestId, Success: false, Msg: responseJson.GetPath(`data`, `errs`, `message`).MustString()}
+				model.AppEnvironment.WSRespChan <- wsResp
+				if responseJson.GetPath(`data`, `errs`, `label`).MustString() == `AUTHENTICATION_FAILED` {
+					account := model.AppConfig.GetAccountFromKeyIndex(model.Gate, key, -1)
+					if valueFuture == nil {
+						return
+					}
+					wsLoginGateOrder(account, valueFuture.(*model.WSConn), model.MarketTypePerp)
 				}
-				wsLoginGateOrder(account, valueFuture.(*model.WSConn), model.MarketTypePerp)
 			} else if !responseJson.Get(`ack`).MustBool() {
 				requestId := responseJson.Get(`request_id`).MustString()
 				idJson := responseJson.GetPath(`data`, `result`, `id`).MustInt()
@@ -532,11 +537,16 @@ var wsPriHandlerGateSpot = func(market, key string, msg []byte) {
 		channel = responseJson.GetPath(`header`, `channel`).MustString()
 		if channel == `spot.order_place` {
 			if responseJson.GetPath(`header`, `status`).MustString() == `400` {
-				account := model.AppConfig.GetAccountFromKeyIndex(model.Gate, key, -1)
-				if valueSpot == nil {
-					return
+				requestId := responseJson.Get(`request_id`).MustString()
+				wsResp := model.WSResp{RequestId: requestId, Success: false, Msg: responseJson.GetPath(`data`, `errs`, `message`).MustString()}
+				model.AppEnvironment.WSRespChan <- wsResp
+				if responseJson.GetPath(`data`, `errs`, `label`).MustString() == `AUTHENTICATION_FAILED` {
+					account := model.AppConfig.GetAccountFromKeyIndex(model.Gate, key, -1)
+					if valueSpot == nil {
+						return
+					}
+					wsLoginGateOrder(account, valueSpot.(*model.WSConn), model.MarketTypeSpot)
 				}
-				wsLoginGateOrder(account, valueSpot.(*model.WSConn), model.MarketTypeSpot)
 			} else if !responseJson.Get(`ack`).MustBool() {
 				requestId := responseJson.Get(`request_id`).MustString()
 				wsResp := model.WSResp{RequestId: requestId, OrderId: responseJson.GetPath(`data`, `result`, `id`).MustString()}
