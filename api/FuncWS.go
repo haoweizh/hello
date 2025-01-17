@@ -5,6 +5,7 @@ import (
 	"hello/model"
 	"hello/util"
 	"strings"
+	"sync"
 	"time"
 )
 
@@ -157,7 +158,15 @@ func getPrivateConnKey(market, accountKey, marketType string) string {
 	return ``
 }
 
+var connectLock sync.Mutex
+
 func HandleWsOrderConnFail(account *model.Account, market string, order *model.Order) {
+	connectLock.Lock()
+	defer func() {
+		model.AppEnvironment.CrossPause = false
+		connectLock.Unlock()
+	}()
+	model.AppEnvironment.CrossPause = true
 	//兼容非order通道
 	if order != nil {
 		wsResp := model.WSResp{RequestId: order.ClientOrdId, Msg: fmt.Sprintf(`connection error and reconnect market %s order %#v`,

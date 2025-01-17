@@ -201,9 +201,7 @@ var wsAccountHandlerOKEX = func(market, key string, event []byte) {
 		}
 		account := model.AppConfig.GetAccountFromKeyIndex(model.OKEX, key, -1)
 		if account != nil {
-			if !wsLogInOKEX(account, value.(*model.WSConn)) {
-				model.AppEnvironment.ConnOrder.Delete(connKey)
-			}
+			wsLogInOKEX(account, value.(*model.WSConn), true)
 		}
 		return
 	}
@@ -296,9 +294,9 @@ var wsAccountHandlerOKEX = func(market, key string, event []byte) {
 }
 
 var loginTimeOk sync.Map // accountKey - time in seconds
-func wsLogInOKEX(account *model.Account, conn *model.WSConn) (success bool) {
+func wsLogInOKEX(account *model.Account, conn *model.WSConn, loginDelay bool) (success bool) {
 	ts, _ := loginTimeOk.Load(account.Key)
-	if ts != nil && time.Now().Unix()-ts.(int64) < 15 {
+	if ts != nil && time.Now().Unix()-ts.(int64) < 15 && loginDelay {
 		util.Log(util.LogLevelInfo, fmt.Sprintf("okex login too fast %s %d", account.Key, ts))
 		return
 	}
@@ -344,7 +342,7 @@ func WsOrderServeOKEX(account *model.Account) {
 	if err != nil {
 		util.Log(util.LogLevelError, "can not create web socket "+err.Error())
 	} else if conn != nil {
-		if wsLogInOKEX(account, conn) {
+		if wsLogInOKEX(account, conn, false) {
 			model.AppEnvironment.ConnOrder.Store(connKey, conn)
 		}
 	}
