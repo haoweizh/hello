@@ -995,7 +995,7 @@ func placeCross(carryCoin *model.CarryCoin, statusBuy, statusSell *model.CarrySt
 		amountSell, score, statusBuy.Holding, statusBuy.TradeLineBuy, statusSell.Holding, statusSell.TradeLineSell))
 	// 买入现货时要交手续费，故而实际到手少于下单量，校准以免未来买单时数量不足
 	if marketTypeBuy == model.MarketTypeSpot {
-		amountBuy = amountBuy * 0.9995
+		amountBuy = amountBuy * 0.9992
 		//util.Log(util.LogLevelInfo, fmt.Sprintf(`spot buy amount before %d %s %s now %f %f buy %f sell %f`,
 		//	statusBuy.Account.Index, statusBuy.Market, statusBuy.Symbol, statusBuy.LimitSell, statusBuy.AvailableSell, amountBuy, amountSell))
 	}
