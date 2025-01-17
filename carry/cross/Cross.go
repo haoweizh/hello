@@ -983,14 +983,22 @@ func placeCross(carryCoin *model.CarryCoin, statusBuy, statusSell *model.CarrySt
 		statusSell.Market, statusSell.Symbol, statusBuy.Market, statusBuy.Symbol, priceSell, priceBuy, amount, amountBuy,
 		amountSell, score, statusBuy.Holding, statusBuy.TradeLineBuy, statusSell.Holding, statusSell.TradeLineSell))
 	// 买入现货时要交手续费，故而实际到手少于下单量，校准以免未来买单时数量不足
+	recordSpotBuy := false
 	if marketType == model.MarketTypeSpot {
+		recordSpotBuy = true
 		amountBuy = amountBuy * 0.9995
+		util.Log(util.LogLevelInfo, fmt.Sprintf(`spot buy amount before %d %s %s now %f %f buy %f sell %f`,
+			statusBuy.Account.Index, statusBuy.Market, statusBuy.Symbol, statusBuy.LimitSell, statusBuy.AvailableSell, amountBuy, amountSell))
 	}
 	if carryCoin != nil && model.AppConfig.GetCrossStyles()[statusBuy.Account.Index] == crossGrid {
 		carryCoin.AddTrade(statusBuy, statusSell, priceBuy, priceSell, amountSell)
 	}
 	placeStatus(statusBuy, priceBuy, amountBuy)
 	placeStatus(statusSell, priceSell, -1*amountSell)
+	if recordSpotBuy {
+		util.Log(util.LogLevelInfo, fmt.Sprintf(`spot buy amount after %d %s %s now %f %f`,
+			statusBuy.Account.Index, statusBuy.Market, statusBuy.Symbol, statusBuy.LimitSell, statusBuy.AvailableSell))
+	}
 }
 
 func placeStatus(status *model.CarryStatus, price float64, amount float64) {
@@ -1191,20 +1199,16 @@ var PostOrderCross = func(order *model.Order) {
 		value, _ := util.LoadSyncMap(carryStatusMap, setting.Coin, setting.Market, setting.Symbol, account.Key)
 		if value != nil {
 			status := value.(*model.CarryStatus)
-			if (status.Holding > 0 && order.OrderSide == model.OrderSideSell) || (status.Holding < 0 && order.OrderSide == model.OrderSideBuy) {
-				status.TradeLineSell = 1
-				status.TradeLineBuy = 1
-				status.LimitSell = 0
-				status.LimitBuy = 0
-			} else if status.Holding > 0 {
-				status.TradeLineBuy = 1
-				status.LimitBuy = 0
-			} else if status.Holding < 0 {
+			if order.OrderSide == model.OrderSideSell {
 				status.TradeLineSell = 1
 				status.LimitSell = 0
 			}
-			util.Log(util.LogLevelError, fmt.Sprintf(`set trade line 1 fail order %s %s %s %s`,
-				account.Key, order.OrderId, order.ErrCode, order.OrderTime.Format(time.DateTime)))
+			if order.OrderSide == model.OrderSideBuy {
+				status.TradeLineBuy = 1
+				status.LimitBuy = 0
+			}
+			util.Log(util.LogLevelError, fmt.Sprintf(`set trade line 1 fail order %s %s %s %s %s %s %s`,
+				setting.Coin, setting.Market, setting.Symbol, account.Key, order.OrderId, order.ErrCode, order.OrderTime.Format(time.DateTime)))
 		}
 		//addCarryResult(account.Key, order.Market, ``, false)
 		//unknownFail := true
