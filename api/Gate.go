@@ -407,9 +407,9 @@ var wsPriHandlerGatePerp = func(market, key string, msg []byte) {
 	channel := responseJson.Get(`channel`).MustString()
 	ts := responseJson.Get(`time_ms`).MustInt64()
 	result := responseJson.GetPath(`header`, `status`).MustString()
+	connKey := getPrivateConnKey(model.Gate, key, model.MarketTypePerp)
+	valueFuture, _ := model.AppEnvironment.ConnOrder.Load(connKey)
 	if channel == `futures.ping` {
-		connKey := getPrivateConnKey(model.Gate, key, model.MarketTypePerp)
-		valueFuture, _ := model.AppEnvironment.ConnOrder.Load(connKey)
 		if valueFuture == nil {
 			return
 		}
@@ -442,18 +442,26 @@ var wsPriHandlerGatePerp = func(market, key string, msg []byte) {
 		}
 	} else {
 		channel = responseJson.GetPath(`header`, `channel`).MustString()
-		if channel == `futures.order_place` && !responseJson.Get(`ack`).MustBool() {
-			//util.Log(util.LogLevelInfo, string(msg))
-			requestId := responseJson.Get(`request_id`).MustString()
-			idJson := responseJson.GetPath(`data`, `result`, `id`).MustInt()
-			wsResp := model.WSResp{RequestId: requestId, OrderId: strconv.Itoa(idJson)}
-			if result == `200` {
-				wsResp.Success = true
-			} else {
-				wsResp.Success = false
-				wsResp.Msg = responseJson.GetPath(`data`, `errs`, `message`).MustString()
+		if channel == `futures.order_place` {
+			if responseJson.GetPath(`header`, `status`).MustString() == `400` { //AUTHENTICATION_FAILED Not login
+				account := model.AppConfig.GetAccountFromKeyIndex(model.Gate, key, -1)
+				if valueFuture == nil {
+					return
+				}
+				wsLoginGateOrder(account, valueFuture.(*model.WSConn), model.MarketTypePerp)
+			} else if !responseJson.Get(`ack`).MustBool() {
+				requestId := responseJson.Get(`request_id`).MustString()
+				idJson := responseJson.GetPath(`data`, `result`, `id`).MustInt()
+				wsResp := model.WSResp{RequestId: requestId, OrderId: strconv.Itoa(idJson)}
+				if result == `200` {
+					wsResp.Success = true
+				} else {
+					wsResp.Success = false
+					wsResp.Msg = responseJson.GetPath(`data`, `errs`, `message`).MustString()
+				}
+				model.AppEnvironment.WSRespChan <- wsResp
 			}
-			model.AppEnvironment.WSRespChan <- wsResp
+
 		} else if channel == `futures.login` {
 			if result == `200` {
 				ts = time.Now().Unix()
@@ -523,17 +531,25 @@ var wsPriHandlerGateSpot = func(market, key string, msg []byte) {
 		}
 	} else {
 		channel = responseJson.GetPath(`header`, `channel`).MustString()
-		if channel == `spot.order_place` && !responseJson.Get(`ack`).MustBool() {
-			//util.Log(util.LogLevelInfo, string(msg))
-			requestId := responseJson.Get(`request_id`).MustString()
-			wsResp := model.WSResp{RequestId: requestId, OrderId: responseJson.GetPath(`data`, `result`, `id`).MustString()}
-			if result == `200` {
-				wsResp.Success = true
-			} else {
-				wsResp.Success = false
-				wsResp.Msg = responseJson.GetPath(`data`, `errs`, `message`).MustString()
+		if channel == `spot.order_place` {
+			if responseJson.GetPath(`header`, `status`).MustString() == `400` {
+				account := model.AppConfig.GetAccountFromKeyIndex(model.Gate, key, -1)
+				if valueSpot == nil {
+					return
+				}
+				wsLoginGateOrder(account, valueSpot.(*model.WSConn), model.MarketTypeSpot)
+			} else if !responseJson.Get(`ack`).MustBool() {
+				requestId := responseJson.Get(`request_id`).MustString()
+				wsResp := model.WSResp{RequestId: requestId, OrderId: responseJson.GetPath(`data`, `result`, `id`).MustString()}
+				if result == `200` {
+					wsResp.Success = true
+				} else {
+					wsResp.Success = false
+					wsResp.Msg = responseJson.GetPath(`data`, `errs`, `message`).MustString()
+				}
+				model.AppEnvironment.WSRespChan <- wsResp
 			}
-			model.AppEnvironment.WSRespChan <- wsResp
+
 		} else if channel == `spot.login` {
 			if result == `200` {
 				if valueSpot == nil {
@@ -607,6 +623,47 @@ func maintainConnsGate(accounts []*model.Account) {
 	}
 }
 
+func wsLoginUnified(account *model.Account, conn *model.WSConn) (success bool) {
+	if conn == nil {
+		return false
+	}
+	hash := hmac.New(sha512.New, []byte(account.Secret))
+	ts := time.Now().Unix()
+	hash.Write([]byte(fmt.Sprintf(`channel=unified.assets&event=subscribe&time=%d`, ts)))
+	sign := hex.EncodeToString(hash.Sum(nil))
+	msg := fmt.Sprintf(`{"time":%d,"channel":"unified.assets","event":"subscribe","payload":[],"auth":
+			{"method":"api_key","KEY":"%s","SIGN": "%s"}}`, ts, account.Key, sign)
+	if err := conn.WriteMsg([]byte(msg)); err != nil {
+		util.Log(util.LogLevelError, fmt.Sprintf("send account unified login message err: %s %s", model.Gate, err.Error()))
+		return
+	}
+	return true
+}
+
+func wsLoginGateOrder(account *model.Account, conn *model.WSConn, marketType string) (success bool) {
+	if conn == nil {
+		return false
+	}
+	logInCode := ``
+	if marketType == model.MarketTypeSpot {
+		logInCode = `spot`
+	} else if marketType == model.MarketTypePerp {
+		logInCode = `futures`
+	}
+	ts := time.Now().Unix()
+	hash := hmac.New(sha512.New, []byte(account.Secret))
+	hash.Write([]byte(fmt.Sprintf("api\n%s.login\n\n%d", logInCode, ts)))
+	sign := hex.EncodeToString(hash.Sum(nil))
+	msg := fmt.Sprintf(`{"time": %d,"channel": "%s.login","event": "api","payload": {"api_key": "%s",
+    		"signature": "%s","timestamp": "%d","req_id": "request%d"}}`, ts, logInCode, account.Key, sign, ts, ts)
+	if err := conn.WriteMsg([]byte(msg)); err != nil {
+		util.Log(util.LogLevelError, fmt.Sprintf("send account login message err: %s %s %s", model.Gate, marketType, err.Error()))
+		return
+	}
+	util.Log(util.LogLevelInfo, fmt.Sprintf("log in conn %s %s %s", model.Gate, marketType, msg))
+	return true
+}
+
 func WSOrderServeGate(account *model.Account, marketType string) {
 	if account == nil {
 		return
@@ -621,55 +678,33 @@ func WSOrderServeGate(account *model.Account, marketType string) {
 		}
 		model.AppEnvironment.PriConnecting.Store(model.Gate+marketType+account.Key, false)
 	}()
-	ts := time.Now().Unix()
-	hash := hmac.New(sha512.New, []byte(account.Secret))
-	var conn, connUpdate *model.WSConn
-	var err, errUpdate error
-	logInCode := ``
 	connKey := getPrivateConnKey(model.Gate, account.Key, marketType)
 	if marketType == model.MarketTypeSpot {
-		logInCode = `spot`
-		conn, err = model.WsPrivateClient(account, &model.AppEnvironment.ConnOrder, connKey, model.Gate, gateWs.BaseUrl, wsPriHandlerGateSpot)
+		conn, err := model.WsPrivateClient(account, &model.AppEnvironment.ConnOrder, connKey, model.Gate, gateWs.BaseUrl, wsPriHandlerGateSpot)
+		if err != nil {
+			util.Log(util.LogLevelError, fmt.Sprintf("get private conn err: %s %s %s", model.Gate, marketType, err.Error()))
+			return
+		}
+		if wsLoginGateOrder(account, conn, marketType) {
+			model.AppEnvironment.ConnOrder.Store(connKey, conn)
+		}
 	} else if marketType == model.MarketTypePerp {
-		logInCode = `futures`
-		conn, err = model.WsPrivateClient(account, &model.AppEnvironment.ConnOrder, connKey, model.Gate, gateWs.FuturesUsdtUrl, wsPriHandlerGatePerp)
-		connUpdate, errUpdate = model.WsPrivateClient(account, &model.AppEnvironment.ConnOrderUpdate, connKey, model.Gate, model.UnifiedUrlGate, wsPriHandlerGateUnified)
-		if errUpdate != nil {
-			util.Log(util.LogLevelError, fmt.Sprintf("gate wsAccount unified connect err: %s %s", errUpdate.Error(), account.Key))
+		conn, err := model.WsPrivateClient(account, &model.AppEnvironment.ConnOrder, connKey, model.Gate, gateWs.FuturesUsdtUrl, wsPriHandlerGatePerp)
+		if wsLoginGateOrder(account, conn, marketType) {
+			model.AppEnvironment.ConnOrder.Store(connKey, conn)
+		}
+		if err != nil {
+			util.Log(util.LogLevelError, fmt.Sprintf("get private conn err: %s %s %s", model.Gate, marketType, err.Error()))
 			return
 		}
-	}
-	if err != nil {
-		util.Log(util.LogLevelError, fmt.Sprintf("gate wsAccount connect errSpot: %s %s", err.Error(), account.Key))
-		return
-	}
-	if conn == nil {
-		return
-	}
-	hash.Write([]byte(fmt.Sprintf("api\n%s.login\n\n%d", logInCode, ts)))
-	sign := hex.EncodeToString(hash.Sum(nil))
-	msg := fmt.Sprintf(`{"time": %d,"channel": "%s.login","event": "api","payload": {"api_key": "%s",
-    		"signature": "%s","timestamp": "%d","req_id": "request%d"}}`, ts, logInCode, account.Key, sign, ts, ts)
-	if err = conn.WriteMsg([]byte(msg)); err != nil {
-		util.Log(util.LogLevelError, fmt.Sprintf("send account login message err: %s %s %s", model.Gate, marketType, err.Error()))
-		return
-	}
-	util.Log(util.LogLevelInfo, fmt.Sprintf("log in conn %s %s %s", model.Gate, marketType, msg))
-	if marketType == model.MarketTypeSpot {
-		model.AppEnvironment.ConnOrder.Store(connKey, conn)
-	} else if connUpdate != nil {
-		hash = hmac.New(sha512.New, []byte(account.Secret))
-		ts = time.Now().Unix()
-		hash.Write([]byte(fmt.Sprintf(`channel=unified.assets&event=subscribe&time=%d`, ts)))
-		sign = hex.EncodeToString(hash.Sum(nil))
-		msg = fmt.Sprintf(`{"time":%d,"channel":"unified.assets","event":"subscribe","payload":[],"auth":
-			{"method":"api_key","KEY":"%s","SIGN": "%s"}}`, ts, account.Key, sign)
-		if err = connUpdate.WriteMsg([]byte(msg)); err != nil {
-			util.Log(util.LogLevelError, fmt.Sprintf("send account unified login message err: %s %s %s", model.Gate, marketType, err.Error()))
+		conn, err = model.WsPrivateClient(account, &model.AppEnvironment.ConnOrderUpdate, connKey, model.Gate, model.UnifiedUrlGate, wsPriHandlerGateUnified)
+		if wsLoginUnified(account, conn) {
+			model.AppEnvironment.ConnOrderUpdate.Store(connKey, conn)
+		}
+		if err != nil {
+			util.Log(util.LogLevelError, fmt.Sprintf("gate wsAccount unified connect err: %s %s", err.Error(), account.Key))
 			return
 		}
-		model.AppEnvironment.ConnOrder.Store(connKey, conn)
-		model.AppEnvironment.ConnOrderUpdate.Store(connKey, conn)
 	}
 }
 
