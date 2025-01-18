@@ -335,10 +335,10 @@ func initTradeLine(account *model.Account, setting *model.Setting, status *model
 		standardScoreSell = setting.CloseShortMargin
 		status.LimitSell = math.Min(status.LimitSell, status.Holding)
 	}
-	if !dirtyInit {
+	if !dirtyInit || status.TradeLineBuy < 1 {
 		status.TradeLineBuy = math.Max(standardScoreBuy*(0.5+jumpBuy*status.RateInAll), lowestScore) * account.CarryRate
 	}
-	if !dirtyInit {
+	if !dirtyInit || status.TradeLineSell < 1 {
 		status.TradeLineSell = math.Max(standardScoreSell*(0.5+jumpSell*status.RateInAll), lowestScore) * account.CarryRate
 	}
 	//tradeLineExtra := getTradeLineExtra(setting.Coin, setting.CloseShortMargin)
