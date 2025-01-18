@@ -21,8 +21,7 @@ import (
 
 const restBinance = `https://api.binance.com`
 const restDataBinance = `https://data.binance.com`
-const wsBinance = "wss://stream.binance.com:9443"
-const wsBinanceSpotApi = `wss://ws-api.binance.com:443/ws-api/v3`
+
 const wsStepBinance = 30
 
 // 用于wss api调用,实际值为method
@@ -136,7 +135,7 @@ func WsKLineBinanceSpot(environment *model.Environment, market string, symbols m
 		_, _, _, dialectSymbol := model.GetFromStandard(market, symbol)
 		subs = append(subs, strings.ToLower(dialectSymbol)+`@kline_1m`)
 	}
-	socketMap, msgChans, connectErr = model.WsPublicClient(market, wsBinance+`/stream`, subs,
+	socketMap, msgChans, connectErr = model.WsPublicClient(market, model.WsBinance+`/stream`, subs,
 		subscribeHandlerBinance, KLineMsgHandlerBinanceSpot, wsStepBinance)
 	environment.MsgChanKLine.Store(market, msgChans)
 	return
@@ -374,35 +373,35 @@ func parseOrderBinanceSpot(market string, orderJson *simplejson.Json) (order *mo
 	return order
 }
 
-//var wsOrderUpdateBinance = func(market, key string, msg []byte) {
-//	resJson, _ := util.NewJSON(msg)
-//	if resJson == nil {
-//		return
-//	}
-//	switch resJson.Get(`e`).MustString() {
-//	case `ORDER_TRADE_UPDATE`:
-//		orderId := strconv.Itoa(resJson.GetPath(`o`, `i`).MustInt())
-//		dealAmount, _ := strconv.ParseFloat(resJson.GetPath(`o`, `z`).MustString(), 64)
-//		status := model.GetOrderStatus(market, resJson.Get(`X`).MustString())
-//		UpdateOrderDeal(market, orderId, status, string(msg), dealAmount)
-//	case `executionReport`:
-//		orderId := strconv.Itoa(resJson.Get(`i`).MustInt())
-//		dealAmount, _ := strconv.ParseFloat(resJson.Get(`z`).MustString(), 64)
-//		status := model.GetOrderStatus(market, resJson.Get(`X`).MustString())
-//		UpdateOrderDeal(market, orderId, status, string(msg), dealAmount)
-//		//case `ACCOUNT_UPDATE`:
-//		//	collateral := &model.Collateral{AccountKey: key}
-//		//	dataarray := resJson.GetPath(`a`, `B`).MustArray()
-//		//	for _, v := range dataarray {
-//		//		value := v.(map[string]interface{})
-//		//		if value[`a`] != nil && value[`a`] == `USDT` {
-//		//			collateral.Available, _ = strconv.ParseFloat(value[`cw`].(string), 64)
-//		//		}
-//		//	}
-//		//	util.Log(util.LogLevelInfo, fmt.Sprintf("binance unified %s %f", collateral.AccountKey, collateral.Available))
-//		//	model.CollateralHandler(collateral)
-//	}
-//}
+var wsOrderUpdateBinance = func(market, key string, msg []byte) {
+	resJson, _ := util.NewJSON(msg)
+	if resJson == nil {
+		return
+	}
+	switch resJson.Get(`e`).MustString() {
+	case `ORDER_TRADE_UPDATE`:
+		orderId := strconv.Itoa(resJson.GetPath(`o`, `i`).MustInt())
+		dealAmount, _ := strconv.ParseFloat(resJson.GetPath(`o`, `z`).MustString(), 64)
+		status := model.GetOrderStatus(market, resJson.Get(`X`).MustString())
+		UpdateOrderDeal(market, orderId, status, string(msg), dealAmount)
+	case `executionReport`:
+		orderId := strconv.Itoa(resJson.Get(`i`).MustInt())
+		dealAmount, _ := strconv.ParseFloat(resJson.Get(`z`).MustString(), 64)
+		status := model.GetOrderStatus(market, resJson.Get(`X`).MustString())
+		UpdateOrderDeal(market, orderId, status, string(msg), dealAmount)
+		//case `ACCOUNT_UPDATE`:
+		//	collateral := &model.Collateral{AccountKey: key}
+		//	dataarray := resJson.GetPath(`a`, `B`).MustArray()
+		//	for _, v := range dataarray {
+		//		value := v.(map[string]interface{})
+		//		if value[`a`] != nil && value[`a`] == `USDT` {
+		//			collateral.Available, _ = strconv.ParseFloat(value[`cw`].(string), 64)
+		//		}
+		//	}
+		//	util.Log(util.LogLevelInfo, fmt.Sprintf("binance unified %s %f", collateral.AccountKey, collateral.Available))
+		//	model.CollateralHandler(collateral)
+	}
+}
 
 var wsActHandlerBinance = func(market, key string, event []byte) {
 	responseJson, err := util.NewJSON(event)
@@ -451,13 +450,13 @@ func WsOrderServeBinance(account *model.Account, market string) {
 		model.AppEnvironment.PriConnecting.Store(market+account.Key, false)
 	}()
 	apiUrl := ``
-	//streamUrl := ``
+	streamUrl := ``
 	if market == model.BinanceSpot {
-		apiUrl = wsBinanceSpotApi
-		//streamUrl = wsBinance
+		apiUrl = model.WsBinanceSpotApi
+		streamUrl = model.WsBinance
 	} else if market == model.BinancePerp {
 		apiUrl = model.WsBinancePerpApi
-		//streamUrl = model.WsBinancePerp
+		streamUrl = model.WsBinancePerp
 	}
 	connKey := getPrivateConnKey(market, account.Key, ``)
 	conn, err := model.WsPrivateClient(account, &model.AppEnvironment.ConnOrder, connKey, market, apiUrl, wsActHandlerBinance)
@@ -466,17 +465,15 @@ func WsOrderServeBinance(account *model.Account, market string) {
 	} else {
 		model.AppEnvironment.ConnOrder.Store(connKey, conn)
 	}
-	RenewListenKeyBinance(account, market)
-	//_, listenKey :=
-	//msg := fmt.Sprintf(`%s/ws/%s`, streamUrl, listenKey)
-	//_ = msg
-	//connUpdate, errUpdate := model.WsPrivateClient(account, &model.AppEnvironment.ConnOrderUpdate, market, msg, wsOrderUpdateBinance)
-	//if errUpdate != nil {
-	//	util.Log(util.LogLevelError, fmt.Sprintf(`fail to create order update ws %s %s`, market, errUpdate.Error()))
-	//} else {
-	//	util.Log(util.LogLevelInfo, fmt.Sprintf("log in conn %s %s", market, msg))
-	//	util.StoreSyncMap(&model.AppEnvironment.ConnOrderUpdate, connUpdate, market, account.Key)
-	//}
+	_, listenKey := RenewListenKeyBinance(account, market)
+	msg := fmt.Sprintf(`%s/ws/%s`, streamUrl, listenKey)
+	connUpdate, errUpdate := model.WsPrivateClient(account, &model.AppEnvironment.ConnOrderUpdate, connKey, market, msg, wsOrderUpdateBinance)
+	if errUpdate != nil {
+		util.Log(util.LogLevelError, fmt.Sprintf(`fail to create order update ws %s %s`, market, errUpdate.Error()))
+	} else {
+		model.AppEnvironment.ConnOrderUpdate.Store(connKey, connUpdate)
+		util.Log(util.LogLevelInfo, fmt.Sprintf("log in conn %s %s", market, msg))
+	}
 }
 
 func cancelOrderBinanceSpot(key, secret, market, symbol, orderId string) (suc bool, order *model.Order) {
