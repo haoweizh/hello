@@ -165,6 +165,7 @@ var markPriceWsHandler = func(market string, conn *model.WSConn, event []byte) {
 	}
 }
 
+// WsTickServeBitgetPerp TODO 由于同一个交易所多次调用WsPublicClient，所以不支持使用specialChan，需要做相应改动
 func WsTickServeBitgetPerp(market string) (socketMap map[*model.WSConn]bool, msgChans []chan struct{}, connectErr error) {
 	msgChans = make([]chan struct{}, 0)
 	socketMap = make(map[*model.WSConn]bool)

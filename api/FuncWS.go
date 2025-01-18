@@ -46,6 +46,8 @@ func GetWSSubscribes(market string, subTypes []string) []interface{} {
 		subscribes = append(subscribes, `position`)
 		subscribes = append(subscribes, `order`)
 	}
+	util.Log(util.LogLevelInfo, fmt.Sprintf("get subscribes %s types %v symbols %d subs %d %#v",
+		market, subTypes, len(symbols), len(subscribes), subscribes))
 	return subscribes
 }
 
