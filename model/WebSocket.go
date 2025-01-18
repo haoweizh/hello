@@ -247,7 +247,8 @@ func newWsGorillaChannel(url string) (newCreate bool, wsConn *WSConn, err error)
 	return true, wsConn, nil
 }
 
-func publicHandler(market string, stopChan chan struct{}, connection *WSConn, msgHandler MsgHandler) {
+func publicHandler(market string, stopChan chan struct{}, connection *WSConn, subHandler SubscribeHandler,
+	subscribes []interface{}, step int, msgHandler MsgHandler) {
 	defer func() {
 		//err := connection.conn.Close(websocket.StatusNormalClosure, "")
 		connection.Close()
@@ -276,11 +277,17 @@ func publicHandler(market string, stopChan chan struct{}, connection *WSConn, ms
 				msgSize := connection.MarketReceiver.ReceiveMarket(buf)
 				if msgSize > 0 {
 					if needReconnection(buf[:msgSize]) {
-						util.Log(util.LogLevelInfo, fmt.Sprintf(`chan need reconnect market %s %s`, market, buf[:msgSize]))
-						//err := connection.MarketPublisher.PublishMarket(string(connection.MarketSubscriber))
-						//if err != nil {
-						//	util.Log(util.LogLevelInfo, fmt.Sprintf(`%s can not publish market %s`, market, err.Error()))
-						//}
+						var stepSubscribes []interface{}
+						for i := 0; subscribes != nil && i*step < len(subscribes); i++ {
+							if (i+1)*step < len(subscribes) {
+								stepSubscribes = subscribes[i*step : (i+1)*step]
+							} else {
+								stepSubscribes = subscribes[i*step:]
+							}
+						}
+						_ = subHandler(market, connection, stepSubscribes)
+						util.Log(util.LogLevelInfo, fmt.Sprintf(`chan need reconnect market %s %s sub %#v`,
+							market, buf[:msgSize], stepSubscribes))
 					} else if msgHandler != nil {
 						go msgHandler(market, connection, buf[:msgSize])
 					}
@@ -360,7 +367,7 @@ func WsPublicClient(market, url string, subscribes []interface{}, subHandler Sub
 		go func() {
 			_ = subHandler(market, connection, stepSubscribes)
 			if newCreate {
-				publicHandler(market, stopChan, connection, msgHandler)
+				publicHandler(market, stopChan, connection, subHandler, subscribes, step, msgHandler)
 			}
 		}()
 		msgChans = append(msgChans, stopChan)
