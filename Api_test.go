@@ -718,12 +718,12 @@ func Test_CalcGridLine(t *testing.T) {
 	p := make([]float64, 5555555)
 	for n := 1; n <= 250000; n++ {
 		if n == 1 {
-			p[n] = 0.001
+			p[n] = 0.0012
 		} else {
-			p[n] = p[n-1] + 0.001 + 0.0001*float64(n-1)
+			p[n] = p[n-1] + 0.0012 + 0.0001*float64(n-1)
 			fmt.Println(fmt.Sprintf(`%f`, p[n]))
 		}
-		if p[n] > 0.2 {
+		if p[n] > 0.3 {
 			break
 		}
 	}
