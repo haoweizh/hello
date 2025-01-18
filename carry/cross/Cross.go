@@ -669,7 +669,7 @@ func equalCoin(index int, coin string, statuses []*model.CarryStatus) (isEqual b
 	sort.Sort(sort.Reverse(bids))
 	for i := 0; i < len(bids); i++ {
 		getBid, bidAsk := model.AppEnvironment.GetBidAsk(bids[i].Market, bids[i].Symbol)
-		if !getBid {
+		if !getBid || time.Now().UnixMilli()-int64(bidAsk.Ts) > 10000 {
 			continue
 		}
 		price := bidAsk.Bids[0].Price * (1 - compSlide)
@@ -699,8 +699,8 @@ func equalCoin(index int, coin string, statuses []*model.CarryStatus) (isEqual b
 					continue
 				}
 			}
-			util.Log(util.LogLevelInfo, fmt.Sprintf(`need equal holding %s %f list %s tick ts %d equal status %#v`,
-				coin, holding, holdStr, time.Now().UnixMilli()-bids[i].Ts, equalStatus))
+			util.Log(util.LogLevelInfo, fmt.Sprintf(`need equal holding sell %s %f list %s tick ts %d price %f=%f slide %f equal status %#v`,
+				coin, holding, holdStr, time.Now().UnixMilli()-int64(bidAsk.Ts), bids[i].Price, bidAsk.Bids[0].Price, price, equalStatus))
 			dealAmount := placeEqual(equalStatus, price, amount, model.OrderSideSell) * equalStatus.Setting.GridAmount
 			holding += dealAmount
 			equalStatus.Holding += dealAmount
@@ -709,7 +709,7 @@ func equalCoin(index int, coin string, statuses []*model.CarryStatus) (isEqual b
 	sort.Sort(asks)
 	for i := 0; i < len(asks); i++ {
 		getAsk, bidAsk := model.AppEnvironment.GetBidAsk(asks[i].Market, asks[i].Symbol)
-		if !getAsk {
+		if !getAsk || time.Now().UnixMilli()-int64(bidAsk.Ts) > 10000 {
 			continue
 		}
 		price := bidAsk.Asks[0].Price * (1 + compSlide)
@@ -741,8 +741,8 @@ func equalCoin(index int, coin string, statuses []*model.CarryStatus) (isEqual b
 			} else {
 				continue
 			}
-			util.Log(util.LogLevelInfo, fmt.Sprintf(`need equal holding %s %f list %s tick ts %d equal status %#v`,
-				coin, holding, holdStr, time.Now().UnixMilli()-asks[i].Ts, equalStatus))
+			util.Log(util.LogLevelInfo, fmt.Sprintf(`need equal holding buy %s %f list %s tick ts %d price %f=%f slide %f equal status %#v`,
+				coin, holding, holdStr, time.Now().UnixMilli()-int64(bidAsk.Ts), asks[i].Price, bidAsk.Asks[0].Price, price, equalStatus))
 			dealAmount := placeEqual(equalStatus, price, amount, model.OrderSideBuy) * equalStatus.Setting.GridAmount
 			holding += dealAmount
 			equalStatus.Holding += dealAmount
