@@ -137,9 +137,7 @@ func (metricManager *MetricManager) AddTick(market, symbol string, current time.
 	//metricManager.metricTicks.Store(fmt.Sprintf(`%s*%d`, marketSymbol, index), tickDelay)
 	//metricManager.index.Store(marketSymbol, (index+1)%recentTickLength)
 	if AppConfig.MetricTick {
-		if market == BinancePerp {
-			util.LogLess(util.LogLevelInfo, fmt.Sprintf(`binace store metric %s %v`, key, tickMetric))
-		}
+		util.LogLess(util.LogLevelInfo, fmt.Sprintf(`store metric %v %s %v`, AppConfig.MetricTick, key, tickMetric))
 		metricManager.tickHour.Store(key, tickMetric)
 	}
 }
