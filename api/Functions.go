@@ -937,8 +937,6 @@ func InitCrossMarketInfos(markets []string) {
 		}
 		return true
 	})
-	trumpPool := infoPool[`TRUMP`]
-	fmt.Println(trumpPool)
 	var settingsDb []*model.Setting
 	model.AppDB.Find(&settingsDb)
 	settingsDbMap := make(map[string]*model.Setting)

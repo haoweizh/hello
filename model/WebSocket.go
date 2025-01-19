@@ -80,7 +80,7 @@ func (wsConn *WSConn) handle() {
 			continue
 		}
 		//if strings.Contains(string(msg), `order`) {
-		util.Log(util.LogLevelInfo, fmt.Sprintf("time mark after %s %d %s", wsConn.WSType.String(), time.Now().UnixMicro(), string(msg)))
+		//util.Log(util.LogLevelInfo, fmt.Sprintf("time mark after %s %d %s", wsConn.WSType.String(), time.Now().UnixMicro(), string(msg)))
 		//}
 		var err error
 		if wsConn.WSType == ChanTypeWS {
