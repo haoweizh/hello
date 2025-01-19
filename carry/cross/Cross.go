@@ -433,6 +433,10 @@ func equalAccounts(doEqual bool, traceId int64) {
 		api.InitCrossMarketInfos(model.AppEnvironment.Markets)
 		api.PrepareSettings()
 	}
+	for _, market := range model.AppEnvironment.Markets {
+		//carry.ClearChannels(market, &model.AppEnvironment.MsgChanTick)
+		api.CreateWSTick(model.AppEnvironment, market)
+	}
 	//needWaitEqual := false // 是否需要进入等待环节
 	for i := 0; i < api.GetCrossLen(); i++ {
 		accounts := make(map[string]*model.Account)
@@ -1097,9 +1101,9 @@ func handleCross(account *model.Account, order *model.Order) {
 		return
 	}
 	leftAmt := order.Amount - order.DealAmount
+	model.AppEnvironment.OrderIdOrders.Delete(order.OrderId)
 	if order.Status == model.CarryStatusFail {
 		compOrder(account, order, leftAmt)
-		model.AppEnvironment.OrderIdOrders.Delete(order.OrderId)
 	} else if leftAmt > marketInfo.SizeMin && leftAmt*order.Price > marketInfo.MoneyMin && order.Status != model.CarryStatusSuccess && order.HaveId() {
 		api.CancelOrder(account.Key, account.Secret, order.Market, order.Symbol, model.OrderTypeLimit, order.OrderId)
 		time.Sleep(time.Second * 10)
@@ -1114,7 +1118,6 @@ func handleCross(account *model.Account, order *model.Order) {
 		} else {
 			util.Log(util.LogLevelError, fmt.Sprintf(`order update fail query %#v`, order))
 		}
-		model.AppEnvironment.OrderIdOrders.Delete(order.OrderId)
 	} else {
 		if order.HaveId() {
 			//util.Log(util.LogLevelInfo, fmt.Sprintf(`post handle done %#v`, order))
@@ -1124,7 +1127,6 @@ func handleCross(account *model.Account, order *model.Order) {
 			order.Status = model.CarryStatusFail
 			util.Log(util.LogLevelError, fmt.Sprintf(`handle have no id %s %s %#v`, order.Market, order.Symbol, order))
 		}
-		model.AppEnvironment.OrderIdOrders.Delete(order.OrderId)
 	}
 	if order.ClientOrdId != `` {
 		model.AppDB.Model(order).Where("client_ord_id = ?", order.ClientOrdId).Updates(map[string]interface{}{
