@@ -108,6 +108,9 @@ func _() {
 }
 
 func ClearChannels(market string, chanMap *sync.Map) {
+	if model.AppConfig.SpecialChan == `1` && (market == model.BinancePerp || market == model.BinanceSpot || market == model.OKEX || market == model.Gate) {
+		return
+	}
 	if chanMap != nil {
 		channels, _ := chanMap.Load(market)
 		if channels != nil {
