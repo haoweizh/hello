@@ -748,25 +748,8 @@ func WsTickServeGatePerp(market string) (socketMap map[*model.WSConn]bool, msgCh
 			futureSubs = append(futureSubs, symbol)
 		}
 	}
-	perpBookTickerSockets, perpBookTickerChannels, perpBookTickerErr := model.WsPublicClient(
+	return model.WsPublicClient(
 		model.Gate, gateWs.FuturesUsdtUrl, futureSubs, subscribeHandler, wsHandlerGate, wsStepGate)
-	if perpBookTickerErr == nil {
-		util.Log(util.LogLevelInfo, `finish connect public gate perp book ticker ws `)
-		msgChans = append(msgChans, perpBookTickerChannels...)
-		for conn, b := range perpBookTickerSockets {
-			socketMap[conn] = b
-		}
-	}
-	perpMarkPriceSockets, perpMarkPriceChannels, perpMarkPriceErr := model.WsPublicClient(
-		model.Gate, gateWs.FuturesUsdtUrl, futureSubs, subscribeMarkPriceHandler, wsHandlerGate, wsStepGate)
-	if perpMarkPriceErr == nil {
-		util.Log(util.LogLevelInfo, `finish connect public gate perp mark price ws `)
-		msgChans = append(msgChans, perpMarkPriceChannels...)
-		for conn, b := range perpMarkPriceSockets {
-			socketMap[conn] = b
-		}
-	}
-	return
 }
 
 var wsHandlerGate = func(market string, conn *model.WSConn, event []byte) {
@@ -800,27 +783,6 @@ var wsHandlerGate = func(market string, conn *model.WSConn, event []byte) {
 	}
 }
 
-var subscribeMarkPriceHandler = func(market string, connection *model.WSConn, subscribes []interface{}) error {
-	var err error = nil
-	var symbols []string
-	for _, subscribe := range subscribes {
-		_, _, _, dialectSymbol := model.GetFromStandard(model.Gate, subscribe.(string))
-		symbols = append(symbols, dialectSymbol)
-	}
-	subscribeMap := map[string]interface{}{
-		"time":    time.Now().Unix(),
-		"channel": "futures.tickers",
-		"event":   "subscribe",
-		"payload": symbols,
-	}
-	subscribeMessage := util.JsonEncodeToByte(subscribeMap)
-	if err = connection.WriteMsg(subscribeMessage); err != nil {
-		util.Log(util.LogLevelInfo, fmt.Sprintf("gate can not subscribe perp symbols %s %s", subscribeMessage, err.Error()))
-	}
-	time.Sleep(500 * time.Millisecond)
-	return err
-}
-
 var subscribeHandler = func(market string, connection *model.WSConn, subscribes []interface{}) error {
 	var err error = nil
 	switch subscribes[0].(type) {
@@ -833,17 +795,22 @@ var subscribeHandler = func(market string, connection *model.WSConn, subscribes 
 				_, _, _, dialectSymbol := model.GetFromStandard(model.Gate, subscribe.(string))
 				symbols = append(symbols, dialectSymbol)
 			}
-			subscribeMap := map[string]interface{}{
+			if err = connection.WriteMsg(util.JsonEncodeToByte(map[string]interface{}{
 				"time":    time.Now().Unix(),
 				"channel": "futures.book_ticker",
 				"event":   "subscribe",
 				"payload": symbols,
+			})); err != nil {
+				util.Log(util.LogLevelError, fmt.Sprintf("gate can not subscribe gate futures.book_ticker %v %s", symbols, err.Error()))
 			}
-			subscribeMessage := util.JsonEncodeToByte(subscribeMap)
-			if err = connection.WriteMsg(subscribeMessage); err != nil {
-				util.Log(util.LogLevelError, fmt.Sprintf("gate can not subscribe perp symbols %s %s", subscribeMessage, err.Error()))
+			if err = connection.WriteMsg(util.JsonEncodeToByte(map[string]interface{}{
+				"time":    time.Now().Unix(),
+				"channel": "futures.tickers",
+				"event":   "subscribe",
+				"payload": symbols,
+			})); err != nil {
+				util.Log(util.LogLevelInfo, fmt.Sprintf("gate can not subscribe gate futures.tickers %v %s", symbols, err.Error()))
 			}
-			time.Sleep(500 * time.Millisecond)
 		} else { //现货ticker订阅
 			var symbols []string
 			for _, subscribe := range subscribes {
@@ -860,7 +827,6 @@ var subscribeHandler = func(market string, connection *model.WSConn, subscribes 
 			if err = connection.WriteMsg(subscribeMessage); err != nil {
 				util.Log(util.LogLevelError, fmt.Sprintf("gate can not subscribe spot symbols %s %s", subscribeMessage, err.Error()))
 			}
-			time.Sleep(500 * time.Millisecond)
 		}
 	case []string: //orderbook订阅
 		for _, subscribe := range subscribes {

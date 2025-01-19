@@ -290,10 +290,11 @@ func publicHandler(market string, stopChan chan struct{}, connection *WSConn, su
 							} else {
 								stepSubscribes = subscribes[i*step:]
 							}
+							_ = subHandler(market, connection, stepSubscribes)
+							util.Log(util.LogLevelInfo, fmt.Sprintf(`chan need reconnect market %s %s sub %#v`,
+								market, buf[:msgSize], stepSubscribes))
+							time.Sleep(time.Millisecond * 50)
 						}
-						_ = subHandler(market, connection, stepSubscribes)
-						util.Log(util.LogLevelInfo, fmt.Sprintf(`chan need reconnect market %s %s sub %#v`,
-							market, buf[:msgSize], stepSubscribes))
 					} else if msgHandler != nil {
 						go msgHandler(market, connection, buf[:msgSize])
 					}
