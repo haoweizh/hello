@@ -336,7 +336,7 @@ func WsPrivateClient(account *Account, connMap *sync.Map, connKey, market, url s
 					go accountMsgHandler(market, account.Key, message)
 				}
 			} else if connection.WSType == ChanTypeOrder {
-				buf := make([]byte, 4096)
+				buf := make([]byte, 8192)
 				msgSize := connection.OrderReceiver.ReceiveOrder(buf)
 				if msgSize > 0 {
 					if needReconnection(buf[:msgSize]) {
