@@ -28,7 +28,8 @@ const compTooBig = 70000.0
 const SmallInU = 20
 const CompLineInMoney = 50
 const crossSlide = 0.0005
-const crossSpotBuySlide = 0.001
+
+// const crossSpotBuySlide = 0.001
 const compSlide = 0.003
 
 // TradeLineExtra 由于comp比例过高或亏损过多，需要增加的额外开仓数额

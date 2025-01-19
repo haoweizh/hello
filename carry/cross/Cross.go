@@ -979,17 +979,11 @@ func breakMarkPrice(account *model.Account, setting *model.Setting, price float6
 
 func placeCross(carryCoin *model.CarryCoin, statusBuy, statusSell *model.CarryStatus, priceBuy, priceSell, amount float64) {
 	_, marketTypeBuy, _, _ := model.GetFromStandard(statusBuy.Market, statusBuy.Symbol)
-	buyCrossStyle := model.AppConfig.GetCrossStyles()[statusBuy.Account.Index]
-	if buyCrossStyle == crossGrid {
-		if marketTypeBuy == model.MarketTypeSpot {
-			priceBuy = priceBuy * (1 + crossSlide)
-		}
-	} else {
-		if marketTypeBuy == model.MarketTypeSpot {
-			priceBuy = priceBuy * (1 + crossSpotBuySlide)
-		} else {
-			priceBuy = priceBuy * (1 + crossSlide)
-		}
+	_, marketTypeSell, _, _ := model.GetFromStandard(statusSell.Market, statusSell.Symbol)
+	if marketTypeBuy == model.MarketTypeSpot {
+		priceBuy = priceBuy * (1 + crossSlide)
+	}
+	if marketTypeSell == model.MarketTypeSpot {
 		priceSell = priceSell * (1 - crossSlide)
 	}
 	score := (priceSell - priceBuy) / math.Max(priceBuy, priceSell)
