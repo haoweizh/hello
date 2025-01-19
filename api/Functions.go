@@ -62,6 +62,9 @@ func RequireConnTickReset(environment *model.Environment, market string) bool {
 		util.Log(util.LogLevelInfo, `clear need reset for market: `+market)
 		return true
 	}
+	if model.AppConfig.SpecialChan == `1` && (market == model.BinancePerp || market == model.BinanceSpot || market == model.OKEX || market == model.Gate) {
+		return false
+	}
 	initTime, _ := model.AppEnvironment.WsInitTime.Load(market)
 	if initTime != nil {
 		if initTime.(time.Time).Add(time.Minute * 2).After(time.Now()) {

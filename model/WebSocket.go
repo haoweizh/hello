@@ -262,7 +262,7 @@ func publicHandler(market, url string, stopChan chan struct{}, connection *WSCon
 		select {
 		case <-stopChan:
 			if connection.WSType == ChanTypeWS {
-				util.Log(util.LogLevelInfo, "get stop struct, return")
+				util.Log(util.LogLevelInfo, market+" get stop struct, return")
 				return
 			}
 		default:
@@ -295,7 +295,7 @@ func publicHandler(market, url string, stopChan chan struct{}, connection *WSCon
 								_ = subHandler(market, connection, stepSubscribes)
 								util.Log(util.LogLevelInfo, fmt.Sprintf(`chan need reconnect market %s %s sub %#v`,
 									market, buf[:msgSize], stepSubscribes))
-								time.Sleep(time.Millisecond * 50)
+								time.Sleep(time.Millisecond * 200)
 							}
 						}
 					} else if msgHandler != nil {
@@ -377,6 +377,7 @@ func WsPublicClient(market, url string, subscribes []interface{}, subHandler Sub
 		stopChan := make(chan struct{}, 2)
 		go func() {
 			_ = subHandler(market, connection, stepSubscribes)
+			util.Log(util.LogLevelInfo, fmt.Sprintf("subscribe %s %s %v", market, url, stepSubscribes))
 			if newCreate {
 				publicHandler(market, url, stopChan, connection, subHandler, step, msgHandler)
 			}
