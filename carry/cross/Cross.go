@@ -858,10 +858,6 @@ var ProcessCross = func(setting *model.Setting, tick *model.BidAsk) {
 			continue
 		}
 		tickLimit = 500
-		if settingRelate.Market == model.BinancePerp {
-			util.Log(util.LogLevelInfo, fmt.Sprintf(`get binance relate %s %s %s ts %d %d `,
-				settingRelate.Coin, settingRelate.Market, tickRelate.Asks[0].Market, int64(tickRelate.Ts)-ts1, tickRelate.Ts))
-		}
 		if int(ts1)-tickRelate.Ts > tickLimit {
 			//util.LogLess(util.LogLevelError, fmt.Sprintf(`abandon tick limit relate %s %s %s limit %v`,
 			//	setting.Coin, tick.Bids[0].Market, tick.Bids[0].Symbol, model.AppEnvironment.CrossEqualing))
@@ -876,11 +872,6 @@ var ProcessCross = func(setting *model.Setting, tick *model.BidAsk) {
 			lastOrder, _ := model.AppEnvironment.LastOrderMilli.Load(account.Key)
 			lastOrderRelate, _ := model.AppEnvironment.LastOrderMilli.Load(accountRelate.Key)
 			if (lastOrder != nil && ts1-lastOrder.(int64) < AccountOrderGap) || (lastOrderRelate != nil && ts1-lastOrderRelate.(int64) < AccountOrderGap) {
-				continue
-			}
-			if setting.Market == model.BinancePerp || settingRelate.Market == model.BinancePerp {
-				util.Log(util.LogLevelInfo, fmt.Sprintf(`binance come %s (%s %s) (%s %s) ts %d %d `,
-					setting.Coin, setting.Market, tick.Bids[0].Market, settingRelate.Market, tickRelate.Asks[0].Market, tick.Ts, tickRelate.Ts))
 				continue
 			}
 			status, getStatus := util.LoadSyncMap(carryStatusMap, setting.Coin, setting.Market, setting.Symbol, account.Key)
