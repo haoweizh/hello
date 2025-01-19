@@ -72,7 +72,7 @@ type spotMarket struct {
 
 // 4/T+1.5*(1-t/T)^2
 func handledFRate(account *model.Account, market, symbol string, interval int) (got, delayed bool, fundingRate *model.FundingRate, handledFr float64) {
-	got, delayed, fundingRate = api.GetFundingRate(account.Key, account.Secret, market, symbol)
+	got, delayed, fundingRate = api.GetFundingRate(account.Key, account.Secret, market, symbol, false)
 	if !got {
 		return
 	}
@@ -311,6 +311,12 @@ func GetHoldings(accounts map[string]*model.Account) (holding [][]interface{}) {
 		holding[i] = append(holding[i], currentStep)
 		holding[i] = append(holding[i], moneyCurStep)
 		holding[i] = append(holding[i], moneyPerStep)
+		_, _, fr := api.GetFundingRate(``, ``, market, symbol, true)
+		if fr != nil {
+			holding[i] = append(holding[i], fr.Rate)
+		} else {
+			holding[i] = append(holding[i], 0)
+		}
 	}
 	return
 }

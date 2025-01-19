@@ -547,7 +547,7 @@ func GetTransfers(key, secret, market string) (balances []*model.Balance) {
 	return balances
 }
 
-func GetFundingRate(key, secret, market, symbol string) (success, useRest bool, rate *model.FundingRate) {
+func GetFundingRate(key, secret, market, symbol string, cacheOnly bool) (success, useRest bool, rate *model.FundingRate) {
 	//非永续合约的资金费率为0
 	_, marketType, _, _ := model.GetFromStandard(market, symbol)
 	if marketType != model.MarketTypePerp {
@@ -571,6 +571,9 @@ func GetFundingRate(key, secret, market, symbol string) (success, useRest bool, 
 		util.Log(util.LogLevelInfo, fmt.Sprintf(`get funding rate fail from ws nil %s %s %#v`, market, symbol, fundingRate))
 	} else {
 		util.Log(util.LogLevelInfo, fmt.Sprintf(`get funding rate fail from ws %s %s %d %#v`, market, symbol, now-fundingRate.UpdateTime.Unix(), fundingRate))
+	}
+	if cacheOnly {
+		return false, false, nil
 	}
 	switch market {
 	case model.BitgetPerp: // bitgetPerp rest接口无发获取expire time，要么直接返回，要么使用原有的

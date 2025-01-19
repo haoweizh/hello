@@ -769,7 +769,7 @@ func Test_wallet(t *testing.T) {
 	market := model.BitgetPerp
 	symbol := `BTC_PERP`
 	account := model.GetAccounts(0)[market]
-	_, _, rate := api.GetFundingRate(account.Key, account.Secret, market, symbol)
+	_, _, rate := api.GetFundingRate(account.Key, account.Secret, market, symbol, false)
 	if rate != nil {
 		fmt.Println(rate.ExpireTime)
 		return
