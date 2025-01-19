@@ -30,7 +30,6 @@ var ProcessCollateral = func(accountKey string, reduceOnly bool, collateral *mod
 	}
 	if (reduceOnly || cm.collateralsAvailable < MarginULowLimit && cm.collateralsAvailable/cm.accountValueInU < 0.05) && cm.reduceOnly == false {
 		cm.reduceOnly = true
-		num := 0
 		carryStatusMap.Range(func(k, v interface{}) bool {
 			if v == nil {
 				return true
@@ -44,7 +43,8 @@ var ProcessCollateral = func(accountKey string, reduceOnly bool, collateral *mod
 				if status.Holding <= 0 {
 					status.TradeLineBuy = 1
 				}
-				num++
+				util.Log(util.LogLevelInfo, fmt.Sprintf("%s set trade line 1 holding %f %f %f",
+					key, status.Holding, status.TradeLineBuy, status.TradeLineSell))
 			}
 			return true
 		})

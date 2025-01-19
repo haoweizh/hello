@@ -19,12 +19,12 @@ const AccountOrderGap = 100 // account order no deal time in million-second
 // const holdingLimitInU = 500000.0
 // const openValueLimit = 2000
 // const compLimitInU = 30000.0
+// const InsufficientCodeBinance = `-2010`
+// const standardScoreClose = 0.01 // 平仓标准利润,不得小于0
 const lowestScore = -0.02
 const standardScoreOpen = 0.002 // 开仓标准利润,不得小于0
-// const standardScoreClose = 0.01 // 平仓标准利润,不得小于0
 const lastOrderLength = 8
 const compTooBig = 70000.0
-const InsufficientCodeBinance = `-2010`
 const SmallInU = 20
 const CompLineInMoney = 50
 const crossSlide = 0.0005
@@ -39,9 +39,8 @@ type TradeLineExtra struct {
 }
 
 //var extras = sync.Map{} // coin - *TradeLineExtra
-
-var InsufficientCodeOKEX = map[string]bool{`51008`: true, `51119`: true, `51120`: true, `51131`: true, `51502`: true,
-	`58350`: true, `59108`: true, `59200`: true}
+//var InsufficientCodeOKEX = map[string]bool{`51008`: true, `51119`: true, `51120`: true, `51131`: true, `51502`: true,
+//	`58350`: true, `59108`: true, `59200`: true}
 
 var lastOrderIndex = &sync.Map{}  // market - symbol - index int
 var lastOrders = &sync.Map{}      // market - symbol - []*Order
