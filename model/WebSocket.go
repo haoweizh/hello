@@ -298,7 +298,6 @@ func publicHandler(market, url string, stopChan chan struct{}, connection *WSCon
 								time.Sleep(time.Millisecond * 50)
 							}
 						}
-
 					} else if msgHandler != nil {
 						go msgHandler(market, connection, buf[:msgSize])
 					}

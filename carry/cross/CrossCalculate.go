@@ -250,9 +250,9 @@ func calcAmount(index int, coin string, carryStatus, carryStatusRelate *model.Ca
 		return false, nil, nil, 0, 0, 0
 	}
 	amount = FormatCrossPair(statusBuy, statusSell, bidAmount, askAmount, amountLimit, priceBuy, priceSell)
-	if checkScoreLimit(carryStatus.Market, carryStatus.Symbol, carryStatusRelate.Market, carryStatusRelate.Symbol, score, scoreRelate) {
-		if carryStatus.Setting.Valid || carryStatusRelate.Setting.Valid {
-			util.Log(util.LogLevelError, fmt.Sprintf(`possible mismatch coin %s %s %s %s score %f %f`,
+	if score > 0.2 || scoreRelate > 0.2 {
+		if (carryStatus.Setting.Valid || carryStatusRelate.Setting.Valid) && (score > 0.4 || scoreRelate > 0.4) {
+			util.LogLess(util.LogLevelError, fmt.Sprintf(`possible mismatch coin %s %s %s %s score %f %f`,
 				carryStatus.Market, carryStatus.Symbol, carryStatusRelate.Market, carryStatusRelate.Symbol, score, scoreRelate))
 			carryStatus.Setting.Valid = false
 			carryStatusRelate.Setting.Valid = false
@@ -264,36 +264,4 @@ func calcAmount(index int, coin string, carryStatus, carryStatusRelate *model.Ca
 		return false, nil, nil, 0, 0, 0
 	}
 	return false, statusBuy, statusSell, amount, priceBuy, priceSell
-}
-
-func checkScoreLimit(market, symbol, marketRelate, symbolRelate string, score, scoreRelate float64) (invalid bool) {
-	if score > 0.3 || scoreRelate > 0.3 {
-		invalid = true
-	}
-	checkKey := fmt.Sprintf(`%s_%s_%s_%s`, market, symbol, marketRelate, symbolRelate)
-	lastTime, ok := notifyTime.Load(checkKey)
-	if !(ok && lastTime.(time.Time).Add(time.Minute*60).After(time.Now())) {
-		title := `币种价差大`
-		checkKeyRelate := fmt.Sprintf(`%s_%s_%s_%s`, marketRelate, symbolRelate, market, symbol)
-		if score > 0.15 || scoreRelate > 0.15 {
-			title = `价差不可思议`
-		}
-		msg := fmt.Sprintf(`价差提醒 %s %s %s %s %f %f`,
-			market, symbol, marketRelate, symbolRelate, score, scoreRelate)
-		if invalid {
-			notifyTime.Store(checkKey, time.Now())
-			notifyTime.Store(checkKeyRelate, time.Now())
-			go func() {
-				err := util.SendMail(model.AppConfig.FromMail, model.AppConfig.FromMailAuth,
-					`haoweizh@qq.com`, title, msg)
-				if err != nil {
-					util.Log(util.LogLevelError, fmt.Sprintf(`fail to send mail msg %s %s`, msg, err.Error()))
-				}
-			}()
-		} else if score > 0.05 || scoreRelate > 0.05 {
-			notifyTime.Store(checkKey, time.Now())
-			notifyTime.Store(checkKeyRelate, time.Now())
-		}
-	}
-	return
 }

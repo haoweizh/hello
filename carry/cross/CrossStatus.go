@@ -49,7 +49,6 @@ var spotMarkets = &sync.Map{}     // key - spotMarket
 var contractMarkets = &sync.Map{} // key - contractMarket
 var carryStatusMap = &sync.Map{}  // coin*market*symbol*key / CarryStatus
 var carryCoinMap = &sync.Map{}    // coin*accountIndex - *carryCoin
-var notifyTime = &sync.Map{}      // 1. market_symbol_market_symbol/time 2. funding_market_symbol/time
 var coinCrossing = &sync.Map{}
 
 type contractMarket struct {
