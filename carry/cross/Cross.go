@@ -177,7 +177,7 @@ func createFromPosition(account *model.Account, setting *model.Setting, valueLim
 		}
 	}
 	if cm.contractValueInU/handledActValueInU > rateLimitPosition || valueInUsd > valueLimit ||
-		valueInUsd/handledActValueInU > rateLimitHolding || (cm.collateralsAvailable < MarginULowLimit && cm.collateralsAvailable/handledActValueInU < 0.05) ||
+		valueInUsd/handledActValueInU > rateLimitHolding || (cm.collateralsAvailable < MarginULowLimit && cm.collateralsAvailable/handledActValueInU < 0.1) ||
 		(setting.Market == model.BitgetPerp && (len(cm.positions) > model.BitgetPosLimit && carryStatus.Holding == 0)) {
 		util.Log(util.LogLevelError, fmt.Sprintf(`do revert true %d %s %s value big %f %f %f %f %f %f margin u %f pos len %d`,
 			account.Index, setting.Market, setting.Symbol, cm.contractValueInU, handledActValueInU, rateLimitPosition, valueInUsd, valueLimit, rateLimitHolding, cm.contractValueInU, len(cm.positions)))
@@ -429,13 +429,12 @@ func equalAccounts(doEqual bool, traceId int64) {
 	util.Log(util.LogLevelInfo, fmt.Sprintf(`enter clearing cross all %d`, traceId))
 	waitEqual := make(map[int]bool)
 	equalChannel := make(chan int, 1)
-	if doEqual {
+	if !doEqual {
 		api.InitCrossMarketInfos(model.AppEnvironment.Markets)
 		api.PrepareSettings()
-	}
-	for _, market := range model.AppEnvironment.Markets {
-		//carry.ClearChannels(market, &model.AppEnvironment.MsgChanTick)
-		api.CreateWSTick(model.AppEnvironment, market)
+		for _, market := range model.AppEnvironment.Markets {
+			model.AppEnvironment.PubChanNeedReset.Store(market, true)
+		}
 	}
 	//needWaitEqual := false // 是否需要进入等待环节
 	for i := 0; i < api.GetCrossLen(); i++ {
@@ -463,7 +462,7 @@ func equalAccounts(doEqual bool, traceId int64) {
 	for i := 0; i < api.GetCrossLen(); i++ {
 		indexAccounts := model.GetAccounts(i)
 		for _, market := range model.AppEnvironment.Markets {
-			if doEqual {
+			if !doEqual {
 				liquidateSmallContracts(indexAccounts[market], market)
 			}
 			account := indexAccounts[market]

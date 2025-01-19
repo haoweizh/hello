@@ -253,8 +253,7 @@ func newWsGorillaChannel(url string) (newCreate bool, wsConn *WSConn, err error)
 	return true, wsConn, nil
 }
 
-func publicHandler(market string, stopChan chan struct{}, connection *WSConn, subHandler SubscribeHandler,
-	subscribes []interface{}, step int, msgHandler MsgHandler) {
+func publicHandler(market, url string, stopChan chan struct{}, connection *WSConn, subHandler SubscribeHandler, step int, msgHandler MsgHandler) {
 	defer func() {
 		//err := connection.conn.Close(websocket.StatusNormalClosure, "")
 		connection.Close()
@@ -283,18 +282,23 @@ func publicHandler(market string, stopChan chan struct{}, connection *WSConn, su
 				msgSize := connection.MarketReceiver.ReceiveMarket(buf)
 				if msgSize > 0 {
 					if needReconnection(buf[:msgSize]) {
-						var stepSubscribes []interface{}
-						for i := 0; subscribes != nil && i*step < len(subscribes); i++ {
-							if (i+1)*step < len(subscribes) {
-								stepSubscribes = subscribes[i*step : (i+1)*step]
-							} else {
-								stepSubscribes = subscribes[i*step:]
+						value, _ := AppEnvironment.PubSubscribes.Load(fmt.Sprintf("%s*%s", market, url))
+						if value != nil {
+							subscribes := value.([]interface{})
+							var stepSubscribes []interface{}
+							for i := 0; subscribes != nil && i*step < len(subscribes); i++ {
+								if (i+1)*step < len(subscribes) {
+									stepSubscribes = subscribes[i*step : (i+1)*step]
+								} else {
+									stepSubscribes = subscribes[i*step:]
+								}
+								_ = subHandler(market, connection, stepSubscribes)
+								util.Log(util.LogLevelInfo, fmt.Sprintf(`chan need reconnect market %s %s sub %#v`,
+									market, buf[:msgSize], stepSubscribes))
+								time.Sleep(time.Millisecond * 50)
 							}
-							_ = subHandler(market, connection, stepSubscribes)
-							util.Log(util.LogLevelInfo, fmt.Sprintf(`chan need reconnect market %s %s sub %#v`,
-								market, buf[:msgSize], stepSubscribes))
-							time.Sleep(time.Millisecond * 50)
 						}
+
 					} else if msgHandler != nil {
 						go msgHandler(market, connection, buf[:msgSize])
 					}
@@ -354,6 +358,7 @@ func WsPrivateClient(account *Account, connMap *sync.Map, connKey, market, url s
 func WsPublicClient(market, url string, subscribes []interface{}, subHandler SubscribeHandler,
 	msgHandler MsgHandler, step int) (socketMap map[*WSConn]bool, msgChans []chan struct{}, connectErr error) {
 	util.Log(util.LogLevelInfo, market+` create depth channel `+url)
+	AppEnvironment.PubSubscribes.Store(fmt.Sprintf("%s*%s", market, url), subscribes)
 	socketMap = make(map[*WSConn]bool)
 	msgChans = make([]chan struct{}, 0)
 	var stepSubscribes []interface{}
@@ -374,7 +379,7 @@ func WsPublicClient(market, url string, subscribes []interface{}, subHandler Sub
 		go func() {
 			_ = subHandler(market, connection, stepSubscribes)
 			if newCreate {
-				publicHandler(market, stopChan, connection, subHandler, subscribes, step, msgHandler)
+				publicHandler(market, url, stopChan, connection, subHandler, step, msgHandler)
 			}
 		}()
 		msgChans = append(msgChans, stopChan)

@@ -10,11 +10,10 @@ import (
 	"time"
 )
 
-var balanceLock = sync.Map{}     // key - locker
-var positionLock = sync.Map{}    // key - locker
-var mustPlaceLock = &sync.Map{}  // key - *sync.Mutex{}
-var mustCancelLock = &sync.Map{} // key - *sync.Mutex{}
-var requireReset sync.Map
+var balanceLock = sync.Map{}          // key - locker
+var positionLock = sync.Map{}         // key - locker
+var mustPlaceLock = &sync.Map{}       // key - *sync.Mutex{}
+var mustCancelLock = &sync.Map{}      // key - *sync.Mutex{}
 var tradeMax = &sync.Map{}            // key - symbol - [maxBuy, maxSell][]float64
 var okTradeMaxResetTime = &sync.Map{} // key - symbol - init time in second
 var okexCrossing = sync.Map{}         // symbol - bool
@@ -57,12 +56,9 @@ func _(environment *model.Environment, market string, symbols map[string]bool) (
 }
 
 func RequireConnTickReset(environment *model.Environment, market string) bool {
-	if model.AppConfig.SpecialChan == `1` && (market == model.OKEX || market == model.BinancePerp) {
-		return false
-	}
-	needReset, ok := requireReset.Load(market)
+	needReset, ok := environment.PubChanNeedReset.Load(market)
 	if ok && needReset != nil && needReset.(bool) {
-		requireReset.Store(market, false)
+		environment.PubChanNeedReset.Store(market, false)
 		util.Log(util.LogLevelInfo, `clear need reset for market: `+market)
 		return true
 	}

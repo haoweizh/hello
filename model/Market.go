@@ -69,6 +69,8 @@ type Environment struct {
 	PriConnecting             sync.Map // accountKey * market - bool
 	SpecialChans              sync.Map // tsCode * wsType *WSConn
 	LastOrderMilli            sync.Map // account.Key - last order time in million-seconds
+	PubChanNeedReset          sync.Map // market - bool
+	PubSubscribes             sync.Map // market*wsUrl - []interface{}
 }
 
 type MarkPriceInfo struct {
