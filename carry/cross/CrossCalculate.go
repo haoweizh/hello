@@ -250,7 +250,7 @@ func calcAmount(index int, coin string, carryStatus, carryStatusRelate *model.Ca
 		return false, nil, nil, 0, 0, 0
 	}
 	amount = FormatCrossPair(statusBuy, statusSell, bidAmount, askAmount, amountLimit, priceBuy, priceSell)
-	if score > 0.2 || scoreRelate > 0.2 {
+	if score > 0.1 || scoreRelate > 0.1 {
 		if (carryStatus.Setting.Valid || carryStatusRelate.Setting.Valid) && (score > 0.4 || scoreRelate > 0.4) {
 			util.LogLess(util.LogLevelError, fmt.Sprintf(`possible mismatch coin %s %s %s %s score %f %f`,
 				carryStatus.Market, carryStatus.Symbol, carryStatusRelate.Market, carryStatusRelate.Symbol, score, scoreRelate))
