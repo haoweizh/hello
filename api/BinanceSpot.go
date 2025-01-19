@@ -22,7 +22,7 @@ import (
 const restBinance = `https://api.binance.com`
 const restDataBinance = `https://data.binance.com`
 
-const wsStepBinance = 30
+const wsStepBinance = 100
 
 // 用于wss api调用,实际值为method
 const wsAccountStatusV2 = "account-status-v2-"

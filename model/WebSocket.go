@@ -379,7 +379,7 @@ func WsPublicClient(market, url string, subscribes []interface{}, subHandler Sub
 		}()
 		msgChans = append(msgChans, stopChan)
 		socketMap[connection] = true
-		time.Sleep(time.Millisecond * 50)
+		time.Sleep(time.Millisecond * 200)
 	}
 	util.Log(util.LogLevelInfo,
 		fmt.Sprintf(`ws client add conns %s sockets %d msgChans %d`, market, len(socketMap), len(msgChans)))
