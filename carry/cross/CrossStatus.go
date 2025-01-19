@@ -320,8 +320,8 @@ func GetHoldings(accounts map[string]*model.Account) (holding [][]interface{}) {
 			fundingStr := fmt.Sprintf(`%d:%d`, util.GetNow().Hour(), util.GetNow().Minute())
 			if marketType == model.MarketTypePerp {
 				updateTime := fr.UpdateTime.In(loc)
-				fundingStr = fmt.Sprintf(`%d:%d %e %dH %d:%d`,
-					util.GetNow().Hour(), util.GetNow().Minute(), 100*fr.Rate, marketInfo.FundingRateInterval/3600000, updateTime.Hour(), updateTime.Minute())
+				fundingStr = fmt.Sprintf(`%e %dH %d:%d`,
+					100*fr.Rate, marketInfo.FundingRateInterval/3600000, updateTime.Hour(), updateTime.Minute())
 			}
 			holding[i] = append(holding[i], fundingStr)
 		} else {
