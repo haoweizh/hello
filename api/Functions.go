@@ -882,24 +882,7 @@ func PlaceOrder(account *model.Account, orderSide, orderType, market, symbol, or
 // 法币 GBP CUSDT TRYB BRZ CAD EUR SUSD USDC TUSD`USDT EURT USD BUSD LDBUSD LDUSDT
 // ftx预测TRUMP BOLSONARO
 func FilterCross(market, symbol string) bool {
-	filterCoins := map[string]bool{`AMPL`: true, `IOTA`: true, `REEF`: true, `MIR`: true, `LUNA`: true, // `UST`: true,
-		`BTC`: true, `ETH`: true, `LINK`: true, `SOS`: true, // `BTT`: true,
-		`REAL`: true, `DFL`: true, `QI`: true, `WSB`: true, `TRADE`: true, `FAME`: true, `BIFI`: true, `TON`: true,
-		`BOX`: true, `PAY`: true, `GTC`: true, `OXY`: true, `CRU`: true, `BCD`: true,
-		`GBP`: true, `CUSDT`: true, `TRYB`: true, `BRZ`: true, `CAD`: true, `EUR`: true, `SUSD`: true, `USDC`: true,
-		`TUSD`: true, `USDT`: true, `EURT`: true, `USD`: true, `BUSD`: true, `LDUSDT`: true, `LDBUSD`: true,
-		`TRUMP`: true, `BOLSONARO`: true, `DEFI`: true}
 	_, _, coin, _ := model.GetFromStandard(market, symbol)
-	if filterCoins[coin] {
-		return true
-	}
-	// ftx波动率产品
-	filterWord := []string{`IBVOL`, `BVOL`, `MOVE`, `BEAR`, `BULL`, `HEDGE`, `HALF`, `EDFIBULL`, `DEFIHEDGE`, `DEIFHALF`, `DEFIBEAR`}
-	for _, word := range filterWord {
-		if strings.Contains(symbol, word) {
-			return true
-		}
-	}
 	switch market {
 	case model.Gate:
 		switch coin {
@@ -954,6 +937,8 @@ func InitCrossMarketInfos(markets []string) {
 		}
 		return true
 	})
+	trumpPool := infoPool[`TRUMP`]
+	fmt.Println(trumpPool)
 	var settingsDb []*model.Setting
 	model.AppDB.Find(&settingsDb)
 	settingsDbMap := make(map[string]*model.Setting)

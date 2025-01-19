@@ -236,8 +236,9 @@ func Test_Sync(t *testing.T) {
 
 func Test_BalAndPos(t *testing.T) {
 	model.NewConfig()
+	markets := []string{`okex`, `binancespot`, `gate`, `binanceperp`, `bybit`}
+	api.InitCrossMarketInfos(markets)
 	model.AppDB, _ = gorm.Open(postgres.Open(model.AppConfig.DBConnection), &gorm.Config{})
-	api.InitCrossMarketInfos([]string{model.BinancePerp, model.OKEX})
 	api.InitMarketInfos(model.OKEX)
 	account := model.AppConfig.GetAccounts(model.BinancePerp)[0]
 	model.AppRedis.Set(context.Background(), `test`, `11`, 0)
@@ -550,24 +551,24 @@ func Test_download(t *testing.T) {
 
 func Test_ClearActs(t *testing.T) {
 	model.NewConfig()
-	market := model.BitgetSpot
+	market := model.OKEX
 	api.InitMarketInfos(market)
-	account := model.AppConfig.GetAccounts(market)[0]
-	_, bals, _, _ := api.GetBalances(account.Key, account.Secret, market)
-	for _, bal := range bals {
-		if strings.ToUpper(bal.Coin) == `USDT` {
-			continue
-		}
-		price := api.GetPriceBitgetSpot(account, bal.Coin+`_USDT`)
-		if price > 0 && price*bal.Amount > 0.3 {
-			fmt.Println(fmt.Sprintf(`%s %f %f`, bal.Coin, bal.Amount, price))
-			time.Sleep(time.Second)
-			api.PlaceOrder(account, model.OrderSideSell, model.OrderTypeLimit, market, bal.Coin+`_USDT`,
-				``, `test`, price, price, bal.Amount, false, nil)
-			time.Sleep(time.Millisecond * 80)
-		}
-		time.Sleep(time.Millisecond * 70)
-	}
+	//account := model.AppConfig.GetAccounts(market)[0]
+	//_, bals, _, _ := api.GetBalances(account.Key, account.Secret, market)
+	//for _, bal := range bals {
+	//	if strings.ToUpper(bal.Coin) == `USDT` {
+	//		continue
+	//	}
+	//	price := api.GetPriceBitgetSpot(account, bal.Coin+`_USDT`)
+	//	if price > 0 && price*bal.Amount > 0.3 {
+	//		fmt.Println(fmt.Sprintf(`%s %f %f`, bal.Coin, bal.Amount, price))
+	//		time.Sleep(time.Second)
+	//		api.PlaceOrder(account, model.OrderSideSell, model.OrderTypeLimit, market, bal.Coin+`_USDT`,
+	//			``, `test`, price, price, bal.Amount, false, nil)
+	//		time.Sleep(time.Millisecond * 80)
+	//	}
+	//	time.Sleep(time.Millisecond * 70)
+	//}
 }
 func Test_Order(t *testing.T) {
 	market := model.BitgetSpot
