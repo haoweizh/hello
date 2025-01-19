@@ -874,7 +874,7 @@ var ProcessCross = func(setting *model.Setting, tick *model.BidAsk) {
 			if (lastOrder != nil && ts1-lastOrder.(int64) < AccountOrderGap) || (lastOrderRelate != nil && ts1-lastOrderRelate.(int64) < AccountOrderGap) {
 				continue
 			}
-			if setting.Market == model.BinancePerp || settingRelate.Market == model.BinancePerp {
+			if setting.Market == model.BinancePerp {
 				util.Log(util.LogLevelInfo, fmt.Sprintf(`binance come %s (%s %s) (%s %s) ts %d %d `,
 					setting.Coin, setting.Market, tick.Bids[0].Market, settingRelate.Market, tickRelate.Asks[0].Market, tick.Ts, tickRelate.Ts))
 				continue

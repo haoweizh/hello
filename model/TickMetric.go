@@ -55,9 +55,9 @@ func (metricManager *MetricManager) AddCarry(mark string, carryOpen, carryClose 
 	key := fmt.Sprintf(`%s*%d/%d_%d`, mark, current.Month(), current.Day(), current.Hour())
 	value, ok := metricManager.carryHour.Load(key)
 	var carryMetric *CarryMetric
-	if !ok {
+	if !ok || value == nil {
 		carryMetric = &CarryMetric{carryHighest: math.NaN(), carryLowest: math.NaN()}
-	} else if value != nil {
+	} else {
 		carryMetric = value.(*CarryMetric)
 	}
 	carryMetric.count++
@@ -137,6 +137,9 @@ func (metricManager *MetricManager) AddTick(market, symbol string, current time.
 	//metricManager.metricTicks.Store(fmt.Sprintf(`%s*%d`, marketSymbol, index), tickDelay)
 	//metricManager.index.Store(marketSymbol, (index+1)%recentTickLength)
 	if AppConfig.MetricTick {
+		if market == BinancePerp {
+			util.LogLess(util.LogLevelInfo, fmt.Sprintf(`binace store metric %s %v`, key, tickMetric))
+		}
 		metricManager.tickHour.Store(key, tickMetric)
 	}
 }
