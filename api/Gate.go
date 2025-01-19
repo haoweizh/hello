@@ -579,14 +579,14 @@ func maintainConnsGate(accounts []*model.Account) {
 		model.AppEnvironment.PriConnecting.Store(model.Gate+model.MarketTypePerp+account.Key, false)
 	}
 	for {
-		connTick, _ := model.AppEnvironment.ConnTick.Load(model.Gate)
+		connTick, _ := model.AppEnvironment.ConnTick.Load(GetPublicConnKey(model.Gate, model.MarketTypeSpot))
 		if connTick != nil {
 			if err := SendToConnections(model.Gate, connTick.(map[*model.WSConn]bool),
 				util.JsonEncodeToByte(map[string]interface{}{"time": time.Now().Unix(), "channel": "spot.ping"})); err != nil {
 				util.Log(util.LogLevelError, fmt.Sprintf("tick conn maintain error %s %s", model.Gate, err.Error()))
 			}
 		}
-		connTickPerp, _ := model.AppEnvironment.ConnTick.Load(model.Gate + model.MarketTypePerp)
+		connTickPerp, _ := model.AppEnvironment.ConnTick.Load(GetPublicConnKey(model.Gate, model.MarketTypePerp))
 		if connTickPerp != nil {
 			if err := SendToConnections(model.Gate, connTickPerp.(map[*model.WSConn]bool),
 				util.JsonEncodeToByte(map[string]interface{}{"time": time.Now().Unix(), "channel": "futures.ping"})); err != nil {
@@ -716,7 +716,7 @@ func WSOrderServeGate(account *model.Account, marketType string) {
 	}
 }
 
-func WsTickServeGateSpot(market string) (socketMap map[*model.WSConn]bool, msgChans []chan struct{}, connectErr error) {
+func WsTickServeGateSpot(market string) (socketMap map[*model.WSConn]bool, connectErr error) {
 	var spotSubs []interface{}
 	symbols := GetMarketSymbols(market)
 	for symbol := range symbols {
@@ -737,10 +737,9 @@ func WsTickServeGateSpot(market string) (socketMap map[*model.WSConn]bool, msgCh
 	return model.WsPublicClient(model.Gate, gateWs.BaseUrl, spotSubs, subscribeHandler, wsHandlerGate, wsStepGate)
 }
 
-func WsTickServeGatePerp(market string) (socketMap map[*model.WSConn]bool, msgChans []chan struct{}, connectErr error) {
+func WsTickServeGatePerp(market string) (socketMap map[*model.WSConn]bool, connectErr error) {
 	var futureSubs []interface{}
 	socketMap = make(map[*model.WSConn]bool)
-	msgChans = make([]chan struct{}, 0)
 	symbols := GetMarketSymbols(market)
 	for symbol := range symbols {
 		if strings.LastIndex(symbol, model.UniStandardTail[model.MarketTypePerp]) == len(symbol)-len(model.UniStandardTail[model.MarketTypePerp]) &&
@@ -748,8 +747,7 @@ func WsTickServeGatePerp(market string) (socketMap map[*model.WSConn]bool, msgCh
 			futureSubs = append(futureSubs, symbol)
 		}
 	}
-	return model.WsPublicClient(
-		model.Gate, gateWs.FuturesUsdtUrl, futureSubs, subscribeHandler, wsHandlerGate, wsStepGate)
+	return model.WsPublicClient(model.Gate, gateWs.FuturesUsdtUrl, futureSubs, subscribeHandler, wsHandlerGate, wsStepGate)
 }
 
 var wsHandlerGate = func(market string, conn *model.WSConn, event []byte) {

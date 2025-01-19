@@ -9,7 +9,6 @@ import (
 	"hello/carry/monitor"
 	"hello/model"
 	"hello/util"
-	"sync"
 	"time"
 )
 
@@ -107,30 +106,24 @@ func _() {
 	}
 }
 
-func ClearChannels(market string, chanMap *sync.Map) {
-	if model.AppConfig.SpecialChan == `1` && (market == model.BinancePerp || market == model.BinanceSpot || market == model.OKEX || market == model.Gate) {
-		return
-	}
-	if chanMap != nil {
-		channels, _ := chanMap.Load(market)
-		if channels != nil {
-			for i, channel := range channels.([]chan struct{}) {
-				util.Log(util.LogLevelInfo, fmt.Sprintf(`send to stop connection %s %d`, market, i))
-				channel <- struct{}{}
-				close(channel)
-			}
-			chanMap.Delete(market)
+func ManageConnTicks(market string) (reset bool) {
+	initialized := false
+	if market != model.Gate {
+		value, _ := model.AppEnvironment.ConnTick.Load(api.GetPublicConnKey(market, ``))
+		if value != nil {
+			initialized = true
+		}
+	} else {
+		valueSpot, _ := model.AppEnvironment.ConnTick.Load(api.GetPublicConnKey(model.Gate, model.MarketTypeSpot))
+		valuePerp, _ := model.AppEnvironment.ConnTick.Load(api.GetPublicConnKey(model.Gate, model.MarketTypePerp))
+		if valueSpot != nil && valuePerp != nil {
+			initialized = true
 		}
 	}
-}
-
-func ManageConnTicks(market string) (reset bool) {
-	depthChans, _ := model.AppEnvironment.MsgChanTick.Load(market)
-	if depthChans == nil || len(depthChans.([]chan struct{})) == 0 {
+	if !initialized {
 		api.CreateWSTick(model.AppEnvironment, market)
 	} else if api.RequireConnTickReset(model.AppEnvironment, market) {
 		reset = true
-		ClearChannels(market, &model.AppEnvironment.MsgChanTick)
 		api.CreateWSTick(model.AppEnvironment, market)
 	}
 	//var settingMonitors []*model.SettingMonitor

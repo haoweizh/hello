@@ -166,31 +166,28 @@ var markPriceWsHandler = func(market string, conn *model.WSConn, event []byte) {
 }
 
 // WsTickServeBitgetPerp TODO 由于同一个交易所多次调用WsPublicClient，所以不支持使用specialChan，需要做相应改动
-func WsTickServeBitgetPerp(market string) (socketMap map[*model.WSConn]bool, msgChans []chan struct{}, connectErr error) {
-	msgChans = make([]chan struct{}, 0)
+func WsTickServeBitgetPerp(market string) (socketMap map[*model.WSConn]bool, connectErr error) {
 	socketMap = make(map[*model.WSConn]bool)
 	depthSubs := GetWSSubscribes(market, []string{model.SubscribeDepth})
 	marketPriceSubs := GetWSSubscribes(market, []string{model.SubscribeMarkPrice})
-	markPriceSockets, markPriceChannels, markPriceErr := model.WsPublicClient(market, bitgetPublic,
+	markPriceSockets, markPriceErr := model.WsPublicClient(market, bitgetPublic,
 		marketPriceSubs, subscribeHandlerBitget, markPriceWsHandler, wsStepBitget)
 	if markPriceErr == nil {
-		msgChans = append(msgChans, markPriceChannels...)
 		for conn, b := range markPriceSockets {
 			socketMap[conn] = b
 		}
 	} else {
-		return nil, nil, markPriceErr
+		return nil, markPriceErr
 	}
-	perpBookSockets, perpBookChannels, perpBookErr := model.WsPublicClient(market, bitgetPublic,
+	perpBookSockets, perpBookErr := model.WsPublicClient(market, bitgetPublic,
 		depthSubs, subscribeHandlerBitget, tickHandlerBitget, wsStepBitget)
 	if perpBookErr == nil {
 		util.Log(util.LogLevelInfo, `finish connect public Bitget perp book wss `)
-		msgChans = append(msgChans, perpBookChannels...)
 		for conn, b := range perpBookSockets {
 			socketMap[conn] = b
 		}
 	} else {
-		return nil, nil, perpBookErr
+		return nil, perpBookErr
 	}
 	return
 }

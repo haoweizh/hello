@@ -51,10 +51,9 @@ type Environment struct {
 	markPriceInfos            sync.Map // symbol - market - ticker 行情包含标记价格
 	bidAsks                   sync.Map // market*symbol - bidAsk
 	kLines                    sync.Map // symbol - market - *candle
-	MsgChanTick               sync.Map // market - []chan struct{}
 	MsgChanKLine              sync.Map // market - []chan struct{}
 	WsInitTime                sync.Map // market - time
-	ConnTick                  sync.Map // market - map[*websocket.conn]bool for depth sockets
+	ConnTick                  sync.Map // market(特殊处理gate） - map[*websocket.conn]bool for depth sockets
 	ConnOrder                 sync.Map // market*accountKey / Gate*marketType*accountKey - *WSConn;
 	ConnOrderUpdate           sync.Map // market*accountKey / Gate*marketType*accountKey - *WSConn;
 	ReqIdOrders               sync.Map // requestId - *Order

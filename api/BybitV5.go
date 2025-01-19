@@ -94,7 +94,8 @@ func maintainConnsBybit(accounts []*model.Account) {
 	}
 	for {
 		pingMsg := []byte(fmt.Sprintf(`{ "req_id": "%d","op": "ping"}`, time.Now().Unix()))
-		connTick, _ := model.AppEnvironment.ConnTick.Load(model.Bybit)
+		publicConnKey := GetPublicConnKey(model.Bybit, ``)
+		connTick, _ := model.AppEnvironment.ConnTick.Load(publicConnKey)
 		if connTick != nil {
 			if err := SendToConnections(model.Bybit, connTick.(map[*model.WSConn]bool), pingMsg); err != nil {
 				util.Log(util.LogLevelError, fmt.Sprintf("tick conn maintain error %s %s", model.Bybit, err.Error()))
@@ -423,8 +424,7 @@ var perpBookWsHandler = func(market string, conn *model.WSConn, event []byte) {
 	}
 }
 
-func WsTickServeBybit(market string) (socketMap map[*model.WSConn]bool, msgChans []chan struct{}, connectErr error) {
-	msgChans = make([]chan struct{}, 0)
+func WsTickServeBybit(market string) (socketMap map[*model.WSConn]bool, connectErr error) {
 	socketMap = make(map[*model.WSConn]bool)
 	symbols := GetMarketSymbols(model.Bybit)
 	spotSubBook := make([]interface{}, 0)
@@ -442,26 +442,23 @@ func WsTickServeBybit(market string) (socketMap map[*model.WSConn]bool, msgChans
 			spotSubBook = append(spotSubBook, fmt.Sprintf("orderbook.1.%s", dialectSymbol))
 		}
 	}
-	spotBookSockets, spotBookChannels, spotBookErr := model.WsPublicClient(model.Bybit, bybitStreamUrl+`/v5/public/spot`,
+	spotBookSockets, spotBookErr := model.WsPublicClient(model.Bybit, bybitStreamUrl+`/v5/public/spot`,
 		spotSubBook, subscribeHandlerBybit, spotBookWsHandler, wsStepBybit)
 	if spotBookErr == nil {
-		msgChans = append(msgChans, spotBookChannels...)
 		for conn, b := range spotBookSockets {
 			socketMap[conn] = b
 		}
 	}
-	perpBookSockets, perpBookChannels, perpBookErr := model.WsPublicClient(market, bybitStreamUrl+`/v5/public/linear`,
+	perpBookSockets, perpBookErr := model.WsPublicClient(market, bybitStreamUrl+`/v5/public/linear`,
 		futureSubBook, subscribeHandlerBybit, perpBookWsHandler, wsStepBybit)
 	if perpBookErr == nil {
-		msgChans = append(msgChans, perpBookChannels...)
 		for conn, b := range perpBookSockets {
 			socketMap[conn] = b
 		}
 	}
-	perpTickConns, perpTickChans, perpTickErr := model.WsPublicClient(market, bybitStreamUrl+`/v5/public/linear`,
+	perpTickConns, perpTickErr := model.WsPublicClient(market, bybitStreamUrl+`/v5/public/linear`,
 		futureSubTick, subscribeHandlerBybit, tickHandlerBybit, wsStepBybit)
 	if perpTickErr == nil {
-		msgChans = append(msgChans, perpTickChans...)
 		for conn, b := range perpTickConns {
 			socketMap[conn] = b
 		}

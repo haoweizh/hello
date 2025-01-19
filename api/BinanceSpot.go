@@ -128,16 +128,15 @@ var KLineMsgHandlerBinanceSpot = func(market string, conn *model.WSConn, event [
 }
 
 // WsKLineBinanceSpot TODO 由于同一个交易所多次调用WsPublicClient，所以不支持使用specialChan，需要做相应改动
-func WsKLineBinanceSpot(environment *model.Environment, market string, symbols map[string]bool) (
+func WsKLineBinanceSpot(market string, symbols map[string]bool) (
 	socketMap map[*model.WSConn]bool, msgChans []chan struct{}, connectErr error) {
 	subs := make([]interface{}, 0)
 	for symbol := range symbols {
 		_, _, _, dialectSymbol := model.GetFromStandard(market, symbol)
 		subs = append(subs, strings.ToLower(dialectSymbol)+`@kline_1m`)
 	}
-	socketMap, msgChans, connectErr = model.WsPublicClient(market, model.WsBinance+`/stream`, subs,
+	socketMap, connectErr = model.WsPublicClient(market, model.WsBinance+`/stream`, subs,
 		subscribeHandlerBinance, KLineMsgHandlerBinanceSpot, wsStepBinance)
-	environment.MsgChanKLine.Store(market, msgChans)
 	return
 }
 

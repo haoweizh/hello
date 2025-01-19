@@ -25,7 +25,8 @@ func maintainConnsBitget(market string, accounts []*model.Account) {
 		model.AppEnvironment.PriConnecting.Store(market+account.Key, false)
 	}
 	for {
-		connTick, _ := model.AppEnvironment.ConnTick.Load(market)
+		publicConnKey := GetPublicConnKey(market, ``)
+		connTick, _ := model.AppEnvironment.ConnTick.Load(publicConnKey)
 		if connTick != nil {
 			if err := SendToConnections(market, connTick.(map[*model.WSConn]bool), []byte(`ping`)); err != nil {
 				util.Log(util.LogLevelError, fmt.Sprintf("tick conn maintain error %s %s", market, err.Error()))
@@ -305,7 +306,8 @@ func getBalanceBitgetSpot(key string, secret string) (success bool, balances []*
 	return true, balances
 }
 
-func GetPriceBitgetSpot(account *model.Account, symbol string) (price float64) {
+// GetPriceBitgetSpot
+func _(account *model.Account, symbol string) (price float64) {
 	_, _, _, dialectSymbol := model.GetFromStandard(model.BitgetSpot, symbol)
 	client := dtos.BitgetRestClient{BaseUrl: bitgetRestUrl, Passphrase: model.AppConfig.Phase, ApiKey: account.Key, ApiSecretKey: account.Secret}
 	resp, _ := client.DoGet("/api/v2/spot/market/tickers", map[string]string{`symbol`: dialectSymbol})

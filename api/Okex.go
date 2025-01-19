@@ -46,7 +46,7 @@ func maintainConnsOKEX(accounts []*model.Account) {
 		model.AppEnvironment.PriConnecting.Store(model.OKEX+account.Key, false)
 	}
 	for {
-		connTick, ok := model.AppEnvironment.ConnTick.Load(model.OKEX)
+		connTick, ok := model.AppEnvironment.ConnTick.Load(GetPublicConnKey(model.OKEX, ``))
 		if ok && connTick != nil {
 			if err := SendToConnections(model.OKEX, connTick.(map[*model.WSConn]bool), []byte(`ping`)); err != nil {
 				util.Log(util.LogLevelError, fmt.Sprintf("tick conn maintain error %s %s", model.OKEX, err.Error()))

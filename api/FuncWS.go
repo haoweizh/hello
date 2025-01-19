@@ -91,12 +91,12 @@ func GetWSSubscribe(market, symbol, subType string) (subscribe interface{}) {
 }
 
 // CreateMarketKLineWS
-func _(environment *model.Environment, market string, symbols map[string]bool) (
+func _(market string, symbols map[string]bool) (
 	socketMap map[*model.WSConn]bool, channels []chan struct{}) {
 	switch market {
 	case model.BinanceSpot:
 		util.Log(util.LogLevelInfo, " create KLine ws chan for "+market)
-		socketMap, channels, _ = WsKLineBinanceSpot(environment, market, symbols)
+		socketMap, channels, _ = WsKLineBinanceSpot(market, symbols)
 	}
 	return
 }
@@ -115,39 +115,50 @@ func CreateWSTick(environment *model.Environment, market string) (
 	var err error
 	switch market {
 	case model.Gate: // Gate 代表spot；Gateperp 代表 futures
-		socketMap, channels, err = WsTickServeGateSpot(market)
-		socketMapPerp, chansPerp, _ := WsTickServeGatePerp(market)
-		environment.ConnTick.Store(market+model.MarketTypePerp, socketMapPerp)
-		environment.MsgChanTick.Store(market+model.MarketTypePerp, chansPerp)
+		socketMap, err = WsTickServeGateSpot(market)
+		environment.ConnTick.Store(GetPublicConnKey(model.Gate, model.MarketTypeSpot), socketMap)
+		socketMapPerp, _ := WsTickServeGatePerp(market)
+		environment.ConnTick.Store(GetPublicConnKey(model.Gate, model.MarketTypePerp), socketMapPerp)
 	case model.OKEX:
-		socketMap, channels, err = model.WsPublicClient(market, wsOKEX, GetWSSubscribes(market, []string{model.SubscribeDepth}),
+		socketMap, err = model.WsPublicClient(market, wsOKEX, GetWSSubscribes(market, []string{model.SubscribeDepth}),
 			subscribeHandlerOKEX, wsHandlerOKEX, wsStepOKEX)
+		environment.ConnTick.Store(GetPublicConnKey(market, ``), socketMap)
 	case model.BinanceSpot:
-		socketMap, channels, err = model.WsPublicClient(market, model.WsBinance+`/stream`, GetWSSubscribes(market, []string{model.SubscribeTicker}),
+		socketMap, err = model.WsPublicClient(market, model.WsBinance+`/stream`, GetWSSubscribes(market, []string{model.SubscribeTicker}),
 			subscribeHandlerBinance, wsHandlerBinanceSpot, wsStepBinance)
+		environment.ConnTick.Store(GetPublicConnKey(market, ``), socketMap)
 	case model.BinancePerp:
-		socketMap, channels, err = model.WsPublicClient(market, model.WsBinancePerp+`/stream`, GetWSSubscribes(
+		socketMap, err = model.WsPublicClient(market, model.WsBinancePerp+`/stream`, GetWSSubscribes(
 			market, []string{model.SubscribeTicker, model.SubscribeMarkPrice}), subscribeHandlerBinance, wsHandlerBinancePerp, wsStepBinance)
 		//model.SubscribeDepth
-	//case model.HuobiPerp:
-	//	socketMap, channels, err = model.WsPublicClient(market, deprecated.wsHuobiPerp, GetWSSubscribes(model.HuobiPerp, []string{model.SubscribeDepth}),
-	//		deprecated.subscribeHandlerHuobiPerp, deprecated.wsMsgHandler, deprecated.wsStepHuobi)
+		environment.ConnTick.Store(GetPublicConnKey(market, ``), socketMap)
 	case model.Bybit:
-		socketMap, channels, err = WsTickServeBybit(market)
+		socketMap, err = WsTickServeBybit(market)
+		environment.ConnTick.Store(GetPublicConnKey(market, ``), socketMap)
 	case model.BitgetSpot:
-		socketMap, channels, err = model.WsPublicClient(market, bitgetPublic,
+		socketMap, err = model.WsPublicClient(market, bitgetPublic,
 			GetWSSubscribes(market, []string{model.SubscribeDepth}), subscribeHandlerBitget, tickHandlerBitget, wsStepBitget)
+		environment.ConnTick.Store(GetPublicConnKey(market, ``), socketMap)
 	case model.BitgetPerp:
-		socketMap, channels, err = WsTickServeBitgetPerp(market)
+		socketMap, err = WsTickServeBitgetPerp(market)
+		environment.ConnTick.Store(GetPublicConnKey(market, ``), socketMap)
 	}
-	environment.ConnTick.Store(market, socketMap)
-	environment.MsgChanTick.Store(market, channels)
 	if err != nil {
 		util.Log(util.LogLevelError, market+` can not create depth server `+err.Error())
 	}
 	model.AppEnvironment.WsInitTime.Store(market, util.GetNow())
 	CheckSetProcessing(model.FunctionTickMaintain, market, ``, false)
 	return socketMap, channels
+}
+
+func GetPublicConnKey(market, marketType string) string {
+	switch market {
+	case model.BinanceSpot, model.BinancePerp, model.BitgetSpot, model.BitgetPerp, model.OKEX, model.Bybit:
+		return fmt.Sprintf(market)
+	case model.Gate:
+		return fmt.Sprintf(`%s*%s`, market, marketType)
+	}
+	return ``
 }
 
 func getPrivateConnKey(market, accountKey, marketType string) string {
