@@ -153,6 +153,7 @@ func GetHoldings(accounts map[string]*model.Account) (holding [][]interface{}) {
 	coinValue := make(map[string]float64)
 	volume := make(map[string]float64)
 	monitorCoins := make(map[string]bool)
+	loc, _ := time.LoadLocation("Asia/Shanghai")
 	coinSettings := api.GetCoinSettings(model.FunctionCross)
 	if coinSettings == nil {
 		return
@@ -295,6 +296,7 @@ func GetHoldings(accounts map[string]*model.Account) (holding [][]interface{}) {
 		market := holding[i][0].(string)
 		symbol := holding[i][2].(string)
 		_, price := api.GetPriceForce(symbol, market)
+		_, marketType, _, _ := model.GetFromStandard(market, symbol)
 		value, _ := util.LoadSyncMap(carryCoinMap, coin, `0`)
 		currentStep := 0
 		moneyCurStep := 0.0
@@ -313,10 +315,17 @@ func GetHoldings(accounts map[string]*model.Account) (holding [][]interface{}) {
 		holding[i] = append(holding[i], moneyCurStep)
 		holding[i] = append(holding[i], moneyPerStep)
 		_, _, fr := api.GetFundingRate(``, ``, market, symbol, true)
-		if fr != nil {
-			holding[i] = append(holding[i], fr.Rate)
+		marketInfo := model.GetMarketInfo(market, symbol)
+		if fr != nil && marketInfo != nil {
+			fundingStr := fmt.Sprintf(`%d:%d`, util.GetNow().Hour(), util.GetNow().Minute())
+			if marketType == model.MarketTypePerp {
+				updateTime := fr.UpdateTime.In(loc)
+				fundingStr = fmt.Sprintf(`%d:%d %e %dH %d:%d`,
+					util.GetNow().Hour(), util.GetNow().Minute(), 100*fr.Rate, marketInfo.FundingRateInterval/3600000, updateTime.Hour(), updateTime.Minute())
+			}
+			holding[i] = append(holding[i], fundingStr)
 		} else {
-			holding[i] = append(holding[i], 0)
+			holding[i] = append(holding[i], ``)
 		}
 	}
 	return
