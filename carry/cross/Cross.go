@@ -986,18 +986,16 @@ func placeCross(carryCoin *model.CarryCoin, statusBuy, statusSell *model.CarrySt
 	score := (priceSell - priceBuy) / math.Max(priceBuy, priceSell)
 	amountBuy := amount / statusBuy.Setting.GridAmount
 	amountSell := amount / statusSell.Setting.GridAmount
-	lastOrder, _ := model.AppEnvironment.LastOrderMilli.Load(statusBuy.Account.Key)
-	lastOrderRelate, _ := model.AppEnvironment.LastOrderMilli.Load(statusSell.Account.Key)
-	if (lastOrder != nil && time.Now().UnixMilli()-lastOrder.(int64) < AccountOrderGap) ||
-		(lastOrderRelate != nil && time.Now().UnixMilli()-lastOrderRelate.(int64) < AccountOrderGap) {
+	lastOrderBuy, _ := model.AppEnvironment.LastOrderMilli.Load(statusBuy.Account.Key)
+	lastOrderSell, _ := model.AppEnvironment.LastOrderMilli.Load(statusSell.Account.Key)
+	if (lastOrderBuy != nil && time.Now().UnixMilli()-lastOrderBuy.(int64) < AccountOrderGap) ||
+		(lastOrderSell != nil && time.Now().UnixMilli()-lastOrderSell.(int64) < AccountOrderGap) {
 		return
 	}
 	go api.PlaceOrder(statusBuy.Account, model.OrderSideBuy, model.OrderTypeLimit, statusBuy.Market,
 		statusBuy.Symbol, ``, model.FunctionCross, priceBuy, priceBuy, amountBuy, true, PostOrderCross)
 	go api.PlaceOrder(statusSell.Account, model.OrderSideSell, model.OrderTypeLimit, statusSell.Market,
 		statusSell.Symbol, ``, model.FunctionCross, priceSell, priceSell, amountSell, true, PostOrderCross)
-	model.AppEnvironment.LastOrderMilli.Store(statusBuy.Account.Key, time.Now().UnixMilli())
-	model.AppEnvironment.LastOrderMilli.Store(statusSell.Account.Key, time.Now().UnixMilli())
 	util.Log(util.LogLevelInfo, fmt.Sprintf(
 		`place cross %s %s -> %s %s at %f %f amount %f %f %f score %f hold %f buy %f hold %f sell %f`,
 		statusSell.Market, statusSell.Symbol, statusBuy.Market, statusBuy.Symbol, priceSell, priceBuy, amount, amountBuy,

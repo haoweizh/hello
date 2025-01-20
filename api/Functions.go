@@ -850,6 +850,7 @@ func PlaceOrder(account *model.Account, orderSide, orderType, market, symbol, or
 	case model.Bybit:
 		placeOrderBybit(account, isWs, order, orderParam)
 	}
+	model.AppEnvironment.LastOrderMilli.Store(account.Key, time.Now().UnixMilli())
 	if isWs {
 		model.AppEnvironment.ReqIdOrders.Store(order.ClientOrdId, order)
 		util.Log(util.LogLevelInfo, fmt.Sprintf(`store order %s %s %s %s %s %#v`, market, coin, symbol, orderSide, order.ClientOrdId, order))
