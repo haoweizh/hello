@@ -251,7 +251,7 @@ func createFromBalance(account *model.Account, setting *model.Setting, valueLimi
 }
 
 // absentRevert: 当cm或sm中没有这个symbol时，是否设置成revert模式
-func initStatus(account *model.Account, setting *model.Setting) (status *model.CarryStatus) {
+func initStatus(account *model.Account, setting *model.Setting, stopBuy, stopSell bool) (status *model.CarryStatus) {
 	if setting == nil {
 		return
 	}
@@ -275,6 +275,7 @@ func initStatus(account *model.Account, setting *model.Setting) (status *model.C
 		util.Log(util.LogLevelError, fmt.Sprintf(`fail to create status %s %s`, setting.Market, setting.Symbol))
 		return nil
 	}
+	status.StopBuy, status.StopSell = stopBuy, stopSell
 	v, _ := util.LoadSyncMap(model.MarketInfos, setting.Market, setting.Symbol)
 	var marketInfo *model.MarketInfo
 	if v != nil {
@@ -539,7 +540,7 @@ func equalAccount(i int, equalChan chan int, accounts map[string]*model.Account,
 					util.Log(util.LogLevelError, `can not equal`)
 					continue
 				}
-				equalStatuses[j] = initStatus(account, setting)
+				equalStatuses[j] = initStatus(account, setting, false, false)
 				if equalStatuses[j] == nil {
 					util.Log(util.LogLevelError, fmt.Sprintf(`store carry nil coin %s %s %s %s %d`,
 						setting.Coin, setting.Market, setting.Symbol, account.Key, account.Index))
@@ -1074,7 +1075,7 @@ func placeStatus(status *model.CarryStatus, price float64, amount float64) {
 		}
 	}
 	account := model.AppConfig.GetAccountFromKeyIndex(status.Market, status.Account.Key, -1)
-	initStatus(account, status.Setting)
+	initStatus(account, status.Setting, status.StopBuy, status.StopSell)
 }
 
 func handleCross(account *model.Account, order *model.Order) {
