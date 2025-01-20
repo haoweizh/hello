@@ -468,7 +468,7 @@ func equalAccounts(doEqual bool, traceId int64) {
 				if market == model.Gate && account != nil && model.AppConfig.GetCrossStyles()[i] == crossGrid {
 					gateCm, _ := contractMarkets.Load(account.Key)
 					if gateCm != nil {
-						updateMoneyPerStep(gateCm.(*contractMarket))
+						updateMoneyPerStep(account, gateCm.(*contractMarket))
 					}
 				}
 			}
@@ -477,7 +477,7 @@ func equalAccounts(doEqual bool, traceId int64) {
 	util.Log(util.LogLevelInfo, fmt.Sprintf(`exit clearing cross all %d`, traceId))
 }
 
-func updateMoneyPerStep(gateCm *contractMarket) {
+func updateMoneyPerStep(account *model.Account, gateCm *contractMarket) {
 	value := api.GetCoinSettings(model.FunctionCross)
 	if value == nil {
 		return
@@ -513,7 +513,10 @@ func updateMoneyPerStep(gateCm *contractMarket) {
 		//	map[string]interface{}{`current_step`: carryCoin.CurrentStep, `money_cur_step`: carryCoin.MoneyCurStep,
 		//		`money_per_step`: carryCoin.MoneyPerStep})
 		//}
-		carryCoin.MoneyPerStep = moneyRiskLimit
+		carryCoin.MoneyPerStep, _ = strconv.ParseFloat(model.AppConfig.GetMoneyPerStep()[account.Index], 64)
+		if moneyRiskLimit < carryCoin.MoneyPerStep {
+			carryCoin.MoneyPerStep = moneyRiskLimit
+		}
 		model.AppDB.Model(carryCoin).Where(`coin=? and account_index=?`, carryCoin.Coin, `0`).Updates(
 			map[string]interface{}{`money_per_step`: carryCoin.MoneyPerStep})
 		util.Log(util.LogLevelInfo, fmt.Sprintf(`update money per step %s to %f`, coin, moneyRiskLimit))
