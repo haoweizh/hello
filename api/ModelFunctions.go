@@ -446,7 +446,7 @@ func initMarketMode(account *model.Account, market string) {
 	case model.Gate:
 		setPosSideGate(account.Key, account.Secret)
 		setMarginSettingGate(account.Key, account.Secret)
-		setLeverageGate(account, account.GateLeverMax, account.GateLeverMin, account.GateRiskLimit)
+		setLeverageGate(account)
 	case model.Bybit:
 		setBybitMarginLeverage(account.Key, account.Secret)
 		setBybitPerpLeverage(account.Key, account.Secret)

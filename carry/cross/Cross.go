@@ -579,7 +579,7 @@ func equalAccount(i int, equalChan chan int, accounts map[string]*model.Account,
 						model.AppDB.Save(carryCoin)
 					} else {
 						util.StoreSyncMap(carryCoinMap, carryCoin, coin.(string), `0`)
-						util.Log(util.LogLevelInfo, fmt.Sprintf(`get a carry coin from db %v %f value %f`, coin, bidHolding, bidHolding*price))
+						util.Log(util.LogLevelInfo, fmt.Sprintf(`get a carry coin from db %d %v %f value %f`, i, coin, bidHolding, bidHolding*price))
 					}
 				}
 			}
