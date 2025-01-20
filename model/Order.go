@@ -6,6 +6,7 @@ import (
 )
 
 type Order struct {
+	AccountIndex      int `gorm:"index:function_index_market_oid,unique"` // 记录配置账户序号index
 	Amount            float64
 	DealAmount        float64
 	DealPrice         float64
@@ -15,12 +16,11 @@ type Order struct {
 	TriggerPrice      float64
 	UnfilledQuantity  float64 //未成交数量
 	GridPos           int64
-	AccountIndex      int // 记录配置账户序号index
 	Coin              string
 	ErrCode           string
 	Function          string
-	Market            string
-	OrderId           string `gorm:"unique"`
+	Market            string `gorm:"index:function_index_market_oid,unique"`
+	OrderId           string `gorm:"index:function_index_market_oid,unique"`
 	ClientOrdId       string
 	OrderSide         string
 	OrderType         string

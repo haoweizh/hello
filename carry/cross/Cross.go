@@ -872,11 +872,6 @@ var ProcessCross = func(setting *model.Setting, tick *model.BidAsk) {
 			if account == nil || accountRelate == nil {
 				continue
 			}
-			lastOrder, _ := model.AppEnvironment.LastOrderMilli.Load(account.Key)
-			lastOrderRelate, _ := model.AppEnvironment.LastOrderMilli.Load(accountRelate.Key)
-			if (lastOrder != nil && ts1-lastOrder.(int64) < AccountOrderGap) || (lastOrderRelate != nil && ts1-lastOrderRelate.(int64) < AccountOrderGap) {
-				continue
-			}
 			status, getStatus := util.LoadSyncMap(carryStatusMap, setting.Coin, setting.Market, setting.Symbol, account.Key)
 			statusRelate, getRelate := util.LoadSyncMap(carryStatusMap, settingRelate.Coin, settingRelate.Market, settingRelate.Symbol, accountRelate.Key)
 			carryCoin, getCoin := util.LoadSyncMap(carryCoinMap, setting.Coin, `0`)
@@ -893,8 +888,6 @@ var ProcessCross = func(setting *model.Setting, tick *model.BidAsk) {
 				placeCross(carryCoin.(*model.CarryCoin), statusBuy, statusSell, priceBuy, priceSell, amount)
 				//util.Log(util.LogLevelInfo, fmt.Sprintf(`time mark coin %s %s %s <- %s %s amt %f ts %d %d %d %d`,
 				//	setting.Coin, statusBuy.Symbol, statusBuy.Market, statusSell.Symbol, statusSell.Market, amount, tsMark, tsDis1, tsDis2, time.Now().UnixMicro()-tsMark))
-				model.AppEnvironment.LastOrderMilli.Store(statusBuy.Account.Key, time.Now().UnixMilli())
-				model.AppEnvironment.LastOrderMilli.Store(statusSell.Account.Key, time.Now().UnixMilli())
 				return
 			}
 		}
@@ -981,18 +974,30 @@ func placeCross(carryCoin *model.CarryCoin, statusBuy, statusSell *model.CarrySt
 	_, marketTypeBuy, _, _ := model.GetFromStandard(statusBuy.Market, statusBuy.Symbol)
 	_, marketTypeSell, _, _ := model.GetFromStandard(statusSell.Market, statusSell.Symbol)
 	if marketTypeBuy == model.MarketTypeSpot {
-		priceBuy = priceBuy * (1 + crossSlide)
+		priceBuy = priceBuy * (1 + crossSlideSpot)
+	} else {
+		priceBuy = priceBuy * (1 + crossSlidePerp)
 	}
 	if marketTypeSell == model.MarketTypeSpot {
-		priceSell = priceSell * (1 - crossSlide)
+		priceSell = priceSell * (1 - crossSlideSpot)
+	} else {
+		priceSell = priceSell * (1 - crossSlidePerp)
 	}
 	score := (priceSell - priceBuy) / math.Max(priceBuy, priceSell)
 	amountBuy := amount / statusBuy.Setting.GridAmount
 	amountSell := amount / statusSell.Setting.GridAmount
+	lastOrder, _ := model.AppEnvironment.LastOrderMilli.Load(statusBuy.Account.Key)
+	lastOrderRelate, _ := model.AppEnvironment.LastOrderMilli.Load(statusSell.Account.Key)
+	if (lastOrder != nil && time.Now().UnixMilli()-lastOrder.(int64) < AccountOrderGap) ||
+		(lastOrderRelate != nil && time.Now().UnixMilli()-lastOrderRelate.(int64) < AccountOrderGap) {
+		return
+	}
 	go api.PlaceOrder(statusBuy.Account, model.OrderSideBuy, model.OrderTypeLimit, statusBuy.Market,
 		statusBuy.Symbol, ``, model.FunctionCross, priceBuy, priceBuy, amountBuy, true, PostOrderCross)
 	go api.PlaceOrder(statusSell.Account, model.OrderSideSell, model.OrderTypeLimit, statusSell.Market,
 		statusSell.Symbol, ``, model.FunctionCross, priceSell, priceSell, amountSell, true, PostOrderCross)
+	model.AppEnvironment.LastOrderMilli.Store(statusBuy.Account.Key, time.Now().UnixMilli())
+	model.AppEnvironment.LastOrderMilli.Store(statusSell.Account.Key, time.Now().UnixMilli())
 	util.Log(util.LogLevelInfo, fmt.Sprintf(
 		`place cross %s %s -> %s %s at %f %f amount %f %f %f score %f hold %f buy %f hold %f sell %f`,
 		statusSell.Market, statusSell.Symbol, statusBuy.Market, statusBuy.Symbol, priceSell, priceBuy, amount, amountBuy,
