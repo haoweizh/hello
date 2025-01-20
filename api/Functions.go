@@ -877,6 +877,8 @@ func PlaceOrder(account *model.Account, orderSide, orderType, market, symbol, or
 	return order
 }
 
+var filterCoins = map[string]bool{`REEF`: true}
+
 // FilterCross
 // 由于gate下线暂时不平仓的币 BCD OXY CRU
 // 搬砖过滤币种 AMPL IOTA REEF MIR SOS
@@ -886,6 +888,9 @@ func PlaceOrder(account *model.Account, orderSide, orderType, market, symbol, or
 // ftx预测TRUMP BOLSONARO
 func FilterCross(market, symbol string) bool {
 	_, _, coin, _ := model.GetFromStandard(market, symbol)
+	if filterCoins[strings.ToUpper(coin)] {
+		return true
+	}
 	switch market {
 	case model.Gate:
 		switch coin {
