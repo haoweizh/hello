@@ -251,7 +251,7 @@ func createFromBalance(account *model.Account, setting *model.Setting, valueLimi
 }
 
 // absentRevert: 当cm或sm中没有这个symbol时，是否设置成revert模式
-func initStatus(account *model.Account, setting *model.Setting, dirtyInit bool) (status *model.CarryStatus) {
+func initStatus(account *model.Account, setting *model.Setting) (status *model.CarryStatus) {
 	if setting == nil {
 		return
 	}
@@ -301,12 +301,12 @@ func initStatus(account *model.Account, setting *model.Setting, dirtyInit bool) 
 	}
 	status.LimitBuy = math.Min(status.LimitBuy, status.AvailableBuy)
 	status.LimitSell = math.Min(status.LimitSell, status.AvailableSell)
-	initTradeLine(account, setting, status, doRevert, dirtyInit)
+	initTradeLine(account, setting, status, doRevert)
 	util.StoreSyncMap(carryStatusMap, status, setting.Coin, setting.Market, setting.Symbol, account.Key)
 	return
 }
 
-func initTradeLine(account *model.Account, setting *model.Setting, status *model.CarryStatus, doRevert, dirtyInit bool) {
+func initTradeLine(account *model.Account, setting *model.Setting, status *model.CarryStatus, doRevert bool) {
 	standardScoreBuy := math.Max(standardScoreOpen, setting.OpenShortMargin)
 	standardScoreSell := math.Max(standardScoreOpen, setting.OpenShortMargin)
 	getTick, ticks := model.AppEnvironment.GetBidAsk(setting.Market, setting.Symbol)
@@ -335,12 +335,8 @@ func initTradeLine(account *model.Account, setting *model.Setting, status *model
 		standardScoreSell = setting.CloseShortMargin
 		status.LimitSell = math.Min(status.LimitSell, status.Holding)
 	}
-	if !dirtyInit || status.TradeLineBuy < 1 {
-		status.TradeLineBuy = math.Max(standardScoreBuy*(0.5+jumpBuy*status.RateInAll), lowestScore) * account.CarryRate
-	}
-	if !dirtyInit || status.TradeLineSell < 1 {
-		status.TradeLineSell = math.Max(standardScoreSell*(0.5+jumpSell*status.RateInAll), lowestScore) * account.CarryRate
-	}
+	status.TradeLineBuy = math.Max(standardScoreBuy*(0.5+jumpBuy*status.RateInAll), lowestScore) * account.CarryRate
+	status.TradeLineSell = math.Max(standardScoreSell*(0.5+jumpSell*status.RateInAll), lowestScore) * account.CarryRate
 	//tradeLineExtra := getTradeLineExtra(setting.Coin, setting.CloseShortMargin)
 	//if tradeLineExtra != nil {
 	//	status.TradeLineBuy += tradeLineExtra.buyExtra
@@ -543,7 +539,7 @@ func equalAccount(i int, equalChan chan int, accounts map[string]*model.Account,
 					util.Log(util.LogLevelError, `can not equal`)
 					continue
 				}
-				equalStatuses[j] = initStatus(account, setting, false)
+				equalStatuses[j] = initStatus(account, setting)
 				if equalStatuses[j] == nil {
 					util.Log(util.LogLevelError, fmt.Sprintf(`store carry nil coin %s %s %s %s %d`,
 						setting.Coin, setting.Market, setting.Symbol, account.Key, account.Index))
@@ -1078,7 +1074,7 @@ func placeStatus(status *model.CarryStatus, price float64, amount float64) {
 		}
 	}
 	account := model.AppConfig.GetAccountFromKeyIndex(status.Market, status.Account.Key, -1)
-	initStatus(account, status.Setting, true)
+	initStatus(account, status.Setting)
 }
 
 func handleCross(account *model.Account, order *model.Order) {
@@ -1225,15 +1221,14 @@ var PostOrderCross = func(order *model.Order) {
 		if value != nil {
 			status := value.(*model.CarryStatus)
 			if order.OrderSide == model.OrderSideSell {
-				status.TradeLineSell = 1
-				status.LimitSell = 0
+				status.StopSell = true
 			}
 			if order.OrderSide == model.OrderSideBuy {
-				status.TradeLineBuy = 1
-				status.LimitBuy = 0
+				status.StopBuy = true
 			}
-			util.Log(util.LogLevelError, fmt.Sprintf(`set trade line 1 fail order %s %s %s %s %s %s %s`,
-				setting.Coin, setting.Market, setting.Symbol, account.Key, order.OrderId, order.ErrCode, order.OrderTime.Format(time.DateTime)))
+			util.Log(util.LogLevelError, fmt.Sprintf(`stop trade %s %s %s %d %s %s buy %v sell %v %s`,
+				setting.Coin, setting.Market, setting.Symbol, account.Index, order.OrderId, order.ErrCode, status.StopSell,
+				status.StopSell, order.OrderTime.Format(time.DateTime)))
 		}
 		//addCarryResult(account.Key, order.Market, ``, false)
 		//unknownFail := true
