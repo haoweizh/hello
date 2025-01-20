@@ -194,8 +194,8 @@ func setSymbolLeverageGate(account *model.Account, symbol string) (success bool)
 		panicGateError(fmt.Sprintf(`%s %f %s`, symbol, leverSet, account.Key), `UpdatePositionLeverage`, errLeverage)
 		return false
 	}
-	util.Log(util.LogLevelInfo, fmt.Sprintf(`set gate lever and risk %s %s %f %f`,
-		account.Key, symbol, leverSet, limit))
+	util.Log(util.LogLevelInfo, fmt.Sprintf(`set gate lever and risk %d %s %f %f`,
+		account.Index, symbol, leverSet, limit))
 	util.StoreSyncMap(&model.AppEnvironment.RiskLimitsGate, limit, account.Key, symbol)
 	return true
 }
