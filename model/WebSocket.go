@@ -76,7 +76,7 @@ func (wsConn *WSConn) handle() {
 	for {
 		msg := <-wsConn.WSChan
 		if len(wsConn.WSChan) > 10 {
-			util.Log(util.LogLevelError, fmt.Sprintf(`wsConn wait list 10 %s %#v`, string(msg), wsConn))
+			util.Log(util.LogLevelError, fmt.Sprintf(`wsConn wait list 10 %d %s %#v`, len(wsConn.WSChan), string(msg), wsConn))
 			continue
 		}
 		//if strings.Contains(string(msg), `order`) {

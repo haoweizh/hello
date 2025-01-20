@@ -809,6 +809,7 @@ func MustPlaceOrder(account *model.Account, orderSide, orderType, market, symbol
 // amount:如果是限价单或市价卖单，amount是左侧币种的数量，如果是市价买单，amount是右测币种的数量
 func PlaceOrder(account *model.Account, orderSide, orderType, market, symbol, orderParam, funcType string, price, triggerPrice,
 	amount float64, isWs bool, postOrder model.PostOrder) (order *model.Order) {
+	model.AppEnvironment.LastOrderMilli.Store(account.Key, time.Now().UnixMilli())
 	markSide := model.OrderSideBuy
 	switch orderSide {
 	case model.OrderSideBuy, model.OrderSideLiquidateShort:
@@ -850,7 +851,6 @@ func PlaceOrder(account *model.Account, orderSide, orderType, market, symbol, or
 	case model.Bybit:
 		placeOrderBybit(account, isWs, order, orderParam)
 	}
-	model.AppEnvironment.LastOrderMilli.Store(account.Key, time.Now().UnixMilli())
 	if isWs {
 		model.AppEnvironment.ReqIdOrders.Store(order.ClientOrdId, order)
 		util.Log(util.LogLevelInfo, fmt.Sprintf(`store order %s %s %s %s %s %#v`, market, coin, symbol, orderSide, order.ClientOrdId, order))
