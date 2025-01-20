@@ -834,9 +834,13 @@ var ProcessCross = func(setting *model.Setting, tick *model.BidAsk) {
 	// 同一个coin cross之间互斥
 	replaced := coinCrossing.CompareAndSwap(setting.Coin, false, true)
 	if !replaced {
+		util.LogLess(util.LogLevelInfo, fmt.Sprintf(`CompareAndSwap %s`, setting.Coin))
 		return
 	}
-	defer coinCrossing.Store(setting.Coin, false)
+	defer func() {
+		time.Sleep(time.Millisecond * 100)
+		coinCrossing.Store(setting.Coin, false)
+	}()
 	tickLimit := 50
 	switch tick.Bids[0].Market {
 	case model.Gate:
