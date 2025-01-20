@@ -1219,16 +1219,15 @@ var PostOrderCross = func(order *model.Order) {
 	if !order.HaveId() || order.ErrCode != `` || order.Status == model.CarryStatusFail {
 		value, _ := util.LoadSyncMap(carryStatusMap, setting.Coin, setting.Market, setting.Symbol, account.Key)
 		if value != nil {
-			status := value.(*model.CarryStatus)
 			if order.OrderSide == model.OrderSideSell {
-				status.StopSell = true
+				value.(*model.CarryStatus).StopSell = true
 			}
 			if order.OrderSide == model.OrderSideBuy {
-				status.StopBuy = true
+				value.(*model.CarryStatus).StopBuy = true
 			}
 			util.Log(util.LogLevelError, fmt.Sprintf(`stop trade %s %s %s %d %s %s buy %v sell %v %s`,
-				setting.Coin, setting.Market, setting.Symbol, account.Index, order.OrderId, order.ErrCode, status.StopSell,
-				status.StopSell, order.OrderTime.Format(time.DateTime)))
+				setting.Coin, setting.Market, setting.Symbol, account.Index, order.OrderId, order.ErrCode, value.(*model.CarryStatus).StopBuy,
+				value.(*model.CarryStatus).StopSell, order.OrderTime.Format(time.DateTime)))
 		}
 		//addCarryResult(account.Key, order.Market, ``, false)
 		//unknownFail := true
