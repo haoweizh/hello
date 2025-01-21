@@ -339,7 +339,8 @@ func placeOrderBitgetSpot(account *model.Account, isWs bool, order *model.Order,
 	} else if orderType == model.OrderTypeLimit {
 		ordType = `limit`
 	}
-	amountStr := util.CutTailZero(fmt.Sprintf(`%f`, model.GetAmountInMarket(model.BitgetSpot, symbol, amount, priceSpot, false)))
+	formattedAmount, format := model.GetAmountInMarket(model.BitgetSpot, symbol, amount, priceSpot, false)
+	amountStr := util.CutTailZero(fmt.Sprintf(format, formattedAmount))
 	if orderSide == model.OrderSideBuy && orderType == model.OrderTypeMarket {
 		amountStr = fmt.Sprintf(`%f`, amount*priceSpot)
 	}

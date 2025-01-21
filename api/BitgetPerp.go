@@ -291,7 +291,8 @@ func placeOrderBitgetPerp(account *model.Account, isWs bool, order *model.Order,
 		reduceOnlyStr = `YES`
 	}
 	formattedPrice, decimalPrice := model.FormatPrice(model.BitgetPerp, symbol, price)
-	amountStr := util.CutTailZero(fmt.Sprintf(`%f`, model.GetAmountInMarket(model.BitgetPerp, symbol, amount, formattedPrice, reduceOnly)))
+	formattedAmount, format := model.GetAmountInMarket(model.BitgetPerp, symbol, amount, formattedPrice, reduceOnly)
+	amountStr := util.CutTailZero(fmt.Sprintf(format, formattedAmount))
 	priceStr := util.CutTailZero(strconv.FormatFloat(formattedPrice, 'f', decimalPrice, 64))
 	ordType := ``
 	if orderType == model.OrderTypeMarket {

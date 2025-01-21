@@ -87,7 +87,7 @@ func createSpotMarket(key, secret, market string) (sm *spotMarket) {
 }
 
 // absentRevert: 当cm或sm中没有这个symbol时，是否设置成revert模式
-func createFromPosition(account *model.Account, setting *model.Setting, valueLimit float64) (carryStatus *model.CarryStatus, doRevert bool) {
+func createFromPosition(account *model.Account, setting *model.Setting) (carryStatus *model.CarryStatus, doRevert bool) {
 	key := account.Key
 	value, ok := contractMarkets.Load(key)
 	if value == nil || !ok {
@@ -176,18 +176,18 @@ func createFromPosition(account *model.Account, setting *model.Setting, valueLim
 			doRevert = true
 		}
 	}
-	if cm.contractValueInU/handledActValueInU > rateLimitPosition || valueInUsd > valueLimit ||
+	if cm.contractValueInU/handledActValueInU > rateLimitPosition || valueInUsd > 0.1*handledActValueInU ||
 		valueInUsd/handledActValueInU > rateLimitHolding || (cm.collateralsAvailable < MarginULowLimit && cm.collateralsAvailable/handledActValueInU < 0.1) ||
 		(setting.Market == model.BitgetPerp && (len(cm.positions) > model.BitgetPosLimit && carryStatus.Holding == 0)) {
-		util.Log(util.LogLevelError, fmt.Sprintf(`do revert true %d %s %s value big %f %f %f %f %f %f margin u %f pos len %d`,
-			account.Index, setting.Market, setting.Symbol, cm.contractValueInU, handledActValueInU, rateLimitPosition, valueInUsd, valueLimit, rateLimitHolding, cm.contractValueInU, len(cm.positions)))
+		util.Log(util.LogLevelError, fmt.Sprintf(`do revert true %d %s %s value big %f %f %f %f %f margin u %f pos len %d`,
+			account.Index, setting.Market, setting.Symbol, cm.contractValueInU, handledActValueInU, rateLimitPosition, valueInUsd, rateLimitHolding, cm.contractValueInU, len(cm.positions)))
 		doRevert = true
 	}
 	return carryStatus, doRevert
 }
 
 // absentRevert: 当cm或sm中没有这个symbol时，是否设置成revert模式
-func createFromBalance(account *model.Account, setting *model.Setting, valueLimit float64) (carryStatus *model.CarryStatus, doRevert bool) {
+func createFromBalance(account *model.Account, setting *model.Setting) (carryStatus *model.CarryStatus, doRevert bool) {
 	key := account.Key
 	value, ok := spotMarkets.Load(key)
 	if value == nil || !ok {
@@ -232,7 +232,7 @@ func createFromBalance(account *model.Account, setting *model.Setting, valueLimi
 	if sm.availableU < usdLowLine || carryStatus.RateInAll > 0.2 {
 		doRevert = true
 	}
-	if sm.balances[setting.Symbol] != nil && math.Abs(sm.balances[setting.Symbol].UsdValue) > valueLimit {
+	if sm.balances[setting.Symbol] != nil && math.Abs(sm.balances[setting.Symbol].UsdValue) > handledActValueInU*0.1 {
 		doRevert = true
 	}
 	if setting.Market == model.Bybit && sm.collateral != nil && sm.collateral.Rate > 0.7 {
@@ -244,8 +244,8 @@ func createFromBalance(account *model.Account, setting *model.Setting, valueLimi
 		doRevert = true
 	}
 	if doRevert {
-		util.Log(util.LogLevelError, fmt.Sprintf(`do revert true %d %s %s value big balance u %f<%f || %f>0.2 %f`,
-			account.Index, setting.Market, setting.Symbol, sm.availableU, usdLowLine, carryStatus.RateInAll, valueLimit))
+		util.Log(util.LogLevelError, fmt.Sprintf(`do revert true %d %s %s value big balance u %f<%f || %f>0.2`,
+			account.Index, setting.Market, setting.Symbol, sm.availableU, usdLowLine, carryStatus.RateInAll))
 	}
 	return carryStatus, doRevert
 }
@@ -258,15 +258,10 @@ func initStatus(account *model.Account, setting *model.Setting, stopBuy, stopSel
 	//util.Log(util.LogLevelInfo, fmt.Sprintf(`start to init status %s %s %s`, setting.Coin, setting.Market, setting.Symbol))
 	_, marketType, _, _ := model.GetFromStandard(setting.Market, setting.Symbol)
 	doRevert := false
-	localLimit := holdingLimitInU
-	account0 := model.AppConfig.GetAccounts(setting.Market)[0]
-	if account0.Key != account.Key {
-		localLimit /= 10
-	}
 	if marketType == model.MarketTypeSpot {
-		status, doRevert = createFromBalance(account, setting, localLimit)
+		status, doRevert = createFromBalance(account, setting)
 	} else if marketType == model.MarketTypePerp {
-		status, doRevert = createFromPosition(account, setting, localLimit)
+		status, doRevert = createFromPosition(account, setting)
 	}
 	if setting.Chance < 0 {
 		doRevert = true
@@ -680,7 +675,7 @@ func equalCoin(index int, coin string, statuses []*model.CarryStatus) (isEqual b
 				util.Log(util.LogLevelError, fmt.Sprintf(`no status when holding: %f %s %s`, holding, bids[i].Market, bids[i].Symbol))
 				continue
 			}
-			checkAmount := model.GetAmountInMarket(status.Market, status.Symbol, math.Abs(holding/status.Setting.GridAmount), price, status.ReduceOnlySell)
+			checkAmount, _ := model.GetAmountInMarket(status.Market, status.Symbol, math.Abs(holding/status.Setting.GridAmount), price, status.ReduceOnlySell)
 			if checkAmount <= 0 {
 				errMsg += fmt.Sprintf(`check amount %s %s %f < 0`, status.Market, status.Symbol, checkAmount)
 				continue
@@ -690,7 +685,7 @@ func equalCoin(index int, coin string, statuses []*model.CarryStatus) (isEqual b
 				equalStatus = status
 				amount = math.Abs(holding) / status.Setting.GridAmount
 			} else {
-				checkAmount = model.GetAmountInMarket(status.Market, status.Symbol, status.AvailableSell, price, status.ReduceOnlySell)
+				checkAmount, _ = model.GetAmountInMarket(status.Market, status.Symbol, status.AvailableSell, price, status.ReduceOnlySell)
 				if checkAmount > 0 && status.AvailableSell*price > SmallInU {
 					equalStatus = status
 					//holding = status.AvailableSell
@@ -720,7 +715,7 @@ func equalCoin(index int, coin string, statuses []*model.CarryStatus) (isEqual b
 				util.Log(util.LogLevelError, fmt.Sprintf(`no status when holding: %f %s %s`, holding, asks[i].Market, asks[i].Symbol))
 				continue
 			}
-			checkAmount := model.GetAmountInMarket(status.Market, status.Symbol, math.Abs(holding)/status.Setting.GridAmount, price, status.ReduceOnlyBuy)
+			checkAmount, _ := model.GetAmountInMarket(status.Market, status.Symbol, math.Abs(holding)/status.Setting.GridAmount, price, status.ReduceOnlyBuy)
 			if checkAmount <= 0 {
 				errMsg += fmt.Sprintf(`check amount %s %s %f < 0`, status.Market, status.Symbol, checkAmount)
 				continue
@@ -730,7 +725,7 @@ func equalCoin(index int, coin string, statuses []*model.CarryStatus) (isEqual b
 				equalStatus = status
 				amount = math.Abs(holding) / status.Setting.GridAmount
 			} else if !math.IsNaN(status.AvailableBuy) {
-				checkAmount = model.GetAmountInMarket(status.Market, status.Symbol, status.AvailableBuy, price, status.ReduceOnlyBuy)
+				checkAmount, _ = model.GetAmountInMarket(status.Market, status.Symbol, status.AvailableBuy, price, status.ReduceOnlyBuy)
 				if checkAmount > 0 && status.AvailableBuy*price > SmallInU {
 					equalStatus = status
 					//holding = status.AvailableBuy
@@ -771,7 +766,7 @@ func placeEqual(status *model.CarryStatus, price, amount float64, orderSide stri
 	if orderSide == model.OrderSideBuy {
 		reduceOnly = status.ReduceOnlyBuy
 	}
-	checkAmount := model.GetAmountInMarket(status.Market, status.Symbol, amount, price, reduceOnly)
+	checkAmount, _ := model.GetAmountInMarket(status.Market, status.Symbol, amount, price, reduceOnly)
 	if checkAmount > 0 {
 		util.Log(util.LogLevelInfo, fmt.Sprintf(`do equal %f %f %#v`, price, amount, status))
 		order := api.PlaceOrder(status.Account, orderSide, model.OrderTypeLimit,

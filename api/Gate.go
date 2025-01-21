@@ -1163,7 +1163,8 @@ func placeOrderGate(account *model.Account, isWs bool, order *model.Order, order
 	if marketType == model.MarketTypeSpot {
 		relatedOrder := gateApi.Order{Price: orderPriceStr, Side: orderSide, CurrencyPair: dialectSymbol, Type: orderType, TimeInForce: tif, AutoRepay: true}
 		relatedOrder.Account = "spot"
-		relatedOrder.Amount = util.CutTailZero(fmt.Sprintf(`%f`, model.GetAmountInMarket(model.Gate, symbol, amount, price, false)))
+		formattedAmount, format := model.GetAmountInMarket(model.Gate, symbol, amount, price, false)
+		relatedOrder.Amount = util.CutTailZero(fmt.Sprintf(format, formattedAmount))
 		if orderType == model.OrderTypeMarket && orderSide == model.OrderSideBuy {
 			relatedOrder.Amount = fmt.Sprintf(`%f`, amount*price)
 		}
@@ -1215,8 +1216,8 @@ func placeOrderGate(account *model.Account, isWs bool, order *model.Order, order
 		}
 	} else if marketType == model.MarketTypePerp {
 		futuresOrder := gateApi.FuturesOrder{Price: orderPriceStr, Contract: dialectSymbol, Tif: tif}
-		futuresOrder.Size, _ = strconv.ParseInt(util.CutTailZero(
-			fmt.Sprintf(`%f`, model.GetAmountInMarket(model.Gate, symbol, amount, price, false))), 10, 64)
+		formattedAmount, format := model.GetAmountInMarket(model.Gate, symbol, amount, price, false)
+		futuresOrder.Size, _ = strconv.ParseInt(util.CutTailZero(fmt.Sprintf(format, formattedAmount)), 10, 64)
 		if orderSide == model.OrderSideSell {
 			futuresOrder.Size = -1 * futuresOrder.Size
 		}

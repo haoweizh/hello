@@ -252,8 +252,8 @@ func placeOrderBinanceSpot(account *model.Account, isWs bool, order *model.Order
 	decimal := 0
 	price, decimal = model.FormatPrice(model.BinanceSpot, symbol, price)
 	priceStr := util.CutTailZero(strconv.FormatFloat(price, 'f', decimal, 64))
-	formattedAmount := model.GetAmountInMarket(model.BinanceSpot, symbol, amount, price, false)
-	amountStr := util.CutTailZero(fmt.Sprintf(`%f`, formattedAmount))
+	formattedAmount, format := model.GetAmountInMarket(model.BinanceSpot, symbol, amount, price, false)
+	amountStr := util.CutTailZero(fmt.Sprintf(format, formattedAmount))
 	success, _, _, dialectSymbol := model.GetFromStandard(model.BinanceSpot, symbol)
 	order.Price = price
 	order.TriggerPrice = price

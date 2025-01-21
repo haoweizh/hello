@@ -254,8 +254,6 @@ func calcAmount(index int, coin string, carryStatus, carryStatusRelate *model.Ca
 		if (carryStatus.Setting.Valid || carryStatusRelate.Setting.Valid) && (score > 0.4 || scoreRelate > 0.4) {
 			util.LogLess(util.LogLevelError, fmt.Sprintf(`possible mismatch coin %s %s %s %s score %f %f`,
 				carryStatus.Market, carryStatus.Symbol, carryStatusRelate.Market, carryStatusRelate.Symbol, score, scoreRelate))
-			carryStatus.Setting.Valid = false
-			carryStatusRelate.Setting.Valid = false
 			carryStatus.Setting.MarketRelated = fmt.Sprintf(`价差过大 %s %s %d‰ %d‰ %s`,
 				carryStatusRelate.Market, carryStatusRelate.Symbol, int(1000*score), int(1000*scoreRelate), time.Now().Format("2006-01-02 15:04:05"))
 			carryStatusRelate.Setting.MarketRelated = fmt.Sprintf(`价差过大 %s %s %d‰ %d‰ %s`,

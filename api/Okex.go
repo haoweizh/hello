@@ -661,8 +661,8 @@ func placeOrderOKEX(account *model.Account, isWs bool, order *model.Order, order
 	priceStr := util.CutTailZero(strconv.FormatFloat(price, 'f', decimal, 64))
 	priceTrigger, decimalTrigger := model.FormatPrice(model.OKEX, order.Symbol, order.TriggerPrice)
 	triggerPriceStr := util.CutTailZero(strconv.FormatFloat(priceTrigger, 'f', decimalTrigger, 64))
-	formattedAmount := model.GetAmountInMarket(model.OKEX, order.Symbol, order.Amount, price, reduceOnly)
-	amount := util.CutTailZero(fmt.Sprintf(`%f`, formattedAmount))
+	formattedAmount, format := model.GetAmountInMarket(model.OKEX, order.Symbol, order.Amount, price, reduceOnly)
+	amount := util.CutTailZero(fmt.Sprintf(format, formattedAmount))
 	order.Price = price
 	order.TriggerPrice = priceTrigger
 	orderAmountReal, _ := strconv.ParseFloat(amount, 64)

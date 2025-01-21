@@ -755,7 +755,8 @@ func placeOrderBybit(account *model.Account, isWs bool, order *model.Order, orde
 		reduceOnly = true
 	}
 	price, decimal := model.FormatPrice(model.Bybit, order.Symbol, order.Price)
-	amountStr := util.CutTailZero(fmt.Sprintf(`%f`, model.GetAmountInMarket(model.Bybit, order.Symbol, order.Amount, price, reduceOnly)))
+	formattedAmount, format := model.GetAmountInMarket(model.Bybit, order.Symbol, order.Amount, price, reduceOnly)
+	amountStr := util.CutTailZero(fmt.Sprintf(format, formattedAmount))
 	priceStr := util.CutTailZero(strconv.FormatFloat(price, 'f', decimal, 64))
 	_, marketType, _, dialectSymbol := model.GetFromStandard(model.Bybit, order.Symbol)
 	var tradeSide, tradeOrderType string

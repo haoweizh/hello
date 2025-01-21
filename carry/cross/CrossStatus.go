@@ -11,7 +11,6 @@ import (
 )
 
 // const FundingRateBase = 12.0
-const holdingLimitInU = 100000.0
 const openValueLimit = 2000.0
 const compLimitInU = 3000.0
 const MarginULowLimit = 10000
@@ -163,7 +162,7 @@ func GetHoldings(accounts map[string]*model.Account) (holding [][]interface{}) {
 		}
 		settings := value.([]*model.Setting)
 		for _, setting := range settings {
-			if !setting.Valid {
+			if !setting.Valid || setting.MarketRelated != `` {
 				monitorCoins[setting.Coin] = true
 			}
 			account := accounts[setting.Market]
@@ -173,8 +172,8 @@ func GetHoldings(accounts map[string]*model.Account) (holding [][]interface{}) {
 			if marketType == model.MarketTypeSpot {
 				smValue, _ := spotMarkets.Load(account.Key)
 				balance := smValue.(*spotMarket).balances[setting.Symbol]
-				if (balance != nil && balance.Amount > 0) || !setting.Valid {
-					if setting.Valid {
+				if (balance != nil && balance.Amount > 0) || !setting.Valid || setting.MarketRelated != `` {
+					if setting.Valid && setting.MarketRelated == `` {
 						valid = `true`
 						if !setting.Liquidated {
 							valid = `removed`
@@ -201,8 +200,8 @@ func GetHoldings(accounts map[string]*model.Account) (holding [][]interface{}) {
 			} else if marketType == model.MarketTypePerp {
 				cm, _ := contractMarkets.Load(account.Key)
 				position := cm.(*contractMarket).positions[setting.Symbol]
-				if (position != nil && position.Holding != 0) || !setting.Valid {
-					if setting.Valid {
+				if (position != nil && position.Holding != 0) || !setting.Valid || setting.MarketRelated != `` {
+					if setting.Valid && setting.MarketRelated == `` {
 						valid = `true`
 					}
 					if !setting.Liquidated {

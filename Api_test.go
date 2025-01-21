@@ -425,6 +425,7 @@ func Test_CutTail(t *testing.T) {
 
 func Test_initTurtleN(t *testing.T) {
 	model.NewConfig()
+	api.InitMarketInfos(model.Bybit)
 	market := model.OKEX
 	account := model.AppConfig.GetAccounts(market)[0]
 	//now := time.Now()
@@ -571,15 +572,15 @@ func Test_ClearActs(t *testing.T) {
 	//}
 }
 func Test_Order(t *testing.T) {
-	market := model.BitgetSpot
+	market := model.Bybit
 	model.NewConfig()
-	model.AppDB, _ = gorm.Open(postgres.Open(model.AppConfig.DBConnection), &gorm.Config{})
-	symbol := `GEMS_USDT`
+	//model.AppDB, _ = gorm.Open(postgres.Open(model.AppConfig.DBConnection), &gorm.Config{})
+	symbol := `BABYDOGE_USDT`
 	account := model.GetAccounts(0)[market]
 	api.InitMarketInfos(market)
-	go api.MaintainConns(market)
-	time.Sleep(5 * time.Second)
-	order1 := api.PlaceOrder(account, model.OrderSideBuy, model.OrderTypeLimit, market, symbol, ``, `test`, 0.110229699, 0.110229699, 55, true, nil)
+	//go api.MaintainConns(market)
+	//time.Sleep(5 * time.Second)
+	order1 := api.PlaceOrder(account, model.OrderSideSell, model.OrderTypeLimit, market, symbol, ``, `test`, 0.00000000221778, 0.00000000221778, 9305338243.31595, true, nil)
 	fmt.Println(fmt.Sprintf(`%#v`, order1))
 	//go func() {
 	//	for {

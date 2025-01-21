@@ -309,8 +309,8 @@ func placeOrderBinancePerp(account *model.Account, isWS bool, order *model.Order
 	if orderParam == model.ReduceOnly {
 		reduceOnly = true
 	}
-	formattedAmount := model.GetAmountInMarket(model.BinancePerp, symbol, amount, price, reduceOnly)
-	amountStr := util.CutTailZero(fmt.Sprintf(`%f`, formattedAmount))
+	formattedAmount, format := model.GetAmountInMarket(model.BinancePerp, symbol, amount, price, reduceOnly)
+	amountStr := util.CutTailZero(fmt.Sprintf(format, formattedAmount))
 	success, _, _, dialectSymbol := model.GetFromStandard(model.BinancePerp, symbol)
 	order.Price = price
 	stopPrice, stopDecimal := model.FormatPrice(model.BinancePerp, symbol, triggerPrice)

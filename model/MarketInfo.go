@@ -73,17 +73,17 @@ func ParseRealAmount(market, symbol string, amount float64) (success bool, realA
 
 // GetAmountInMarket 返回交易所认可的下单数量，可能是币数、张数等
 // amount: 搬砖程序中使用的币数量
-func GetAmountInMarket(market, symbol string, amount, price float64, reduceOnly bool) (formattedAmount float64) {
+func GetAmountInMarket(market, symbol string, amount, price float64, reduceOnly bool) (formattedAmount float64, format string) {
 	marketInfo := GetMarketInfo(market, symbol)
 	if marketInfo == nil || marketInfo.SizeIncrement == 0 || marketInfo.SizeMin == 0 || amount < marketInfo.SizeMin {
-		return 0
+		return 0, ``
 	}
 	success, _, coin, _ := GetFromStandard(market, symbol)
 	if success && marketInfo.CTValue > 0 && marketInfo.CTCurrency == coin {
 		amount = amount / marketInfo.CTValue
 	}
 	decimal := util.NumDecPlaces(marketInfo.SizeIncrement)
-	format := `%.` + strconv.Itoa(decimal) + `f`
+	format = `%.` + strconv.Itoa(decimal) + `f`
 	formattedAmount, _ = strconv.ParseFloat(fmt.Sprintf(format, amount), 64)
 	formattedAmount = marketInfo.SizeIncrement * math.Round(formattedAmount/marketInfo.SizeIncrement)
 	if formattedAmount > amount {
@@ -92,12 +92,12 @@ func GetAmountInMarket(market, symbol string, amount, price float64, reduceOnly 
 	formattedAmount, _ = strconv.ParseFloat(fmt.Sprintf(format, formattedAmount), 64)
 	// reduce的时候应该不受最小下单金额限制
 	if reduceOnly {
-		return formattedAmount
+		return formattedAmount, format
 	}
 	if marketInfo.SizeMin == 0 || (marketInfo.MoneyMin > 0 && marketInfo.MoneyMin > price*formattedAmount) {
-		return 0
+		return 0, format
 	}
-	return formattedAmount
+	return formattedAmount, format
 }
 
 func FormatPrice(market, symbol string, price float64) (formattedPrice float64, decimal int) {
