@@ -115,12 +115,12 @@ func appendSpotMarketsGate(key, secret string, marketInfos map[string]*model.Mar
 }
 
 // setLeverageGate 设置杠杆和risk limit
-func setLeverageGate(account *model.Account, leverMax, leverMin float64, limit float64) (success bool) {
+func setLeverageGate(account *model.Account) (success bool) {
 	symbols := GetMarketSymbols(model.Gate)
 	for symbol := range symbols {
 		_, marketType, _, _ := model.GetFromStandard(model.Gate, symbol)
 		if marketType == model.MarketTypePerp {
-			setSymbolLeverageGate(account, symbol, leverMax, leverMin, limit)
+			setSymbolLeverageGate(account, symbol)
 			time.Sleep(time.Millisecond * 200)
 		}
 	}
@@ -134,7 +134,7 @@ type Tier struct {
 
 // setSymbolLeverageGate 设置杠杆率和risk limit
 // 需要先设置risk再更新杠杆率才能成功
-func setSymbolLeverageGate(account *model.Account, symbol string, leverMax, leverMin float64, limit float64) (success bool) {
+func setSymbolLeverageGate(account *model.Account, symbol string) (success bool) {
 	_, _, _, dialectSymbol := model.GetFromStandard(model.Gate, symbol)
 	client, ctx := getClientGate(account.Key, account.Secret)
 	tiers, _, errTiers := client.FuturesApi.ListRiskLimitTiers(ctx, `usdt`, dialectSymbol)
@@ -158,17 +158,18 @@ func setSymbolLeverageGate(account *model.Account, symbol string, leverMax, leve
 		}
 	}
 	leverSet := 0.0
-	for i := leverMax; i >= leverMin && leverSet == 0; i-- {
+	for i := account.GateLeverMax; i >= account.GateLeverMin && leverSet == 0; i-- {
 		for j := 0; j < len(tierArray); j++ {
-			if tierArray[j].LeverageMax >= i && tierArray[j].RiskLimit >= limit {
+			if tierArray[j].LeverageMax >= i && tierArray[j].RiskLimit >= account.GateRiskLimit {
 				leverSet = i
 				break
 			}
 		}
 	}
 	if leverSet == 0 {
-		leverSet = leverMin
+		leverSet = account.GateLeverMin
 	}
+	limit := account.GateRiskLimit
 	insideTiers := false
 	for i := len(tierArray) - 1; i >= 0; i-- {
 		if tierArray[i].LeverageMax >= leverSet {
@@ -193,8 +194,8 @@ func setSymbolLeverageGate(account *model.Account, symbol string, leverMax, leve
 		panicGateError(fmt.Sprintf(`%s %f %s`, symbol, leverSet, account.Key), `UpdatePositionLeverage`, errLeverage)
 		return false
 	}
-	util.Log(util.LogLevelInfo, fmt.Sprintf(`set gate lever and risk %s %s %f %f`,
-		account.Key, symbol, leverSet, limit))
+	util.Log(util.LogLevelInfo, fmt.Sprintf(`set gate lever and risk %d %s %f %f`,
+		account.Index, symbol, leverSet, limit))
 	util.StoreSyncMap(&model.AppEnvironment.RiskLimitsGate, limit, account.Key, symbol)
 	return true
 }

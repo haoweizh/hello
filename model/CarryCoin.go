@@ -12,6 +12,7 @@ type CarryStatus struct {
 	IsSpot                        bool
 	Market, Symbol                string
 	ReduceOnlyBuy, ReduceOnlySell bool
+	StopBuy, StopSell             bool
 	Setting                       *Setting
 	Account                       *Account
 	LimitSell, LimitBuy           float64 // 未经过setting.GridAmount处理过的原始下单数量限制，用于comp

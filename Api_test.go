@@ -732,6 +732,13 @@ func Test_CalcGridLine(t *testing.T) {
 
 func Test_map(t *testing.T) {
 	valueMap := &sync.Map{}
+	setting := &model.Setting{Market: model.Gate}
+	valueMap.Store(1, setting)
+	test1, _ := valueMap.Load(1)
+	item := test1.(*model.Setting)
+	item.Market = model.BinanceSpot
+	test2, _ := valueMap.Load(1)
+	fmt.Println(test2.(*model.Setting).Market)
 	util.StoreSyncMap(valueMap, 1, `1`, `2`)
 	util.StoreSyncMap(valueMap, 2, `1`, `3`)
 	for i := 0; i < 10000; i++ {
@@ -877,7 +884,7 @@ func Test_SetLeverage(t *testing.T) {
 	market := model.Gate
 	model.NewConfig()
 	//api.InitMarketInfos(market)
-	symbol := `AURORA_PERP`
+	symbol := `DUCK_PERP`
 	account := model.GetAccounts(0)[market]
 	api.SetSymbolLeverage(account, market, symbol)
 }

@@ -989,6 +989,12 @@ func InitCrossMarketInfos(markets []string) {
 						PriceX:           1, GridAmount: 1}
 					util.Log(util.LogLevelInfo, fmt.Sprintf(`save setting %s %s %s %#v`, info.Market, info.Symbol, coin, setting.Valid))
 					model.AppDB.Save(setting)
+					accounts := model.AppConfig.GetAccounts(info.Market)
+					for _, account := range accounts {
+						suc := SetSymbolLeverage(account, info.Market, info.Symbol)
+						util.Log(util.LogLevelInfo, fmt.Sprintf(`add new gate setting index %d %s set leverage %f %f %f %v`,
+							account.Index, info.Symbol, account.GateLeverMax, account.GateLeverMin, account.GateRiskLimit, suc))
+					}
 				}
 			}
 		} else if len(infos) == 1 && infos[0].Symbol[0:2] == `10` {
@@ -1097,7 +1103,7 @@ func SetSymbolLeverage(account *model.Account, market, symbol string) (success b
 	case model.BitgetPerp:
 		return setSymbolLeverageBitgetPerp(account, symbol)
 	case model.Gate:
-		return setSymbolLeverageGate(account, symbol, 9, 5, 10000)
+		return setSymbolLeverageGate(account, symbol)
 	}
 	return false
 }

@@ -121,12 +121,12 @@ func generateMonitorMsg(index int, coin string, score, scoreRelate float64, carr
 
 // checkTradeLine 返回limit=0表示无限制
 func checkTradeLine(statusBuy, statusSell *model.CarryStatus, carryCoin *model.CarryCoin, priceBuy, priceSell, score float64) (valid bool, limit float64) {
+	if statusBuy.StopBuy || statusSell.StopSell {
+		return false, 0
+	}
 	buyCrossStyle := model.AppConfig.GetCrossStyles()[statusBuy.Account.Index]
 	sellCrossStyle := model.AppConfig.GetCrossStyles()[statusSell.Account.Index]
 	if (buyCrossStyle == crossGrid || sellCrossStyle == crossGrid) && carryCoin == nil {
-		return
-	}
-	if statusBuy.TradeLineBuy == 1 || statusSell.TradeLineSell == 1 {
 		return
 	}
 	crossLimit := openValueLimit / priceBuy * statusBuy.Setting.GridAmount
@@ -159,9 +159,9 @@ func checkTradeLine(statusBuy, statusSell *model.CarryStatus, carryCoin *model.C
 				currentStep--
 				closeLimit = (carryCoin.MoneyCurStep + carryCoin.MoneyPerStep) / priceBuy * statusBuy.Setting.GridAmount
 			} else { // current step = 0 and money current step < small holding
-				statusBuy.TradeLineBuy = 0.001
-				statusSell.TradeLineSell = 0.001
-				return score > 0.001, limit
+				statusBuy.TradeLineBuy = 0.0
+				statusSell.TradeLineSell = 0.0
+				return score >= 0.0, limit
 			}
 			if currentStep < 0 || currentStep > len(stepScores)-2 {
 				return false, 0
