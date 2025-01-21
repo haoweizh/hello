@@ -1317,12 +1317,9 @@ func FormatCrossPair(statusBuy, statusSell *model.CarryStatus, bidAmount, askAmo
 	}
 	minBuy := marketInfoBuy.SizeMin * statusBuy.Setting.GridAmount
 	minSell := marketInfoSell.SizeMin * statusSell.Setting.GridAmount
-	if statusBuy.Setting.Market == model.Bybit {
-		minBuy = math.Max(5.5/priceBuy*statusBuy.Setting.GridAmount, minBuy)
-	}
-	if statusSell.Setting.Market == model.Bybit {
-		minSell = math.Max(5.5/priceSell*statusSell.Setting.GridAmount, minSell)
-	}
+	// 过滤掉小于10u的搬砖
+	minBuy = math.Max(10/priceBuy*statusBuy.Setting.GridAmount, minBuy)
+	minSell = math.Max(10/priceSell*statusSell.Setting.GridAmount, minSell)
 	if marketInfoBuy.MoneyMin > 0 {
 		minBuy = math.Max(minBuy, marketInfoBuy.MoneyMin/priceBuy*statusBuy.Setting.GridAmount)
 	}
