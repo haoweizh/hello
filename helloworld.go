@@ -6,18 +6,58 @@ import (
 	"hello/carry"
 	"hello/controller"
 	"hello/model"
+	"hello/service"
 	"hello/util"
-	//_ "net/http/pprof"
+	"time"
 )
 
 func main() {
+	model.NewConfig()
+	if model.AppConfig.Mode == "agent" {
+		agent()
+	} else {
+		server()
+	}
+	select {}
+}
+func agent() {
+	go util.LogChanHandler(model.AppConfig.Log, model.AppConfig.Port)
+	_, clientMarketConn, err := model.InitConn(model.ClientTopic, model.ChanTypeMarket)
+	if err != nil {
+		util.Log(util.LogLevelError, "ok-m-client"+err.Error())
+		return
+	}
+	_, okexMarketConn, err := model.InitConn(model.OkxTopic, model.ChanTypeMarket)
+	if err != nil {
+		util.Log(util.LogLevelError, "ok-m-okex"+err.Error())
+		return
+	}
+	//_, clientOrderConn, err := model.InitConn(model.ClientTopic, model.ChanTypeOrder)
+	//if err != nil {
+	//	util.Log(util.LogLevelError, "ok-order-client"+err.Error())
+	//	return
+	//}
+	//_, OkexOrderConn, err := model.InitConn(model.OkxTopic, model.ChanTypeOrder)
+	//if err != nil {
+	//	util.Log(util.LogLevelError, "ok-order-okex"+err.Error())
+	//	return
+	//}
+	noaMarket := service.NewOkexAgentService(clientMarketConn, okexMarketConn)
+	//noaOrder := service.NewOkexAgentService(clientOrderConn, OkexOrderConn)
+	go noaMarket.HandleClientPublicMessages()
+	time.Sleep(1 * time.Second)
+	go noaMarket.HandleMessages()
+	//go noaOrder.HandleClientPrivateMessages()
+	//go noaOrder.HandleMessages()
+	select {}
+}
+func server() {
 	//go func() {
 	//	err := http.ListenAndServe("0.0.0.0:8081", nil)
 	//	if err != nil {
 	//		return
 	//	}
 	//}()
-	model.NewConfig()
 	var err error
 	model.AppDB, err = gorm.Open(postgres.Open(model.AppConfig.DBConnection), &gorm.Config{})
 	if err != nil {

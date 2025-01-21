@@ -70,6 +70,7 @@ type Environment struct {
 	LastOrderMilli            sync.Map // account.Key - last order time in million-seconds
 	PubChanNeedReset          sync.Map // market - bool
 	PubSubscribes             sync.Map // market*wsUrl - []interface{}
+	OkexPubMarkets            sync.Map // channel*instid- string
 }
 
 type MarkPriceInfo struct {

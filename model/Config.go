@@ -9,6 +9,10 @@ import (
 )
 
 type Config struct {
+	Mode                          string
+	TimeThreshold                 int
+	FundingTimeThreshold          int
+	PriceThreshold                float64
 	Delay                         float64
 	Debug, KucoinSpot, MetricTick bool
 	// SpecialChan 1 代表使用特殊通道

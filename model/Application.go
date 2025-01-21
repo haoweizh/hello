@@ -84,6 +84,8 @@ const WsBinance = "wss://stream.binance.com:9443"
 const WsBinancePerpApi = `wss://ws-fapi.binance.com/ws-fapi/v1`
 const WsBinancePerp = `wss://fstream.binance.com`
 const UnifiedUrlGate = `wss://ws.gate.io/v4/ws/unified`
+const WsOKEX = `wss://ws.okx.com:8443/ws/v5/public`
+const WsPrivateOKEX = `wss://ws.okx.com:8443/ws/v5/private`
 
 var AppDB *gorm.DB
 var AppRedis *redis.Client

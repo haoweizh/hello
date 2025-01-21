@@ -120,7 +120,7 @@ func CreateWSTick(environment *model.Environment, market string) (
 		socketMapPerp, _ := WsTickServeGatePerp(market)
 		environment.ConnTick.Store(GetPublicConnKey(model.Gate, model.MarketTypePerp), socketMapPerp)
 	case model.OKEX:
-		socketMap, err = model.WsPublicClient(market, wsOKEX, GetWSSubscribes(market, []string{model.SubscribeDepth}),
+		socketMap, err = model.WsPublicClient(market, model.WsOKEX, GetWSSubscribes(market, []string{model.SubscribeDepth}),
 			subscribeHandlerOKEX, wsHandlerOKEX, wsStepOKEX)
 		environment.ConnTick.Store(GetPublicConnKey(market, ``), socketMap)
 	case model.BinanceSpot:

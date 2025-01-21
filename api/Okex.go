@@ -21,8 +21,7 @@ import (
 const OKEXTag = `f924a8c6cc6fBCDE` // okx经纪商ID
 const OKSeparator = `Sep`
 const restOKEX = `https://www.okx.com`
-const wsOKEX = `wss://ws.okx.com:8443/ws/v5/public`
-const wsPrivateOKEX = `wss://ws.okx.com:8443/ws/v5/private`
+
 const wsStepOKEX = 50
 const ParamArrayOkex = `OK_ARRAY`
 const chanelOKEX = `bbo-tbt` //`books5`
@@ -152,7 +151,7 @@ var wsHandlerOKEX = func(market string, conn *model.WSConn, event []byte) {
 			success, bidAsk = handleBooksUpdate(symbol, data, bidAsk)
 		}
 	} else if action == `snapshot` || responseJson.GetPath(`arg`, `channel`).MustString() == chanelOKEX {
-		bidAsk = handleBooksOKEX(symbol, data)
+		bidAsk = HandleBooksOKEX(symbol, data)
 		success = true
 	} else if responseJson.GetPath(`arg`, `channel`).MustString() == `funding-rate` {
 		rate, _ := strconv.ParseFloat(data[`fundingRate`].(string), 64)
@@ -338,7 +337,7 @@ func WsOrderServeOKEX(account *model.Account) {
 	}()
 	connKey := getPrivateConnKey(model.OKEX, account.Key, ``)
 	util.Log(util.LogLevelInfo, fmt.Sprintf("okex order serve %s", connKey))
-	conn, err := model.WsPrivateClient(account, &model.AppEnvironment.ConnOrder, connKey, model.OKEX, wsPrivateOKEX, wsAccountHandlerOKEX)
+	conn, err := model.WsPrivateClient(account, &model.AppEnvironment.ConnOrder, connKey, model.OKEX, model.WsPrivateOKEX, wsAccountHandlerOKEX)
 	if err != nil {
 		util.Log(util.LogLevelError, "can not create web socket "+err.Error())
 	} else if conn != nil {
@@ -350,7 +349,7 @@ func WsOrderServeOKEX(account *model.Account) {
 
 func handleBooksUpdate(symbol string, data map[string]interface{}, bidAsk *model.BidAsk) (
 	success bool, bidAskUpdate *model.BidAsk) {
-	bidAskUpdate = handleBooksOKEX(symbol, data)
+	bidAskUpdate = HandleBooksOKEX(symbol, data)
 	if data[`ts`] != nil {
 		ts, _ := strconv.ParseInt(data[`ts`].(string), 10, 64)
 		bidAskUpdate.Ts = int(ts)
@@ -464,7 +463,7 @@ func handleBooksUpdate(symbol string, data map[string]interface{}, bidAsk *model
 	return success, bidAskUpdate
 }
 
-func handleBooksOKEX(symbol string, data map[string]interface{}) (bidAsk *model.BidAsk) {
+func HandleBooksOKEX(symbol string, data map[string]interface{}) (bidAsk *model.BidAsk) {
 	bidAsk = &model.BidAsk{TsReceived: int(util.GetNowUnixMillion())}
 	if data[`ts`] != nil {
 		ts, _ := strconv.ParseInt(data[`ts`].(string), 10, 64)

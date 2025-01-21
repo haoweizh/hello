@@ -274,7 +274,7 @@ func publicHandler(market, url string, connection *WSConn, subHandler SubscribeH
 			buf := make([]byte, 4096)
 			msgSize := connection.MarketReceiver.ReceiveMarket(buf)
 			if msgSize > 0 {
-				if needReconnection(buf[:msgSize]) {
+				if NeedReconnection(buf[:msgSize]) {
 					value, _ := AppEnvironment.PubSubscribes.Load(fmt.Sprintf("%s*%s", market, url))
 					if value != nil {
 						subscribes := value.([]interface{})
@@ -334,7 +334,7 @@ func WsPrivateClient(account *Account, connMap *sync.Map, connKey, market, url s
 				buf := make([]byte, 8192)
 				msgSize := connection.OrderReceiver.ReceiveOrder(buf)
 				if msgSize > 0 {
-					if needReconnection(buf[:msgSize]) {
+					if NeedReconnection(buf[:msgSize]) {
 						util.Log(util.LogLevelInfo, fmt.Sprintf(`order channel reconnect %s %s `, market, buf[:msgSize]))
 					} else if accountMsgHandler != nil {
 						go accountMsgHandler(market, account.Key, buf[:msgSize])
@@ -381,9 +381,12 @@ func WsPublicClient(market, url string, subscribes []interface{}, subHandler Sub
 	return
 }
 
-func needReconnection(buf []byte) bool {
+func NeedReconnection(buf []byte) bool {
 	if strings.Contains(string(buf), "{\"ctlOp\":\"Reconnection\"}") {
 		return true
 	}
 	return false
+}
+func InitConn(tsCode string, wsType ChannelType) (newCreate bool, wsConn *WSConn, err error) {
+	return newTsChannel("", tsCode, wsType)
 }
