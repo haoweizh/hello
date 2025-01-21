@@ -387,6 +387,7 @@ func NeedReconnection(buf []byte) bool {
 	}
 	return false
 }
+
 func InitConn(tsCode string, wsType ChannelType) (newCreate bool, wsConn *WSConn, err error) {
 	return newTsChannel("", tsCode, wsType)
 }

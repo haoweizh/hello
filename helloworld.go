@@ -18,18 +18,19 @@ func main() {
 	} else {
 		server()
 	}
+	go util.LogChanHandler(model.AppConfig.Log, model.AppConfig.Port)
 	select {}
 }
+
 func agent() {
-	go util.LogChanHandler(model.AppConfig.Log, model.AppConfig.Port)
-	_, clientMarketConn, err := model.InitConn(model.ClientTopic, model.ChanTypeMarket)
-	if err != nil {
-		util.Log(util.LogLevelError, "ok-m-client"+err.Error())
+	_, clientMarketConn, errClient := model.InitConn(model.ClientTopic, model.ChanTypeMarket)
+	if errClient != nil {
+		util.Log(util.LogLevelError, "ok-m-client"+errClient.Error())
 		return
 	}
-	_, okexMarketConn, err := model.InitConn(model.OkxTopic, model.ChanTypeMarket)
-	if err != nil {
-		util.Log(util.LogLevelError, "ok-m-okex"+err.Error())
+	_, okexMarketConn, errOkex := model.InitConn(model.OkxTopic, model.ChanTypeMarket)
+	if errOkex != nil {
+		util.Log(util.LogLevelError, "ok-m-okex"+errOkex.Error())
 		return
 	}
 	//_, clientOrderConn, err := model.InitConn(model.ClientTopic, model.ChanTypeOrder)
@@ -51,6 +52,7 @@ func agent() {
 	//go noaOrder.HandleMessages()
 	select {}
 }
+
 func server() {
 	//go func() {
 	//	err := http.ListenAndServe("0.0.0.0:8081", nil)
@@ -72,7 +74,6 @@ func server() {
 	go controller.ParameterServe()
 	//go model.AppEnvironment.HandleOldWSResp()
 	go model.AppEnvironment.HandleWSResp()
-	go util.LogChanHandler(model.AppConfig.Log, model.AppConfig.Port)
 	carry.Maintain()
 	select {}
 }

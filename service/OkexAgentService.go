@@ -19,17 +19,17 @@ type OkexAgentService struct {
 }
 
 // NewOkexAgentService 创建一个新的 WebSocketService 实例
-func NewOkexAgentService(conn *model.WSConn, okexconn *model.WSConn) *OkexAgentService {
+func NewOkexAgentService(conn *model.WSConn, okexConn *model.WSConn) *OkexAgentService {
 	return &OkexAgentService{
 		ClientConn:   conn,
-		OkexConn:     okexconn,
+		OkexConn:     okexConn,
 		ClientToOkex: make(chan model.OkexAgentMessage, 10000),
 		OkexToClient: make(chan model.OkexAgentMessage, 10000),
 		doneCh:       make(chan struct{}),
 	}
 }
 
-// 处理公有消息
+// HandleClientPublicMessages 处理公有消息
 func (s *OkexAgentService) HandleClientPublicMessages() {
 	defer close(s.doneCh)
 	go func() {
@@ -37,7 +37,7 @@ func (s *OkexAgentService) HandleClientPublicMessages() {
 			buf := make([]byte, 4096)
 			msgSize := s.ClientConn.MarketReceiver.ReceiveMarket(buf)
 			if msgSize > 0 {
-				util.Log(util.LogLevelInfo, "ClientConn recv msg :"+string(buf[:msgSize]))
+				util.Log(util.LogLevelInfo, "ClientConn rev msg :"+string(buf[:msgSize]))
 				select {
 				case s.ClientToOkex <- s.processMessage(buf[:msgSize], model.ChanTypeMarket):
 				case <-s.doneCh:
@@ -51,7 +51,7 @@ func (s *OkexAgentService) HandleClientPublicMessages() {
 			buf := make([]byte, 4096)
 			msgSize := s.OkexConn.MarketReceiver.ReceiveMarket(buf)
 			if msgSize > 0 {
-				util.Log(util.LogLevelInfo, "OkexConn recv msg :"+string(buf[:msgSize]))
+				util.Log(util.LogLevelInfo, "OkexConn rev msg :"+string(buf[:msgSize]))
 				// 将消息放入通道
 				select {
 				case s.OkexToClient <- s.processMessage(buf[:msgSize], model.ChanTypeMarket):
@@ -63,7 +63,7 @@ func (s *OkexAgentService) HandleClientPublicMessages() {
 	}()
 }
 
-// 处理私有消息
+// HandleClientPrivateMessages 处理私有消息
 func (s *OkexAgentService) HandleClientPrivateMessages() {
 	defer close(s.doneCh)
 	go func() {
@@ -102,7 +102,7 @@ func (s *OkexAgentService) processMessage(message []byte, wsType model.ChannelTy
 	return agentMessage
 }
 
-// handleMessages 处理通道中的消息
+// HandleMessages 处理通道中的消息
 func (s *OkexAgentService) HandleMessages() {
 	for {
 		select {
@@ -111,7 +111,7 @@ func (s *OkexAgentService) HandleMessages() {
 				return
 			}
 			if msg.ChannelType == model.ChanTypeMarket {
-				util.Log(util.LogLevelInfo, "HandleMessages recv msg :"+string(msg.Message))
+				util.Log(util.LogLevelInfo, "HandleMessages rev msg :"+string(msg.Message))
 				if model.NeedReconnection(msg.Message) || s.ClientConn == nil {
 					_, clientMarketConn, err := model.InitConn(model.ClientTopic, model.ChanTypeMarket)
 					if err != nil {
@@ -180,13 +180,13 @@ func Process(event []byte) []byte {
 	switch channel {
 	case "bbo-tbt":
 		bidAsk := api.HandleBooksOKEX(instId, data)
-		lastbidAsk := api.HandleBooksOKEX(instId, lastData.(map[string]interface{}))
+		lastBidAsk := api.HandleBooksOKEX(instId, lastData.(map[string]interface{}))
 		//时间戳差值小于阈值，则不更新
-		if bidAsk.Ts-lastbidAsk.Ts < model.AppConfig.TimeThreshold {
+		if bidAsk.Ts-lastBidAsk.Ts < model.AppConfig.TimeThreshold {
 			return nil
 		} else {
 			//ask 1和bid 1 的变化大于阈值就发送新的消息
-			if isPriceChangeBig(bidAsk.Asks[0].Price, lastbidAsk.Asks[0].Price) || isPriceChangeBig(bidAsk.Bids[0].Price, lastbidAsk.Bids[0].Price) {
+			if isPriceChangeBig(bidAsk.Asks[0].Price, lastBidAsk.Asks[0].Price) || isPriceChangeBig(bidAsk.Bids[0].Price, lastBidAsk.Bids[0].Price) {
 				util.StoreSyncMap(&model.AppEnvironment.OkexPubMarkets, data, channel, instId)
 				return event
 			}
