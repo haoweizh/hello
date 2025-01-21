@@ -82,6 +82,10 @@ func handledFRate(account *model.Account, market, symbol string, interval int) (
 		leftHours = 2
 	}
 	handledFr = fundingRate.Rate * (4/hours + 1.5*(1-leftHours/hours)*(1-leftHours/hours))
+	crossStyle := model.AppConfig.GetCrossStyles()[account.Index]
+	if crossStyle == crossGrid {
+		handledFr = fundingRate.Rate * (4/hours + (1-leftHours/hours)*(1-leftHours/hours))
+	}
 	if handledFr > 0.1 || handledFr < -0.1 {
 		got = false
 		util.Log(util.LogLevelError, fmt.Sprintf(`fatal error funding rate break %s %s %f %#v %d`,
