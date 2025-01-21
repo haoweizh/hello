@@ -50,7 +50,6 @@ func agent() {
 	go noaMarket.HandleMessages()
 	//go noaOrder.HandleClientPrivateMessages()
 	//go noaOrder.HandleMessages()
-	select {}
 }
 
 func server() {
@@ -75,5 +74,4 @@ func server() {
 	//go model.AppEnvironment.HandleOldWSResp()
 	go model.AppEnvironment.HandleWSResp()
 	carry.Maintain()
-	select {}
 }
