@@ -827,7 +827,7 @@ var ProcessCross = func(setting *model.Setting, tick *model.BidAsk) {
 	// 同一个coin cross之间互斥
 	replaced := coinCrossing.CompareAndSwap(setting.Coin, false, true)
 	if !replaced {
-		util.LogLess(util.LogLevelInfo, fmt.Sprintf(`CompareAndSwap %s`, setting.Coin))
+		//util.LogLess(util.LogLevelInfo, fmt.Sprintf(`CompareAndSwap %s`, setting.Coin))
 		return
 	}
 	defer func() {
