@@ -14,9 +14,9 @@ import (
 func main() {
 	model.NewConfig()
 	if model.AppConfig.Mode == "agent" {
-		agent()
+		go agent()
 	} else {
-		server()
+		go server()
 	}
 	go util.LogChanHandler(model.AppConfig.Log, model.AppConfig.Port)
 	select {}
