@@ -121,7 +121,11 @@ func generateMonitorMsg(index int, coin string, score, scoreRelate float64, carr
 
 // checkTradeLine 返回limit=0表示无限制
 func checkTradeLine(statusBuy, statusSell *model.CarryStatus, carryCoin *model.CarryCoin, priceBuy, priceSell, score, frBuy, frSell float64) (valid bool, limit float64) {
-	if statusBuy.StopBuy || statusSell.StopSell {
+	settingBuy := statusBuy.Setting
+	settingSell := statusSell.Setting
+	pauseBuy, _ := util.LoadSyncMap(pauseTrade, settingBuy.Coin, settingBuy.Market, settingBuy.Symbol, statusBuy.Account.Key, model.OrderSideBuy)
+	pauseSell, _ := util.LoadSyncMap(pauseTrade, settingSell.Coin, settingSell.Market, settingSell.Symbol, statusSell.Account.Key, model.OrderSideSell)
+	if (pauseBuy != nil && pauseBuy.(bool)) || (pauseSell != nil && pauseSell.(bool)) {
 		return false, 0
 	}
 	buyCrossStyle := model.AppConfig.GetCrossStyles()[statusBuy.Account.Index]

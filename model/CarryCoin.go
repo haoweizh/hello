@@ -12,7 +12,6 @@ type CarryStatus struct {
 	IsSpot                        bool
 	Market, Symbol                string
 	ReduceOnlyBuy, ReduceOnlySell bool
-	StopBuy, StopSell             bool
 	Setting                       *Setting
 	Account                       *Account
 	LimitSell, LimitBuy           float64 // 未经过setting.GridAmount处理过的原始下单数量限制，用于comp
@@ -51,7 +50,7 @@ func (carryCoin *CarryCoin) AddTrade(statusBuy, statusSell *CarryStatus, priceBu
 		carryCoin.Holding -= amountSell * statusSell.Setting.GridAmount
 		carryCoin.MoneyCurStep -= amountSell * priceSell
 		if carryCoin.Holding*priceBuy/statusBuy.Setting.GridAmount < carryCoin.MoneyPerStep {
-			carryCoin.MoneyCurStep = 0
+			carryCoin.CurrentStep = 0
 		}
 		if carryCoin.Holding*priceBuy/statusBuy.Setting.GridAmount >= SmallHolding {
 			if carryCoin.MoneyCurStep < 0 {
