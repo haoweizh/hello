@@ -13,13 +13,12 @@ import (
 
 func main() {
 	model.NewConfig()
-	if model.AppConfig.Mode == "agent" {
-		go agent()
-	} else {
-		go server()
-	}
 	go util.LogChanHandler(model.AppConfig.Log, model.AppConfig.Port)
-	select {}
+	if model.AppConfig.Mode == "agent" {
+		agent()
+	} else {
+		server()
+	}
 }
 
 func agent() {

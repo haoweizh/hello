@@ -901,30 +901,29 @@ func breakMarkPrice(account *model.Account, setting *model.Setting, price float6
 		markPriceInfo := model.AppEnvironment.GetMarkPriceInfo(setting.Symbol, setting.Market)
 		if markPriceInfo == nil {
 			util.LogLess(util.LogLevelError, fmt.Sprintf(
-				"币种：%s 市场 %s 有限价条件，但是没有标记价格", setting.Symbol, setting.Market))
+				"mark price no %s %s", setting.Symbol, setting.Market))
 			api.GetMarkPrice(account, setting.Market, setting.Symbol)
 			return true
 		}
 		bidMaxPrice := markPriceInfo.MarkPrice * (1 + marketInfo.BuyLimitPriceRatio)
 		bidMinPrice := markPriceInfo.MarkPrice * (1 - marketInfo.BuyLimitPriceRatio)
 		if price > bidMaxPrice || price < bidMinPrice {
-			util.LogLess(util.LogLevelInfo, fmt.Sprintf("币种：%s %s 被限买价，买上浮：%f，标记价：%f，限最高买价：%f，限最低买价：%f，当前最佳买价：%f",
+			util.LogLess(util.LogLevelInfo, fmt.Sprintf("mark price %s %s limit buy %f mark price %f buy (%f %f)  current %f",
 				setting.Market, setting.Symbol, marketInfo.BuyLimitPriceRatio, markPriceInfo.MarkPrice, bidMaxPrice, bidMinPrice, price))
 			return true
 		}
 	} else if marketInfo != nil && orderSide == model.OrderSideSell && marketInfo.SellLimitPriceRatio > 0 {
 		markPriceInfo := model.AppEnvironment.GetMarkPriceInfo(setting.Symbol, setting.Market)
 		if markPriceInfo == nil {
-			util.LogLess(util.LogLevelError, fmt.Sprintf("币种：%s 市场 %s 有限价条件，但是没有标记价格", setting.Symbol, setting.Market))
+			util.LogLess(util.LogLevelError, fmt.Sprintf("mark price no %s %s", setting.Symbol, setting.Market))
 			api.GetMarkPrice(account, setting.Market, setting.Symbol)
 			return true
 		}
 		askMaxPrice := markPriceInfo.MarkPrice * (1 + marketInfo.SellLimitPriceRatio)
 		askMinPrice := markPriceInfo.MarkPrice * (1 - marketInfo.SellLimitPriceRatio)
 		if price > askMaxPrice || price < askMinPrice {
-			util.LogLess(util.LogLevelError, fmt.Sprintf("币种：%s %s 被限卖价，卖下浮：%f，标记价：%f，限最高卖价：%f，限最低卖价：%f，当前最佳卖价：%f",
+			util.LogLess(util.LogLevelError, fmt.Sprintf("mark price %s %s limit sell %f mark price %f sell (%f %f) current %f",
 				setting.Market, setting.Symbol, marketInfo.SellLimitPriceRatio, markPriceInfo.MarkPrice, askMaxPrice, askMinPrice, price))
-			//perpAskPrice = askMinPrice
 			return true
 		}
 	}
@@ -1215,53 +1214,18 @@ var PostOrderCross = func(order *model.Order) {
 	if !order.HaveId() || order.ErrCode != `` || order.Status == model.CarryStatusFail {
 		value, _ := util.LoadSyncMap(carryStatusMap, setting.Coin, setting.Market, setting.Symbol, account.Key)
 		if value != nil {
+			beforeBuy := value.(*model.CarryStatus).StopBuy
+			beforeSell := value.(*model.CarryStatus).StopSell
 			if order.OrderSide == model.OrderSideSell {
 				value.(*model.CarryStatus).StopSell = true
 			}
 			if order.OrderSide == model.OrderSideBuy {
 				value.(*model.CarryStatus).StopBuy = true
 			}
-			util.Log(util.LogLevelError, fmt.Sprintf(`stop trade %s %s %s %d %s %s buy %v sell %v %s`,
-				setting.Coin, setting.Market, setting.Symbol, account.Index, order.OrderId, order.ErrCode, value.(*model.CarryStatus).StopBuy,
-				value.(*model.CarryStatus).StopSell, order.OrderTime.Format(time.DateTime)))
+			util.Log(util.LogLevelError, fmt.Sprintf(`stop trade %s %s %s %d %s %s buy %v->%v sell %v->%v %s`,
+				setting.Coin, setting.Market, setting.Symbol, account.Index, order.OrderId, order.ErrCode, beforeBuy, value.(*model.CarryStatus).StopBuy,
+				beforeSell, value.(*model.CarryStatus).StopSell, order.OrderTime.Format(time.DateTime)))
 		}
-		//addCarryResult(account.Key, order.Market, ``, false)
-		//unknownFail := true
-		//if account != nil {
-		//	status, ok := util.LoadSyncMap(carryStatusMap, setting.Coin, setting.Market, setting.Symbol, account.Key)
-		//	switch order.Market {
-		//	case model.OKEX:
-		//		if InsufficientCodeOKEX[order.ErrCode] && setting != nil {
-		//			util.Log(util.LogLevelInfo, fmt.Sprintf(
-		//				`reset %s trade max with %s account index %d`, order.Market, order.ErrCode, order.AccountIndex))
-		//			getMax, maxBuy, maxSell := api.GetTradeMaxOKEX(account.Key, account.Secret, setting.Symbol, 0)
-		//			if getMax && ok && status != nil {
-		//				status.(*CarryStatus).LimitSell = math.Min(status.(*CarryStatus).LimitSell, maxSell)
-		//				status.(*CarryStatus).LimitBuy = math.Min(status.(*CarryStatus).LimitBuy, maxBuy)
-		//			}
-		//			unknownFail = false
-		//		}
-		//	case model.BinancePerp, model.BinanceSpot:
-		//		if strings.Contains(InsufficientCodeBinance, order.ErrCode) {
-		//			util.Log(util.LogLevelError, fmt.Sprintf(
-		//				`reset binance trade max with %s account index %d`, order.ErrCode, order.AccountIndex))
-		//			spotMarkets.Delete(account.Key)
-		//			contractMarkets.Delete(account.Key)
-		//			initStatus(account, setting)
-		//			unknownFail = false
-		//		}
-		//	}
-		//	util.Log(util.LogLevelInfo, fmt.Sprintf(
-		//		`set 1 trade line after fail %s %s %s`, setting.Market, setting.Symbol, order.OrderSide))
-		//	if status != nil {
-		//		initTradeLine(account, setting, status.(*CarryStatus), true)
-		//	}
-		//}
-		//if unknownFail {
-		//	addCarryResult(account.Key, order.Market, order.ErrCode, false)
-		//} else {
-		//	addCarryResult(account.Key, order.Market, ``, true)
-		//}
 	}
 }
 
@@ -1332,6 +1296,8 @@ func FormatCrossPair(statusBuy, statusSell *model.CarryStatus, bidAmount, askAmo
 	//_, amountSell = model.ParseRealAmount(marketSell, symbolSell, amountSell)
 	//formattedAmount = math.Min(amountBuy, amountSell)
 	if formattedAmount < math.Max(minBuy, minSell) {
+		util.LogLess(util.LogLevelError, fmt.Sprintf(`format amt 0 amt %f %s %s limit buy %f bid amount %f min buy %f price %f %s %s limit sell %f ask amount %f min buy %f`,
+			amountLimit, statusBuy.Market, statusBuy.Symbol, statusBuy.LimitBuy, bidAmount, minBuy, priceBuy, statusSell.Market, statusSell.Symbol, statusSell.LimitSell, askAmount, minSell))
 		return 0
 	}
 	return formattedAmount
