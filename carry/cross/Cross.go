@@ -567,10 +567,12 @@ func syncGridHoldings() {
 				}
 			}
 		}
-		if coinHolding > 0 && valueCarryCoin.(*model.CarryCoin).Holding > 0 && (coinHolding/valueCarryCoin.(*model.CarryCoin).Holding > 1.1 ||
-			coinHolding/valueCarryCoin.(*model.CarryCoin).Holding < 0.9) {
-			util.Log(util.LogLevelError, fmt.Sprintf(`carryCoin holding mismatch %v %f %f`,
-				coin, coinHolding, valueCarryCoin.(*model.CarryCoin).Holding))
+		if coinHolding != valueCarryCoin.(*model.CarryCoin).Holding {
+			oldHolding := valueCarryCoin.(*model.CarryCoin).Holding
+			valueCarryCoin.(*model.CarryCoin).Holding = coinHolding
+			model.AppDB.Model(&model.CarryCoin{}).Where(`coin=? and account_index=?`, valueCarryCoin.(*model.CarryCoin).Coin,
+				valueCarryCoin.(*model.CarryCoin).AccountIndex).Updates(map[string]interface{}{`holding`: valueCarryCoin.(*model.CarryCoin).Holding})
+			util.Log(util.LogLevelInfo, fmt.Sprintf(`sync carry coin holding %v %f -> %f`, coin, oldHolding, coinHolding))
 		}
 		return true
 	})
