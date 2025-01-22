@@ -161,7 +161,10 @@ func createFromPosition(account *model.Account, setting *model.Setting) (carrySt
 		}
 	}
 	rateLimitPosition := 2.8
-	rateLimitHolding := 0.28
+	rateLimitHolding := 0.1
+	if model.AppConfig.GetCrossStyles()[account.Index] == crossGrid {
+		rateLimitHolding = 0.3
+	}
 	switch setting.Market {
 	case model.OKEX, model.Gate:
 		if cm.mmr < 1.5 {
@@ -176,8 +179,8 @@ func createFromPosition(account *model.Account, setting *model.Setting) (carrySt
 			doRevert = true
 		}
 	}
-	if cm.contractValueInU/handledActValueInU > rateLimitPosition || valueInUsd > 0.1*handledActValueInU ||
-		valueInUsd/handledActValueInU > rateLimitHolding || (cm.collateralsAvailable < MarginULowLimit && cm.collateralsAvailable/handledActValueInU < 0.1) ||
+	if cm.contractValueInU/handledActValueInU > rateLimitPosition || valueInUsd/handledActValueInU > rateLimitHolding ||
+		(cm.collateralsAvailable < MarginULowLimit && cm.collateralsAvailable/handledActValueInU < 0.05) ||
 		(setting.Market == model.BitgetPerp && (len(cm.positions) > model.BitgetPosLimit && carryStatus.Holding == 0)) {
 		util.Log(util.LogLevelError, fmt.Sprintf(`do revert true %d %s %s value big %f %f %f %f %f margin u %f pos len %d`,
 			account.Index, setting.Market, setting.Symbol, cm.contractValueInU, handledActValueInU, rateLimitPosition, valueInUsd, rateLimitHolding, cm.contractValueInU, len(cm.positions)))
@@ -232,7 +235,11 @@ func createFromBalance(account *model.Account, setting *model.Setting) (carrySta
 	if sm.availableU < usdLowLine || carryStatus.RateInAll > 0.2 {
 		doRevert = true
 	}
-	if sm.balances[setting.Symbol] != nil && math.Abs(sm.balances[setting.Symbol].UsdValue) > handledActValueInU*0.1 {
+	rateLimitHolding := 0.1
+	if model.AppConfig.GetCrossStyles()[account.Index] == crossGrid {
+		rateLimitHolding = 0.3
+	}
+	if sm.balances[setting.Symbol] != nil && math.Abs(sm.balances[setting.Symbol].UsdValue)/handledActValueInU > rateLimitHolding {
 		doRevert = true
 	}
 	if setting.Market == model.Bybit && sm.collateral != nil && sm.collateral.Rate > 0.7 {
