@@ -420,6 +420,7 @@ var ClearCross = func() {
 	if model.AppConfig.Handle == `1` {
 		equalAccounts(doEqual, traceId)
 	}
+	syncGridHoldings()
 	model.AppEnvironment.CrossEqualing = false
 	util.Log(util.LogLevelInfo, fmt.Sprintf("end to clearing cross get set %v %d", model.AppEnvironment.CrossEqualing, traceId))
 }
@@ -522,6 +523,58 @@ func updateMoneyPerStep(account *model.Account, gateCm *contractMarket) {
 		return true
 	})
 	return
+}
+
+func syncGridHoldings() {
+	value := api.GetCoinSettings(model.FunctionCross)
+	if value == nil {
+		return
+	}
+	value.Range(func(coin, settings interface{}) bool {
+		coinHolding := 0.0
+		valueCarryCoin, ok := util.LoadSyncMap(carryCoinMap, coin.(string), `0`)
+		if valueCarryCoin == nil || !ok {
+			util.Log(util.LogLevelError, fmt.Sprintf(`carryCoin not exist in %s`, coin.(string)))
+			return true
+		}
+		if settings == nil {
+			return true
+		}
+		for _, setting := range settings.([]*model.Setting) {
+			crossStyles := model.AppConfig.GetCrossStyles()
+			_, marketType, _, _ := model.GetFromStandard(setting.Market, setting.Symbol)
+			for i := 0; i < api.GetCrossLen(); i++ {
+				if crossStyles[i] != crossGrid {
+					continue
+				}
+				account := model.GetAccounts(i)[setting.Market]
+				if marketType == model.MarketTypeSpot {
+					sm, _ := spotMarkets.Load(account.Key)
+					if sm != nil {
+						balance := sm.(*spotMarket).balances[setting.Symbol]
+						if balance != nil && balance.Amount > 0 {
+							coinHolding += balance.Amount * setting.GridAmount
+						}
+					}
+				} else if marketType == model.MarketTypePerp {
+					cm, _ := contractMarkets.Load(account.Key)
+					if cm != nil {
+						position := cm.(*contractMarket).positions[setting.Symbol]
+						if position != nil && position.Holding > 0 {
+							coinHolding += position.Holding * setting.GridAmount
+						}
+					}
+				}
+			}
+		}
+		if coinHolding > 0 && valueCarryCoin.(*model.CarryCoin).Holding > 0 && (coinHolding/valueCarryCoin.(*model.CarryCoin).Holding > 1.1 ||
+			coinHolding/valueCarryCoin.(*model.CarryCoin).Holding < 0.9) {
+			util.Log(util.LogLevelError, fmt.Sprintf(`carryCoin holding mismatch %v %f %f`,
+				coin, coinHolding, valueCarryCoin.(*model.CarryCoin).Holding))
+		}
+		return true
+	})
+
 }
 
 func equalAccount(i int, equalChan chan int, accounts map[string]*model.Account, doEqual bool, traceId int64) {
