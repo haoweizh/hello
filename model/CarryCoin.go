@@ -6,7 +6,7 @@ import (
 	"time"
 )
 
-const SmallHolding = 20 // 设定以money计20位较少持仓，可以归入下一等级
+const SmallHolding = 50 // 设定以money计20位较少持仓，可以归入下一等级
 
 type CarryStatus struct {
 	IsSpot                        bool
@@ -50,6 +50,9 @@ func (carryCoin *CarryCoin) AddTrade(statusBuy, statusSell *CarryStatus, priceBu
 		change = true
 		carryCoin.Holding -= amountSell * statusSell.Setting.GridAmount
 		carryCoin.MoneyCurStep -= amountSell * priceSell
+		if carryCoin.Holding*priceBuy/statusBuy.Setting.GridAmount < carryCoin.MoneyPerStep {
+			carryCoin.MoneyCurStep = 0
+		}
 		if carryCoin.Holding*priceBuy/statusBuy.Setting.GridAmount >= SmallHolding {
 			if carryCoin.MoneyCurStep < 0 {
 				if carryCoin.CurrentStep >= 1 {
