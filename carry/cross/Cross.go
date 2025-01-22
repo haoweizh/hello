@@ -570,8 +570,8 @@ func syncGridHoldings() {
 		if coinHolding != valueCarryCoin.(*model.CarryCoin).Holding {
 			oldHolding := valueCarryCoin.(*model.CarryCoin).Holding
 			valueCarryCoin.(*model.CarryCoin).Holding = coinHolding
-			model.AppDB.Model(&model.CarryCoin{}).Where(`coin=? and account_index=?`, valueCarryCoin.(*model.CarryCoin).Coin,
-				valueCarryCoin.(*model.CarryCoin).AccountIndex).Updates(map[string]interface{}{`holding`: valueCarryCoin.(*model.CarryCoin).Holding})
+			//model.AppDB.Model(&model.CarryCoin{}).Where(`coin=? and account_index=?`, valueCarryCoin.(*model.CarryCoin).Coin,
+			//	valueCarryCoin.(*model.CarryCoin).AccountIndex).Updates(map[string]interface{}{`holding`: valueCarryCoin.(*model.CarryCoin).Holding})
 			util.Log(util.LogLevelInfo, fmt.Sprintf(`sync carry coin holding %v %f -> %f`, coin, oldHolding, coinHolding))
 		}
 		return true
