@@ -186,6 +186,9 @@ func checkTradeLine(statusBuy, statusSell *model.CarryStatus, carryCoin *model.C
 			return false, 0
 		}
 	} else { // 换仓
+		if frSell-frBuy < -0.001 {
+			return false, 0
+		}
 		if statusBuy.Holding*priceBuy < -1*model.SmallHolding {
 			limit = math.Abs(statusBuy.Holding) * statusBuy.Setting.GridAmount
 		} else if statusSell.Holding*priceSell > model.SmallHolding {
