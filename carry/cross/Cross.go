@@ -318,11 +318,7 @@ func initTradeLine(account *model.Account, setting *model.Setting, status *model
 	} else {
 		util.LogLess(util.LogLevelError, fmt.Sprintf(`fail to get ticket %s %s`, setting.Market, setting.Symbol))
 	}
-	jumpOpen := 30.0
-	switch setting.Market {
-	case model.BinanceSpot, model.BinancePerp, model.BitgetPerp, model.BitgetSpot:
-		jumpOpen = 20
-	}
+	jumpOpen := 20.0
 	jumpClose := -20.0
 	jumpBuy := jumpOpen
 	jumpSell := jumpOpen
