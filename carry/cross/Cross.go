@@ -540,7 +540,13 @@ func syncGridHoldings() {
 		if settings == nil {
 			return true
 		}
+		price := 0.0
+		var priceSetting *model.Setting
 		for _, setting := range settings.([]*model.Setting) {
+			if price == 0 {
+				_, price = api.GetPriceForce(setting.Symbol, setting.Market)
+				priceSetting = setting
+			}
 			crossStyles := model.AppConfig.GetCrossStyles()
 			_, marketType, _, _ := model.GetFromStandard(setting.Market, setting.Symbol)
 			for i := 0; i < api.GetCrossLen(); i++ {
@@ -567,16 +573,31 @@ func syncGridHoldings() {
 				}
 			}
 		}
-		if coinHolding != valueCarryCoin.(*model.CarryCoin).Holding {
-			oldHolding := valueCarryCoin.(*model.CarryCoin).Holding
-			valueCarryCoin.(*model.CarryCoin).Holding = coinHolding
-			//model.AppDB.Model(&model.CarryCoin{}).Where(`coin=? and account_index=?`, valueCarryCoin.(*model.CarryCoin).Coin,
-			//	valueCarryCoin.(*model.CarryCoin).AccountIndex).Updates(map[string]interface{}{`holding`: valueCarryCoin.(*model.CarryCoin).Holding})
-			util.Log(util.LogLevelInfo, fmt.Sprintf(`sync carry coin holding %v %f -> %f`, coin, oldHolding, coinHolding))
+		if price == 0 || priceSetting == nil {
+			return true
+		}
+		change := false
+		moneyInAll := coinHolding / priceSetting.GridAmount * price
+		carryCoin := valueCarryCoin.(*model.CarryCoin)
+		if moneyInAll < carryCoin.MoneyCurStep {
+			carryCoin.CurrentStep = 0
+			carryCoin.MoneyCurStep = coinHolding * price
+			change = true
+		}
+		if carryCoin.CurrentStep == 0 && carryCoin.MoneyCurStep == 0 {
+			carryCoin.CurrentStep = int(moneyInAll / carryCoin.MoneyPerStep)
+			carryCoin.MoneyCurStep = moneyInAll - carryCoin.MoneyPerStep*float64(carryCoin.CurrentStep)
+			change = true
+		}
+		carryCoin.Holding = coinHolding
+		if change {
+			model.AppDB.Model(&model.CarryCoin{}).Where(`coin=? and account_index=?`, valueCarryCoin.(*model.CarryCoin).Coin,
+				valueCarryCoin.(*model.CarryCoin).AccountIndex).Updates(map[string]interface{}{
+				`holding`: valueCarryCoin.(*model.CarryCoin).Holding, `current_step`: carryCoin.CurrentStep, `money_cur_step`: carryCoin.MoneyCurStep})
+			util.Log(util.LogLevelInfo, fmt.Sprintf(`sync carry coin holding %v price %f money %f %#v`, coin, price, moneyInAll, carryCoin))
 		}
 		return true
 	})
-
 }
 
 func equalAccount(i int, equalChan chan int, accounts map[string]*model.Account, doEqual bool, traceId int64) {

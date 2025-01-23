@@ -49,9 +49,9 @@ func (carryCoin *CarryCoin) AddTrade(statusBuy, statusSell *CarryStatus, priceBu
 		change = true
 		carryCoin.Holding -= amountSell * statusSell.Setting.GridAmount
 		carryCoin.MoneyCurStep -= amountSell * priceSell
-		if carryCoin.Holding*priceBuy/statusBuy.Setting.GridAmount < carryCoin.MoneyPerStep {
-			carryCoin.CurrentStep = 0
-		}
+		//if carryCoin.Holding*priceBuy/statusBuy.Setting.GridAmount < carryCoin.MoneyPerStep {
+		//	carryCoin.CurrentStep = 0
+		//}
 		if carryCoin.Holding*priceBuy/statusBuy.Setting.GridAmount >= SmallHolding {
 			if carryCoin.MoneyCurStep < 0 {
 				if carryCoin.CurrentStep >= 1 {
