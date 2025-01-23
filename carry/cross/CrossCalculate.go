@@ -214,25 +214,24 @@ func calcAmount(index int, coin string, carryStatus, carryStatusRelate *model.Ca
 	if !gotFr || !gotFrRelate || useRest || useRestRelate {
 		return useRest || useRestRelate, nil, nil, 0, 0, 0
 	}
+	priceAskRelate := tickRelate.Asks[0].Price * (1 + handledRateRelate)
+	priceBidRelate := tickRelate.Bids[0].Price * (1 + handledRateRelate)
+	priceAsk := tick.Asks[0].Price * (1 + handledRate)
+	priceBid := tick.Bids[0].Price * (1 + handledRate)
 	priceX := carryStatus.Setting.PriceX
 	priceXRelate := carryStatusRelate.Setting.PriceX
 	// 如果（卖方加权资金费率-买方加权资金费率）小于0，则开仓和换仓交易用4倍加权资金费率,平仓交易用2倍
 	// 如果（卖方加权资金费率-买方加权资金费率）大于等于0，则开仓换仓和平仓都用加权资金费率
 	var score, scoreR, scoreOpen, scoreClose, scoreSwitch, scoreOpenR, scoreCloseR, scoreSwitchR float64
-	priceBid := tick.Bids[0].Price * (1 + handledRate)
-	priceAskRelate := tickRelate.Asks[0].Price * (1 + handledRateRelate)
 	scoreOpen = (priceBid/priceX - priceAskRelate/priceXRelate) / math.Max(priceBid/priceX, priceAskRelate/priceXRelate)
 	score = scoreOpen
 	scoreClose = scoreOpen
 	scoreSwitch = scoreOpen
-	priceBidRelate := tickRelate.Bids[0].Price * (1 + handledRateRelate)
-	priceAsk := tick.Asks[0].Price * (1 + handledRate)
 	scoreOpenR = (priceBidRelate/priceXRelate - priceAsk/priceX) / math.Max(priceAsk/priceX, priceBidRelate/priceXRelate)
 	scoreR = scoreOpenR
 	scoreCloseR = scoreOpenR
 	scoreSwitchR = scoreOpenR
-	if handledRateRelate > handledRate {
-		// R为买方＞0
+	if handledRateRelate > handledRate { // R为买方＞0
 		priceBid = tick.Bids[0].Price * (1 + 4*handledRate)
 		priceAskRelate = tickRelate.Asks[0].Price * (1 + 4*handledRateRelate)
 		scoreOpen = (priceBid/priceX - priceAskRelate/priceXRelate) / math.Max(priceBid/priceX, priceAskRelate/priceXRelate)
@@ -240,14 +239,7 @@ func calcAmount(index int, coin string, carryStatus, carryStatusRelate *model.Ca
 		priceBid = tick.Bids[0].Price * (1 + 2*handledRate)
 		priceAskRelate = tickRelate.Asks[0].Price * (1 + 2*handledRateRelate)
 		scoreClose = (priceBid/priceX - priceAskRelate/priceXRelate) / math.Max(priceBid/priceX, priceAskRelate/priceXRelate)
-		// R为卖方＞0
-		priceBidRelate = tickRelate.Bids[0].Price * (1 + handledRateRelate)
-		priceAsk = tick.Asks[0].Price * (1 + handledRate)
-		scoreOpenR = (priceBidRelate/priceXRelate - priceAsk/priceX) / math.Max(priceAsk/priceX, priceBidRelate/priceXRelate)
-		scoreCloseR = scoreOpenR
-		scoreSwitchR = scoreOpenR
-	} else if handledRateRelate < handledRate {
-		// R为卖方<0
+	} else if handledRateRelate < handledRate { // R为卖方<0
 		priceBidRelate = tickRelate.Bids[0].Price * (1 + 4*handledRateRelate)
 		priceAsk = tick.Asks[0].Price * (1 + 4*handledRate)
 		scoreOpenR = (priceBidRelate/priceXRelate - priceAsk/priceX) / math.Max(priceAsk/priceX, priceBidRelate/priceXRelate)
@@ -255,12 +247,6 @@ func calcAmount(index int, coin string, carryStatus, carryStatusRelate *model.Ca
 		priceBidRelate = tickRelate.Bids[0].Price * (1 + 2*handledRateRelate)
 		priceAsk = tick.Asks[0].Price * (1 + 2*handledRate)
 		scoreCloseR = (priceBidRelate/priceXRelate - priceAsk/priceX) / math.Max(priceAsk/priceX, priceBidRelate/priceXRelate)
-		// R为买方<0
-		priceBid = tick.Bids[0].Price * (1 + handledRate)
-		priceAskRelate = tickRelate.Asks[0].Price * (1 + handledRateRelate)
-		scoreOpen = (priceBid/priceX - priceAskRelate/priceXRelate) / math.Max(priceBid/priceX, priceAskRelate/priceXRelate)
-		scoreClose = scoreOpen
-		scoreSwitch = scoreOpen
 	}
 	valid, amountLimit := checkTradeLine(carryStatusRelate, carryStatus, carryCoin, tickRelate.Asks[0].Price, tick.Bids[0].Price, scoreOpen, scoreClose, scoreSwitch)
 	if valid {
