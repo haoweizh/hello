@@ -579,6 +579,8 @@ func maintainConnsGate(accounts []*model.Account) {
 		model.AppEnvironment.PriConnecting.Store(model.Gate+model.MarketTypeSpot+account.Key, false)
 		model.AppEnvironment.PriConnecting.Store(model.Gate+model.MarketTypePerp+account.Key, false)
 	}
+	loginTSSpot := time.Now().Unix()
+	loginTSPerp := time.Now().Unix()
 	for {
 		connTick, _ := model.AppEnvironment.ConnTick.Load(GetPublicConnKey(model.Gate, model.MarketTypeSpot))
 		if connTick != nil {
@@ -605,6 +607,10 @@ func maintainConnsGate(accounts []*model.Account) {
 					//wsSpot.(*model.WSConn).Close()
 					util.Log(util.LogLevelError, fmt.Sprintf("send account spot ping message err:%s %s", model.Gate, err.Error()))
 				}
+				if time.Now().Unix()-loginTSSpot > 600 {
+					wsLoginGateOrder(account, wsSpot.(*model.WSConn), model.MarketTypeSpot)
+					loginTSSpot = time.Now().Unix()
+				}
 			} else {
 				successSpot = false
 			}
@@ -620,6 +626,10 @@ func maintainConnsGate(accounts []*model.Account) {
 					util.Log(util.LogLevelError, fmt.Sprintf("send account futures ping message err:%s %s", model.Gate, err.Error()))
 					//wsFuture.(*model.WSConn).Close()
 					successPerp = false
+				}
+				if time.Now().Unix()-loginTSPerp > 600 {
+					wsLoginGateOrder(account, wsFuture.(*model.WSConn), model.MarketTypePerp)
+					loginTSPerp = time.Now().Unix()
 				}
 			} else {
 				successPerp = false
