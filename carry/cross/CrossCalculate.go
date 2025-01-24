@@ -20,34 +20,43 @@ const swapScore = 0.0015 // 换仓要求的利润金额
 const crossGrid = `grid`
 
 var ProcessCollateral = func(accountKey string, reduceOnly bool, collateral *model.Collateral) {
-	value, _ := contractMarkets.Load(accountKey)
-	if value == nil {
-		return
-	}
-	cm := value.(*contractMarket)
-	if collateral != nil {
-		cm.collateralsAvailable = collateral.Available
-	}
-	if (reduceOnly || cm.collateralsAvailable < MarginULowLimit && cm.collateralsAvailable/cm.accountValueInU < 0.05) && cm.reduceOnly == false {
-		cm.reduceOnly = true
-		carryStatusMap.Range(func(k, v interface{}) bool {
-			if v == nil {
+	valueContract, _ := contractMarkets.Load(accountKey)
+	if valueContract != nil {
+		cm := valueContract.(*contractMarket)
+		if collateral != nil {
+			cm.collateralsAvailable = collateral.Available
+		}
+		if collateral.AccountValueInU > 0 {
+			cm.accountValueInU = collateral.AccountValueInU
+		}
+		if (reduceOnly || cm.collateralsAvailable < MarginULowLimit && cm.collateralsAvailable/cm.accountValueInU < 0.05) && cm.reduceOnly == false {
+			cm.reduceOnly = true
+			carryStatusMap.Range(func(k, v interface{}) bool {
+				if v == nil {
+					return true
+				}
+				key := k.(string)
+				status := v.(*model.CarryStatus)
+				if strings.Contains(key, fmt.Sprintf("*%s*", cm.market)) && strings.Contains(key, accountKey) {
+					if status.Holding >= 0 {
+						status.TradeLineBuy = 1
+					}
+					if status.Holding <= 0 {
+						status.TradeLineBuy = 1
+					}
+					util.Log(util.LogLevelInfo, fmt.Sprintf("%s set trade line 1 holding %f %f %f",
+						key, status.Holding, status.TradeLineBuy, status.TradeLineSell))
+				}
 				return true
-			}
-			key := k.(string)
-			status := v.(*model.CarryStatus)
-			if strings.Contains(key, fmt.Sprintf("*%s*", cm.market)) && strings.Contains(key, accountKey) {
-				if status.Holding >= 0 {
-					status.TradeLineBuy = 1
-				}
-				if status.Holding <= 0 {
-					status.TradeLineBuy = 1
-				}
-				util.Log(util.LogLevelInfo, fmt.Sprintf("%s set trade line 1 holding %f %f %f",
-					key, status.Holding, status.TradeLineBuy, status.TradeLineSell))
-			}
-			return true
-		})
+			})
+		}
+	}
+	valueSpot, _ := spotMarkets.Load(accountKey)
+	if valueSpot != nil {
+		sm := valueSpot.(*spotMarket)
+		if collateral.AccountValueInU > 0 {
+			sm.accountValueInU = collateral.AccountValueInU
+		}
 	}
 }
 

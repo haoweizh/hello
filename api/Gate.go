@@ -386,10 +386,12 @@ var wsPriHandlerGateUnified = func(market, key string, msg []byte) {
 		return
 	}
 	value := responseJson.GetPath(`result`).MustMap()
+	collateral := &model.Collateral{AccountKey: key}
 	if value[`e`] == nil {
 		return
+	} else {
+		collateral.AccountValueInU, _ = strconv.ParseFloat(value[`e`].(string), 64)
 	}
-	collateral := &model.Collateral{AccountKey: key}
 	if value[`a`] != nil {
 		collateral.Available, _ = strconv.ParseFloat(value[`a`].(string), 64)
 	}
