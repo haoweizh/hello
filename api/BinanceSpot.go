@@ -415,7 +415,7 @@ var wsActHandlerBinance = func(market, key string, event []byte) {
 				collateral.Available, _ = strconv.ParseFloat(responseJson.GetPath(`result`, `totalMarginBalance`).MustString(), 64)
 				collateral.AccountValueInU, _ = strconv.ParseFloat(responseJson.GetPath(`result`, `totalWalletBalance`).MustString(), 64)
 				//util.Log(util.LogLevelInfo, fmt.Sprintf("binance unified %s %f", collateral.AccountKey, collateral.Available))
-				model.CollateralHandler(key, false, collateral)
+				model.CollateralHandler(key, model.MarketTypePerp, false, collateral)
 			} else {
 				code := responseJson.GetPath(`error`, `code`).MustInt()
 				util.Log(util.LogLevelError, fmt.Sprintf("binance unified request %s code %d msg %s", requestId, code, responseJson.GetPath(`error`, `msg`)))
@@ -601,16 +601,18 @@ func getBalanceBinanceSpot(key string, secret string) (success bool, totalInUsdt
 		//}
 		balances = append(balances, balance)
 	}
-	btcResp := signedRequestBinance(key, secret, model.BinanceSpot, http.MethodGet,
-		restBinance+`/api/v3/avgPrice?symbol=BTCUSDT`, false, nil)
-	btcPrice := 0.0
-	btcValue := 0.0
-	if btcResp != nil {
-		btcJson, _ := util.NewJSON(btcResp)
-		if btcJson != nil {
-			btcPrice, _ = strconv.ParseFloat(btcJson.Get(`price`).MustString(), 64)
+	_, btcPrice := GetPriceForce(`BTC_USDT`, model.BinanceSpot)
+	if btcPrice == 0 {
+		btcResp := signedRequestBinance(key, secret, model.BinanceSpot, http.MethodGet,
+			restBinance+`/api/v3/avgPrice?symbol=BTCUSDT`, false, nil)
+		if btcResp != nil {
+			btcJson, _ := util.NewJSON(btcResp)
+			if btcJson != nil {
+				btcPrice, _ = strconv.ParseFloat(btcJson.Get(`price`).MustString(), 64)
+			}
 		}
 	}
+	btcValue := 0.0
 	walletResp := signedRequestBinance(key, secret, model.BinanceSpot, http.MethodGet,
 		restBinance+`/sapi/v1/asset/wallet/balance`, true, nil)
 	if walletResp != nil {

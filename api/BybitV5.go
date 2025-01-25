@@ -64,7 +64,7 @@ var wsOrdUdtHandlerBybit = func(market, key string, msg []byte) {
 			collateral.Rate, _ = strconv.ParseFloat(walletResp.Data[0].AccountMMRate, 64)
 			collateral.AccountValueInU, _ = strconv.ParseFloat(walletResp.Data[0].TotalEquity, 64)
 			//util.Log(util.LogLevelInfo, fmt.Sprintf("bybit unified %s %f", collateral.AccountKey, collateral.Available))
-			model.CollateralHandler(key, false, collateral)
+			model.CollateralHandler(key, ``, false, collateral)
 		}
 	}
 }

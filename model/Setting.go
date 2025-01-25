@@ -10,7 +10,7 @@ const SettingTurtleRemoved = `SettingTurtleRemoved`
 type CarryHandler func(setting *Setting, bidAsk *BidAsk)
 
 type WsOrderHandler func(order *Order)
-type WsCollateralHandler func(accountKey string, reduceOnly bool, collateral *Collateral)
+type WsCollateralHandler func(accountKey, accountType string, reduceOnly bool, collateral *Collateral)
 
 type Setting struct {
 	Valid, Liquidated                          bool

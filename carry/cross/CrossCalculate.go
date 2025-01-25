@@ -19,9 +19,10 @@ var stepScores = []float64{0, 0.0012, 0.0025, 0.0039, 0.0054, 0.007, 0.0087, 0.0
 const swapScore = 0.0015 // 换仓要求的利润金额
 const crossGrid = `grid`
 
-var ProcessCollateral = func(accountKey string, reduceOnly bool, collateral *model.Collateral) {
+// ProcessCollateral accountType 为“代表统一账户，为marketTypePerp or marketTypeSpot代表只是期货或现货
+var ProcessCollateral = func(accountKey, accountType string, reduceOnly bool, collateral *model.Collateral) {
 	valueContract, _ := contractMarkets.Load(accountKey)
-	if valueContract != nil {
+	if valueContract != nil && accountType != model.MarketTypeSpot {
 		cm := valueContract.(*contractMarket)
 		if collateral != nil {
 			cm.collateralsAvailable = collateral.Available
@@ -52,7 +53,7 @@ var ProcessCollateral = func(accountKey string, reduceOnly bool, collateral *mod
 		}
 	}
 	valueSpot, _ := spotMarkets.Load(accountKey)
-	if valueSpot != nil {
+	if valueSpot != nil && accountType != model.MarketTypePerp {
 		sm := valueSpot.(*spotMarket)
 		if collateral.AccountValueInU > 0 {
 			sm.accountValueInU = collateral.AccountValueInU

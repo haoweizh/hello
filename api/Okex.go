@@ -286,7 +286,7 @@ var wsAccountHandlerOKEX = func(market, key string, event []byte) {
 			collateral.Available, _ = strconv.ParseFloat(dataArray[0].(map[string]interface{})[`adjEq`].(string), 64)
 			collateral.AccountValueInU, _ = strconv.ParseFloat(dataArray[0].(map[string]interface{})[`totalEq`].(string), 64)
 			//util.Log(util.LogLevelInfo, fmt.Sprintf("okex unified %s %f", collateral.AccountKey, collateral.Available))
-			model.CollateralHandler(key, false, collateral)
+			model.CollateralHandler(key, ``, false, collateral)
 		}
 		//} else {
 		//	fmt.Println(time.Now().String() + ` other msg ` + string(event))
