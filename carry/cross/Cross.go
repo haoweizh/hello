@@ -162,9 +162,7 @@ func createFromPosition(account *model.Account, setting *model.Setting) (carrySt
 	}
 	rateLimitPosition := 2.8
 	rateLimitHolding := 0.1
-	if model.AppConfig.GetCrossStyles()[account.Index] == crossGrid {
-		rateLimitHolding = 0.3
-	}
+	rateLimitHolding = 0.3
 	switch setting.Market {
 	case model.OKEX, model.Gate:
 		if cm.mmr < 1.5 {
@@ -236,9 +234,7 @@ func createFromBalance(account *model.Account, setting *model.Setting) (carrySta
 		doRevert = true
 	}
 	rateLimitHolding := 0.1
-	if model.AppConfig.GetCrossStyles()[account.Index] == crossGrid {
-		rateLimitHolding = 0.3
-	}
+	rateLimitHolding = 0.3
 	if sm.balances[setting.Symbol] != nil && math.Abs(sm.balances[setting.Symbol].UsdValue)/handledActValueInU > rateLimitHolding {
 		doRevert = true
 	}
