@@ -551,43 +551,24 @@ func Test_download(t *testing.T) {
 }
 
 func Test_ClearActs(t *testing.T) {
-	event := `{
-    "id": "605a6d20-6588-4cb9-afa0-b0ab087507ba",
-    "status": 200,
-    "result": {
-        [
-          {
-            "accountAlias": "SgsR",              // unique account code
-            "asset": "USDT",  	                // asset name
-            "balance": "122607.35137903",        // wallet balance
-            "crossWalletBalance": "23.72469206", // crossed wallet balance
-            "crossUnPnl": "0.00000000"           // unrealized profit of crossed positions
-            "availableBalance": "23.72469206",   // available balance
-            "maxWithdrawAmount": "23.72469206",  // maximum amount for transfer out
-            "marginAvailable": true,             // whether the asset can be used as margin in Multi-Assets mode
-            "updateTime": 1617939110373
-          }
-        ]       
-    },
-    "rateLimits": [
-      {
-        "rateLimitType": "REQUEST_WEIGHT",
-        "interval": "MINUTE",
-        "intervalNum": 1,
-        "limit": 2400,
-        "count": 20
-      }
-    ]
-}`
+	event := `{"id":"account-balance-v2-1737821112816","status":200,"result":[{"accountAlias":"FzXqFzAusRmYSgmY","asset":"FDUSD",
+"balance":"0.00000000","crossWalletBalance":"0.00000000","crossUnPnl":"0.00000000","availableBalance":"9310.89505866","maxWithdrawAmount":"0.00000000",
+"marginAvailable":true,"updateTime":0},{"accountAlias":"FzXqFzAusRmYSgmY","asset":"BFUSD","balance":"0.00000000","crossWalletBalance":"0.00000000","crossUnPnl":"0.00000000","availableBalance":"9399.20898925","maxWithdrawAmount":"0.00000000","marginAvailable":true,"updateTime":0},{"accountAlias":"FzXqFzAusRmYSgmY","asset":"BNB","balance":"2.33463468","crossWalletBalance":"2.33463468","crossUnPnl":"0.00000000","availableBalance":"13.02905711","maxWithdrawAmount":"2.33463468","marginAvailable":true,"updateTime":1737821040184},{"accountAlias":"FzXqFzAusRmYSgmY","asset":"ETH","balance":"0.00000000","crossWalletBalance":"0.00000000","crossUnPnl":"0.00000000","availableBalance":"2.68397842","maxWithdrawAmount":"0.00000000","marginAvailable":true,"updateTime":0},{"accountAlias":"FzXqFzAusRmYSgmY","asset":"BTC","balance":"0.00000000","crossWalletBalance":"0.00000000","crossUnPnl":"0.00000000","availableBalance":"0.08537030","maxWithdrawAmount":"0.00000000","marginAvailable":true,"updateTime":0},{"accountAlias":"FzXqFzAusRmYSgmY","asset":"USDT","balance":"12874.29522174","crossWalletBalance":"12874.29522174","crossUnPnl":"-327.13667425","availableBalance":"9407.66742508","maxWithdrawAmount":"9407.66742508","marginAvailable":true,"updateTime":1737821040184},{"accountAlias":"FzXqFzAusRmYSgmY","asset":"USDC","balance":"0.00000000","crossWalletBalance":"0.00000000","crossUnPnl":"0.00000000","availableBalance":"9407.35389563","maxWithdrawAmount":"0.00000000","marginAvailable":true,"updateTime":0}],"rateLimits":[{"rateLimitType":"REQUEST_WEIGHT","interval":"MINUTE","intervalNum":1,"limit":2400,"count":5}]}`
 	j, err := util.NewJSON([]byte(event))
 	if err != nil {
 		t.Error(err)
 	}
-	ja := j.Get(`result`)
+	ja := j.Get(`result`).MustArray()
 	fmt.Println(ja)
-	//for _, i2 := range ja {
-	//	fmt.Println(i2.(map[string]interface{})[`accountAlias`].(string))
-	//}
+	for _, item := range ja {
+		asset := item.(map[string]interface{})[`asset`].(string)
+		if asset == `USDT` {
+			balance, _ := strconv.ParseFloat(item.(map[string]interface{})[`balance`].(string), 64)
+			crossUnPnl, _ := strconv.ParseFloat(item.(map[string]interface{})[`crossUnPnl`].(string), 64)
+			availableBalance, _ := strconv.ParseFloat(item.(map[string]interface{})[`availableBalance`].(string), 64)
+			fmt.Println(fmt.Sprintf("balance: %f %f %f", balance, crossUnPnl, availableBalance))
+		}
+	}
 	model.NewConfig()
 	market := model.OKEX
 	api.InitMarketInfos(market)

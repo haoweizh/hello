@@ -907,7 +907,7 @@ func FilterCross(market, symbol string) bool {
 		case `OKB`:
 			return true
 		}
-	case model.BinancePerp, model.BinanceSpot:
+	case model.BinanceSpot:
 		switch coin {
 		case `BNB`:
 			return true

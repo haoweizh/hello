@@ -425,9 +425,30 @@ var wsActHandlerBinance = func(market, key string, event []byte) {
 				util.Log(util.LogLevelError, fmt.Sprintf("binance unified request %s code %d msg %s", requestId, code, responseJson.GetPath(`error`, `msg`)))
 			}
 		} else if strings.HasPrefix(requestId, wsAccountBalanceV2) {
-			//responseJson.GetPath()
-			fmt.Println(err)
-			fmt.Println(string(event))
+			if status == 200 {
+				collateral := &model.Collateral{AccountKey: key}
+				assets := responseJson.Get(`result`).MustArray()
+				for _, item := range assets {
+					asset := item.(map[string]interface{})[`asset`].(string)
+					balance, _ := strconv.ParseFloat(item.(map[string]interface{})[`balance`].(string), 64)
+					crossUnPnl, _ := strconv.ParseFloat(item.(map[string]interface{})[`crossUnPnl`].(string), 64)
+					availableBalance, _ := strconv.ParseFloat(item.(map[string]interface{})[`availableBalance`].(string), 64)
+					if asset == `USDT` {
+						collateral.Available = availableBalance
+						collateral.AccountValueInU += balance
+						collateral.AccountValueInU += crossUnPnl
+					} else {
+						getPrice, price := GetPriceForce(asset+model.UniStandardTail[model.MarketTypePerp], model.BinancePerp)
+						if getPrice {
+							collateral.AccountValueInU += balance * price
+						}
+					}
+				}
+				model.CollateralHandler(key, model.MarketTypePerp, false, collateral)
+			} else {
+				code := responseJson.GetPath(`error`, `code`).MustInt()
+				util.Log(util.LogLevelError, fmt.Sprintf("binance unified request %s code %d msg %s", requestId, code, responseJson.GetPath(`error`, `msg`)))
+			}
 		} else {
 			idInt := responseJson.GetPath(`result`, `orderId`).MustInt()
 			wsResp := model.WSResp{RequestId: responseJson.Get(`id`).MustString(), OrderId: strconv.Itoa(idInt)}
