@@ -136,7 +136,7 @@ func WsKLineBinanceSpot(market string, symbols map[string]bool) (
 		subs = append(subs, strings.ToLower(dialectSymbol)+`@kline_1m`)
 	}
 	socketMap, connectErr = model.WsPublicClient(market, model.WsBinance+`/stream`, subs,
-		subscribeHandlerBinance, KLineMsgHandlerBinanceSpot, wsStepBinance)
+		subscribeHandlerBinance, KLineMsgHandlerBinanceSpot, wsStepBinance, true)
 	return
 }
 
@@ -462,7 +462,7 @@ func WsOrderServeBinance(account *model.Account, market string) {
 		streamUrl = model.WsBinancePerp
 	}
 	connKey := getPrivateConnKey(market, account.Key, ``)
-	conn, err := model.WsPrivateClient(account, &model.AppEnvironment.ConnOrder, connKey, market, apiUrl, wsActHandlerBinance)
+	conn, err := model.WsPrivateClient(account, &model.AppEnvironment.ConnOrder, connKey, market, apiUrl, wsActHandlerBinance, false)
 	if err != nil {
 		util.Log(util.LogLevelError, fmt.Sprintf(`fail to create account ws %s %s`, market, err.Error()))
 	} else {
@@ -470,7 +470,7 @@ func WsOrderServeBinance(account *model.Account, market string) {
 	}
 	_, listenKey := RenewListenKeyBinance(account, market)
 	msg := fmt.Sprintf(`%s/ws/%s`, streamUrl, listenKey)
-	connUpdate, errUpdate := model.WsPrivateClient(account, &model.AppEnvironment.ConnOrderUpdate, connKey, market, msg, wsOrderUpdateBinance)
+	connUpdate, errUpdate := model.WsPrivateClient(account, &model.AppEnvironment.ConnOrderUpdate, connKey, market, msg, wsOrderUpdateBinance, true)
 	if errUpdate != nil {
 		util.Log(util.LogLevelError, fmt.Sprintf(`fail to create order update ws %s %s`, market, errUpdate.Error()))
 	} else {

@@ -338,7 +338,7 @@ func WsOrderServeOKEX(account *model.Account) {
 	}()
 	connKey := getPrivateConnKey(model.OKEX, account.Key, ``)
 	util.Log(util.LogLevelInfo, fmt.Sprintf("okex order serve %s", connKey))
-	conn, err := model.WsPrivateClient(account, &model.AppEnvironment.ConnOrder, connKey, model.OKEX, model.WsPrivateOKEX, wsAccountHandlerOKEX)
+	conn, err := model.WsPrivateClient(account, &model.AppEnvironment.ConnOrder, connKey, model.OKEX, model.WsPrivateOKEX, wsAccountHandlerOKEX, false)
 	if err != nil {
 		util.Log(util.LogLevelError, "can not create web socket "+err.Error())
 	} else if conn != nil {

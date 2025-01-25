@@ -184,7 +184,8 @@ func WsOrderServeBybit(account *model.Account) {
 		model.AppEnvironment.PriConnecting.Store(model.Bybit+account.Key, false)
 	}()
 	connKey := getPrivateConnKey(model.Bybit, account.Key, ``)
-	connOrder, errOrder := model.WsPrivateClient(account, &model.AppEnvironment.ConnOrder, connKey, model.Bybit, bybitTradeWsUrl, wsOrderHandlerBybit)
+	connOrder, errOrder := model.WsPrivateClient(account, &model.AppEnvironment.ConnOrder, connKey, model.Bybit,
+		bybitTradeWsUrl, wsOrderHandlerBybit, false)
 	if errOrder != nil {
 		util.Log(util.LogLevelError, "bybit can not create ws order "+errOrder.Error())
 	} else if connOrder != nil {
@@ -192,7 +193,8 @@ func WsOrderServeBybit(account *model.Account) {
 			model.AppEnvironment.ConnOrder.Store(connKey, connOrder)
 		}
 	}
-	connOrderUpdate, errOrderUpdate := model.WsPrivateClient(account, &model.AppEnvironment.ConnOrderUpdate, connKey, model.Bybit, bybitStreamUrl+`/v5/private`, wsOrdUdtHandlerBybit)
+	connOrderUpdate, errOrderUpdate := model.WsPrivateClient(account, &model.AppEnvironment.ConnOrderUpdate, connKey,
+		model.Bybit, bybitStreamUrl+`/v5/private`, wsOrdUdtHandlerBybit, false)
 	if errOrderUpdate != nil {
 		util.Log(util.LogLevelError, "bybit can not create ws order update"+errOrderUpdate.Error())
 	} else if connOrderUpdate != nil {
@@ -444,21 +446,21 @@ func WsTickServeBybit(market string) (socketMap map[*model.WSConn]bool, connectE
 		}
 	}
 	spotBookSockets, spotBookErr := model.WsPublicClient(model.Bybit, bybitStreamUrl+`/v5/public/spot`,
-		spotSubBook, subscribeHandlerBybit, spotBookWsHandler, wsStepBybit)
+		spotSubBook, subscribeHandlerBybit, spotBookWsHandler, wsStepBybit, false)
 	if spotBookErr == nil {
 		for conn, b := range spotBookSockets {
 			socketMap[conn] = b
 		}
 	}
 	perpBookSockets, perpBookErr := model.WsPublicClient(market, bybitStreamUrl+`/v5/public/linear`,
-		futureSubBook, subscribeHandlerBybit, perpBookWsHandler, wsStepBybit)
+		futureSubBook, subscribeHandlerBybit, perpBookWsHandler, wsStepBybit, false)
 	if perpBookErr == nil {
 		for conn, b := range perpBookSockets {
 			socketMap[conn] = b
 		}
 	}
 	perpTickConns, perpTickErr := model.WsPublicClient(market, bybitStreamUrl+`/v5/public/linear`,
-		futureSubTick, subscribeHandlerBybit, tickHandlerBybit, wsStepBybit)
+		futureSubTick, subscribeHandlerBybit, tickHandlerBybit, wsStepBybit, false)
 	if perpTickErr == nil {
 		for conn, b := range perpTickConns {
 			socketMap[conn] = b

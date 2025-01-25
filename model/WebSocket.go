@@ -144,16 +144,16 @@ func (wsConn *WSConn) WriteJson(body map[string]interface{}) (err error) {
 //
 //	*WSConn - 成功时返回一个WebSocket连接指针。
 //	error - 如果初始化过程中遇到任何问题，则返回错误。
-func initChannel(account *Account, url, market string, wsType ChannelType) (newCreate bool, wsConn *WSConn, err error) {
+func initChannel(account *Account, url, market string, wsType ChannelType, noSpecialChan bool) (newCreate bool, wsConn *WSConn, err error) {
 	if AppConfig.SpecialChan == "1" && (account == nil || account.Index == 0) {
 		switch market {
 		case BinancePerp:
-			if strings.HasPrefix(url, fmt.Sprintf(`%s/ws/`, WsBinancePerp)) {
+			if noSpecialChan {
 				return newWsGorillaChannel(url)
 			}
 			return newTsChannel(url, "bf", wsType)
 		case BinanceSpot:
-			if strings.HasPrefix(url, fmt.Sprintf(`%s/ws/`, WsBinance)) {
+			if noSpecialChan {
 				return newWsGorillaChannel(url)
 			}
 			return newTsChannel(url, "bs", wsType)
@@ -299,10 +299,11 @@ func publicHandler(market, url string, connection *WSConn, subHandler SubscribeH
 	}
 }
 
-func WsPrivateClient(account *Account, connMap *sync.Map, connKey, market, url string, accountMsgHandler AccountMsgHandler) (connection *WSConn, err error) {
+func WsPrivateClient(account *Account, connMap *sync.Map, connKey, market, url string, accountMsgHandler AccountMsgHandler,
+	noSpecialChan bool) (connection *WSConn, err error) {
 	util.Log(util.LogLevelInfo, fmt.Sprintf(` create account channel %s %d %s`, market, account.Index, url))
 	newCreate := false
-	newCreate, connection, err = initChannel(account, url, market, ChanTypeOrder)
+	newCreate, connection, err = initChannel(account, url, market, ChanTypeOrder, noSpecialChan)
 	if !newCreate {
 		return connection, err
 	}
@@ -347,7 +348,7 @@ func WsPrivateClient(account *Account, connMap *sync.Map, connKey, market, url s
 }
 
 func WsPublicClient(market, url string, subscribes []interface{}, subHandler SubscribeHandler,
-	msgHandler MsgHandler, step int) (socketMap map[*WSConn]bool, connectErr error) {
+	msgHandler MsgHandler, step int, noSpecialChan bool) (socketMap map[*WSConn]bool, connectErr error) {
 	util.Log(util.LogLevelInfo, market+` create depth channel `+url)
 	AppEnvironment.PubSubscribes.Store(fmt.Sprintf("%s*%s", market, url), subscribes)
 	socketMap = make(map[*WSConn]bool)
@@ -358,7 +359,7 @@ func WsPublicClient(market, url string, subscribes []interface{}, subHandler Sub
 		} else {
 			stepSubscribes = subscribes[i*step:]
 		}
-		newCreate, connection, err := initChannel(nil, url, market, ChanTypeMarket)
+		newCreate, connection, err := initChannel(nil, url, market, ChanTypeMarket, noSpecialChan)
 		if err != nil || connection == nil {
 			if err != nil {
 				util.Log(util.LogLevelError, fmt.Sprintf("can not create web socket %s %s %s", market, url, err.Error()))

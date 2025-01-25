@@ -701,7 +701,7 @@ func WSOrderServeGate(account *model.Account, marketType string) {
 	}()
 	connKey := getPrivateConnKey(model.Gate, account.Key, marketType)
 	if marketType == model.MarketTypeSpot {
-		conn, err := model.WsPrivateClient(account, &model.AppEnvironment.ConnOrder, connKey, model.Gate, gateWs.BaseUrl, wsPriHandlerGateSpot)
+		conn, err := model.WsPrivateClient(account, &model.AppEnvironment.ConnOrder, connKey, model.Gate, gateWs.BaseUrl, wsPriHandlerGateSpot, false)
 		if err != nil {
 			util.Log(util.LogLevelError, fmt.Sprintf("get private conn err: %s %s %s", model.Gate, marketType, err.Error()))
 			return
@@ -710,7 +710,7 @@ func WSOrderServeGate(account *model.Account, marketType string) {
 			model.AppEnvironment.ConnOrder.Store(connKey, conn)
 		}
 	} else if marketType == model.MarketTypePerp {
-		conn, err := model.WsPrivateClient(account, &model.AppEnvironment.ConnOrder, connKey, model.Gate, gateWs.FuturesUsdtUrl, wsPriHandlerGatePerp)
+		conn, err := model.WsPrivateClient(account, &model.AppEnvironment.ConnOrder, connKey, model.Gate, gateWs.FuturesUsdtUrl, wsPriHandlerGatePerp, false)
 		if wsLoginGateOrder(account, conn, marketType) {
 			model.AppEnvironment.ConnOrder.Store(connKey, conn)
 		}
@@ -718,7 +718,7 @@ func WSOrderServeGate(account *model.Account, marketType string) {
 			util.Log(util.LogLevelError, fmt.Sprintf("get private conn err: %s %s %s", model.Gate, marketType, err.Error()))
 			return
 		}
-		conn, err = model.WsPrivateClient(account, &model.AppEnvironment.ConnOrderUpdate, connKey, model.Gate, model.UnifiedUrlGate, wsPriHandlerGateUnified)
+		conn, err = model.WsPrivateClient(account, &model.AppEnvironment.ConnOrderUpdate, connKey, model.Gate, model.UnifiedUrlGate, wsPriHandlerGateUnified, true)
 		if wsLoginUnified(account, conn) {
 			model.AppEnvironment.ConnOrderUpdate.Store(connKey, conn)
 		}
@@ -747,7 +747,7 @@ func WsTickServeGateSpot(market string) (socketMap map[*model.WSConn]bool, conne
 	//		socketMap[conn] = b
 	//	}
 	//}
-	return model.WsPublicClient(model.Gate, gateWs.BaseUrl, spotSubs, subscribeHandler, wsHandlerGate, wsStepGate)
+	return model.WsPublicClient(model.Gate, gateWs.BaseUrl, spotSubs, subscribeHandler, wsHandlerGate, wsStepGate, false)
 }
 
 func WsTickServeGatePerp(market string) (socketMap map[*model.WSConn]bool, connectErr error) {
@@ -760,7 +760,7 @@ func WsTickServeGatePerp(market string) (socketMap map[*model.WSConn]bool, conne
 			futureSubs = append(futureSubs, symbol)
 		}
 	}
-	return model.WsPublicClient(model.Gate, gateWs.FuturesUsdtUrl, futureSubs, subscribeHandler, wsHandlerGate, wsStepGate)
+	return model.WsPublicClient(model.Gate, gateWs.FuturesUsdtUrl, futureSubs, subscribeHandler, wsHandlerGate, wsStepGate, false)
 }
 
 var wsHandlerGate = func(market string, conn *model.WSConn, event []byte) {

@@ -121,15 +121,16 @@ func CreateWSTick(environment *model.Environment, market string) (
 		environment.ConnTick.Store(GetPublicConnKey(model.Gate, model.MarketTypePerp), socketMapPerp)
 	case model.OKEX:
 		socketMap, err = model.WsPublicClient(market, model.WsOKEX, GetWSSubscribes(market, []string{model.SubscribeDepth}),
-			subscribeHandlerOKEX, wsHandlerOKEX, wsStepOKEX)
+			subscribeHandlerOKEX, wsHandlerOKEX, wsStepOKEX, false)
 		environment.ConnTick.Store(GetPublicConnKey(market, ``), socketMap)
 	case model.BinanceSpot:
 		socketMap, err = model.WsPublicClient(market, model.WsBinance+`/stream`, GetWSSubscribes(market, []string{model.SubscribeTicker}),
-			subscribeHandlerBinance, wsHandlerBinanceSpot, wsStepBinance)
+			subscribeHandlerBinance, wsHandlerBinanceSpot, wsStepBinance, false)
 		environment.ConnTick.Store(GetPublicConnKey(market, ``), socketMap)
 	case model.BinancePerp:
 		socketMap, err = model.WsPublicClient(market, model.WsBinancePerp+`/stream`, GetWSSubscribes(
-			market, []string{model.SubscribeTicker, model.SubscribeMarkPrice}), subscribeHandlerBinance, wsHandlerBinancePerp, wsStepBinance)
+			market, []string{model.SubscribeTicker, model.SubscribeMarkPrice}), subscribeHandlerBinance, wsHandlerBinancePerp,
+			wsStepBinance, false)
 		//model.SubscribeDepth
 		environment.ConnTick.Store(GetPublicConnKey(market, ``), socketMap)
 	case model.Bybit:
