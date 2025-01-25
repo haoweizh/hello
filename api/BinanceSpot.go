@@ -413,7 +413,7 @@ var wsActHandlerBinance = func(market, key string, event []byte) {
 			if status == 200 {
 				collateral := &model.Collateral{AccountKey: key}
 				collateral.Available, _ = strconv.ParseFloat(responseJson.GetPath(`result`, `totalMarginBalance`).MustString(), 64)
-				collateral.AccountValueInU, _ = strconv.ParseFloat(responseJson.GetPath(`result`, `totalWalletBalance`).MustString(), 64)
+				collateral.AccountValueInU, _ = strconv.ParseFloat(responseJson.GetPath(`result`, `totalCrossWalletBalance`).MustString(), 64)
 				//util.Log(util.LogLevelInfo, fmt.Sprintf("binance unified %s %f", collateral.AccountKey, collateral.Available))
 				model.CollateralHandler(key, model.MarketTypePerp, false, collateral)
 			} else {
