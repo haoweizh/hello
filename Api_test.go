@@ -551,6 +551,43 @@ func Test_download(t *testing.T) {
 }
 
 func Test_ClearActs(t *testing.T) {
+	event := `{
+    "id": "605a6d20-6588-4cb9-afa0-b0ab087507ba",
+    "status": 200,
+    "result": {
+        [
+          {
+            "accountAlias": "SgsR",              // unique account code
+            "asset": "USDT",  	                // asset name
+            "balance": "122607.35137903",        // wallet balance
+            "crossWalletBalance": "23.72469206", // crossed wallet balance
+            "crossUnPnl": "0.00000000"           // unrealized profit of crossed positions
+            "availableBalance": "23.72469206",   // available balance
+            "maxWithdrawAmount": "23.72469206",  // maximum amount for transfer out
+            "marginAvailable": true,             // whether the asset can be used as margin in Multi-Assets mode
+            "updateTime": 1617939110373
+          }
+        ]       
+    },
+    "rateLimits": [
+      {
+        "rateLimitType": "REQUEST_WEIGHT",
+        "interval": "MINUTE",
+        "intervalNum": 1,
+        "limit": 2400,
+        "count": 20
+      }
+    ]
+}`
+	j, err := util.NewJSON([]byte(event))
+	if err != nil {
+		t.Error(err)
+	}
+	ja := j.Get(`result`)
+	fmt.Println(ja)
+	//for _, i2 := range ja {
+	//	fmt.Println(i2.(map[string]interface{})[`accountAlias`].(string))
+	//}
 	model.NewConfig()
 	market := model.OKEX
 	api.InitMarketInfos(market)

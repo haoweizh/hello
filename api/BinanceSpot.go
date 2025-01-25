@@ -26,11 +26,12 @@ const wsStepBinance = 100
 
 // 用于wss api调用,实际值为method
 const wsAccountStatusV2 = "account-status-v2-"
+const wsAccountBalanceV2 = `account-balance-v2-`
 
 // 定义键值对
 var accountMethodMap = map[string]string{
-	wsAccountStatusV2: "v2/account.status",
-}
+	wsAccountStatusV2:  "v2/account.status",
+	wsAccountBalanceV2: `v2/account.balance`}
 
 func GetMarketsBinance(account *model.Account, market string) (marketInfos map[string]*model.MarketInfo) {
 	marketInfos = make(map[string]*model.MarketInfo)
@@ -423,6 +424,10 @@ var wsActHandlerBinance = func(market, key string, event []byte) {
 				code := responseJson.GetPath(`error`, `code`).MustInt()
 				util.Log(util.LogLevelError, fmt.Sprintf("binance unified request %s code %d msg %s", requestId, code, responseJson.GetPath(`error`, `msg`)))
 			}
+		} else if strings.HasPrefix(requestId, wsAccountBalanceV2) {
+			//responseJson.GetPath()
+			fmt.Println(err)
+			fmt.Println(string(event))
 		} else {
 			idInt := responseJson.GetPath(`result`, `orderId`).MustInt()
 			wsResp := model.WSResp{RequestId: responseJson.Get(`id`).MustString(), OrderId: strconv.Itoa(idInt)}
@@ -768,7 +773,8 @@ func GetAccountFromWsAPI(account *model.Account, method, market string) {
 	param.Set(`timestamp`, fmt.Sprintf(`%d`, ts))
 	hash := hmac.New(sha256.New, []byte(account.Secret))
 	hash.Write([]byte(param.Encode()))
-	msg := fmt.Sprintf(`{"id": "%s","method": "%s","params":{"apiKey": "%s","signature": "%s","timestamp": %d}}`, requestId, accountMethodMap[method], account.Key, hex.EncodeToString(hash.Sum(nil)), ts)
+	msg := fmt.Sprintf(`{"id": "%s","method": "%s","params":{"apiKey": "%s","signature": "%s","timestamp": %d}}`,
+		requestId, accountMethodMap[method], account.Key, hex.EncodeToString(hash.Sum(nil)), ts)
 	connKey := getPrivateConnKey(market, account.Key, ``)
 	value, _ := model.AppEnvironment.ConnOrder.Load(connKey)
 	Status := "true"
