@@ -29,7 +29,13 @@ func MaintainConnsBinance(market string, accounts []*model.Account) {
 	for _, account := range accounts {
 		model.AppEnvironment.PriConnecting.Store(market+account.Key, false)
 	}
+	spotWalletUptTs := time.Now().Unix()
 	for {
+		updateWalletSpot := false
+		if time.Now().Unix()-spotWalletUptTs > 120 {
+			updateWalletSpot = true
+			spotWalletUptTs = time.Now().Unix()
+		}
 		for _, account := range accounts {
 			connKey := getPrivateConnKey(market, account.Key, ``)
 			value, _ := model.AppEnvironment.ConnOrder.Load(connKey)
@@ -53,6 +59,36 @@ func MaintainConnsBinance(market string, accounts []*model.Account) {
 				WsOrderServeBinance(account, market)
 			}
 			GetAccountFromWsAPI(account, wsAccountStatusV2, market)
+			if updateWalletSpot {
+				_, btcPrice := GetPriceForce(`BTC_USDT`, model.BinanceSpot)
+				if btcPrice == 0 {
+					btcResp := signedRequestBinance(account.Key, account.Secret, model.BinanceSpot, http.MethodGet,
+						restBinance+`/api/v3/avgPrice?symbol=BTCUSDT`, false, nil)
+					if btcResp != nil {
+						btcJson, _ := util.NewJSON(btcResp)
+						if btcJson != nil {
+							btcPrice, _ = strconv.ParseFloat(btcJson.Get(`price`).MustString(), 64)
+						}
+					}
+				}
+				btcValue := 0.0
+				walletResp := signedRequestBinance(account.Key, account.Secret, model.BinanceSpot, http.MethodGet,
+					restBinance+`/sapi/v1/asset/wallet/balance`, true, nil)
+				if walletResp != nil {
+					walletJson, _ := util.NewJSON(walletResp)
+					for _, item := range walletJson.MustArray() {
+						if item == nil {
+							continue
+						}
+						wallet := item.(map[string]interface{})
+						if wallet[`walletName`] != nil && wallet[`walletName`].(string) == `Spot` {
+							btcValue, _ = strconv.ParseFloat(wallet[`balance`].(string), 64)
+						}
+					}
+				}
+				model.CollateralHandler(account.Key, model.MarketTypeSpot, false,
+					&model.Collateral{AccountKey: account.Key, AccountValueInU: btcValue * btcPrice})
+			}
 		}
 		time.Sleep(time.Second * 30)
 	}

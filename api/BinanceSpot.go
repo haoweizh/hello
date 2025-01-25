@@ -405,7 +405,7 @@ var wsOrderUpdateBinance = func(market, key string, msg []byte) {
 var wsActHandlerBinance = func(market, key string, event []byte) {
 	responseJson, err := util.NewJSON(event)
 	if err == nil && responseJson != nil {
-		//返回状态，statu=200则为正确
+		//返回状态，status=200则为正确
 		status := responseJson.Get(`status`).MustInt()
 		requestId := responseJson.Get(`id`).MustString()
 		//基于ID类型判断是否为wsAccountStatusV2=v2/account.status
