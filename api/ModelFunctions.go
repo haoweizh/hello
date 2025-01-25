@@ -2,6 +2,7 @@ package api
 
 import (
 	"fmt"
+	//"hello/deprecated"
 	"hello/model"
 	"hello/util"
 	"os"
@@ -450,9 +451,9 @@ func initMarketMode(account *model.Account, market string) {
 	case model.Bybit:
 		setBybitMarginLeverage(account.Key, account.Secret)
 		setBybitPerpLeverage(account.Key, account.Secret)
-	case model.BitgetPerp:
-		setBitgetPositionMode(account.Key, account.Secret)
-		setLeverageBitgetPerp(account)
+		//case model.BitgetPerp:
+		//	deprecated.setBitgetPositionMode(account.Key, account.Secret)
+		//	deprecated.setLeverageBitgetPerp(account)
 	}
 }
 

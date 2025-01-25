@@ -135,13 +135,13 @@ func CreateWSTick(environment *model.Environment, market string) (
 	case model.Bybit:
 		socketMap, err = WsTickServeBybit(market)
 		environment.ConnTick.Store(GetPublicConnKey(market, ``), socketMap)
-	case model.BitgetSpot:
-		socketMap, err = model.WsPublicClient(market, bitgetPublic,
-			GetWSSubscribes(market, []string{model.SubscribeDepth}), subscribeHandlerBitget, tickHandlerBitget, wsStepBitget)
-		environment.ConnTick.Store(GetPublicConnKey(market, ``), socketMap)
-	case model.BitgetPerp:
-		socketMap, err = WsTickServeBitgetPerp(market)
-		environment.ConnTick.Store(GetPublicConnKey(market, ``), socketMap)
+		//case model.BitgetSpot:
+		//	socketMap, err = model.WsPublicClient(market, deprecated.bitgetPublic,
+		//		GetWSSubscribes(market, []string{model.SubscribeDepth}), deprecated.subscribeHandlerBitget, deprecated.tickHandlerBitget, deprecated.wsStepBitget)
+		//	environment.ConnTick.Store(GetPublicConnKey(market, ``), socketMap)
+		//case model.BitgetPerp:
+		//	socketMap, err = deprecated.WsTickServeBitgetPerp(market)
+		//	environment.ConnTick.Store(GetPublicConnKey(market, ``), socketMap)
 	}
 	if err != nil {
 		util.Log(util.LogLevelError, market+` can not create depth server `+err.Error())
@@ -199,8 +199,8 @@ func HandleWsOrderConnFail(account *model.Account, market string, order *model.O
 		WsOrderServeBinance(account, market)
 	case model.Bybit:
 		WsOrderServeBybit(account)
-	case model.BitgetSpot, model.BitgetPerp:
-		WsOrderServeBitget(market, account)
+		//case model.BitgetSpot, model.BitgetPerp:
+		//	deprecated.WsOrderServeBitget(market, account)
 	}
 }
 
@@ -215,8 +215,8 @@ func MaintainConns(market string) {
 		go MaintainConnsBinance(market, accounts)
 	case model.Bybit:
 		go maintainConnsBybit(accounts)
-	case model.BitgetSpot, model.BitgetPerp:
-		go maintainConnsBitget(market, accounts)
+		//case model.BitgetSpot, model.BitgetPerp:
+		//	go deprecated.maintainConnsBitget(market, accounts)
 	}
 }
 

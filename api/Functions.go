@@ -187,22 +187,22 @@ func CancelAll(key, secret, market string) {
 		}
 	case model.Gate:
 		cancelAllGate(key, secret)
-	case model.BitgetSpot:
-		// 只支持50个以内的order
-		orders := queryOpenOrdersBitgetSpot(key, secret, ``)
-		batchCancelBitgetSpot(key, secret, orders)
-	case model.BitgetPerp:
-		cancelAllBitgetPerp(key, secret)
+		//case model.BitgetSpot:
+		//	// 只支持50个以内的order
+		//	orders := deprecated.queryOpenOrdersBitgetSpot(key, secret, ``)
+		//	deprecated.batchCancelBitgetSpot(key, secret, orders)
+		//case model.BitgetPerp:
+		//	deprecated.cancelAllBitgetPerp(key, secret)
 	}
 }
 
 // CancelOrders 暂不支持策略订单
 func CancelOrders(key, secret, market, symbol string) (result bool) {
 	switch market {
-	case model.BitgetPerp:
-		result = cancelOrdersBitgetPerp(key, secret, symbol)
-	case model.BitgetSpot:
-		result = cancelOrdersBitgetSpot(key, secret, symbol)
+	//case model.BitgetPerp:
+	//	result = deprecated.cancelOrdersBitgetPerp(key, secret, symbol)
+	//case model.BitgetSpot:
+	//	result = deprecated.cancelOrdersBitgetSpot(key, secret, symbol)
 	case model.Gate:
 		result = cancelOrdersGate(key, secret, symbol)
 	case model.BinanceSpot, model.BinanceMargin:
@@ -241,10 +241,10 @@ func CancelOrder(key, secret, market, symbol, orderType, orderId string) (result
 		result, errCode, msg = cancelOrderOkex(key, secret, symbol, orderId, orderType)
 	case model.Bybit:
 		result = cancelOrderBybit(key, secret, symbol, orderId)
-	case model.BitgetSpot:
-		result = cancelOrderBitgetSpot(key, secret, symbol, orderId)
-	case model.BitgetPerp:
-		result = cancelOrderBitgetPerp(key, secret, symbol, orderId)
+	//case model.BitgetSpot:
+	//	result = deprecated.cancelOrderBitgetSpot(key, secret, symbol, orderId)
+	//case model.BitgetPerp:
+	//	result = deprecated.cancelOrderBitgetPerp(key, secret, symbol, orderId)
 	case model.Gate:
 		result = cancelOrderGate(key, secret, symbol, orderId)
 	case model.BinancePerp:
@@ -491,8 +491,8 @@ func GetBalances(key, secret, market string) (
 	//	return true, balances, totalInUsd, collateral
 	//}
 	switch market {
-	case model.BitgetSpot:
-		success, balances = getBalanceBitgetSpot(key, secret)
+	//case model.BitgetSpot:
+	//	success, balances = deprecated.getBalanceBitgetSpot(key, secret)
 	case model.Gate:
 		success, balances, totalInUsd, collateral = getBalanceGate(key, secret)
 	case model.OKEX:
@@ -579,20 +579,20 @@ func GetFundingRate(key, secret, market, symbol string, cacheOnly bool) (success
 		return false, false, nil
 	}
 	switch market {
-	case model.BitgetPerp: // bitgetPerp rest接口无发获取expire time，要么直接返回，要么使用原有的
-		if fundingRate != nil && now-fundingRate.UpdateTime.Unix() < 300 {
-			return true, false, fundingRate
-		} else {
-			newFRate := getFundingRateBitgetPerp(symbol)
-			if newFRate != nil {
-				if fundingRate != nil {
-					newFRate.ExpireTime = fundingRate.ExpireTime
-				}
-				fundingRate = newFRate
-			} else {
-				return false, true, nil
-			}
-		}
+	//case model.BitgetPerp: // bitgetPerp rest接口无发获取expire time，要么直接返回，要么使用原有的
+	//	if fundingRate != nil && now-fundingRate.UpdateTime.Unix() < 300 {
+	//		return true, false, fundingRate
+	//	} else {
+	//		newFRate := deprecated.getFundingRateBitgetPerp(symbol)
+	//		if newFRate != nil {
+	//			if fundingRate != nil {
+	//				newFRate.ExpireTime = fundingRate.ExpireTime
+	//			}
+	//			fundingRate = newFRate
+	//		} else {
+	//			return false, true, nil
+	//		}
+	//	}
 	case model.Bybit:
 		fundingRate = getFundingRateBybit(symbol)
 	case model.OKEX:
@@ -634,10 +634,10 @@ func QueryOpenOrders(key, secret, market, symbol string) (orders []*model.Order)
 		}
 	case model.Bybit:
 		orders = queryOpenOrdersBybit(key, secret, symbol)
-	case model.BitgetSpot:
-		orders = queryOpenOrdersBitgetSpot(key, secret, symbol)
-	case model.BitgetPerp:
-		orders = queryOpenOrdersBitgetPerp(key, secret)
+	//case model.BitgetSpot:
+	//	orders = deprecated.queryOpenOrdersBitgetSpot(key, secret, symbol)
+	//case model.BitgetPerp:
+	//	orders = deprecated.queryOpenOrdersBitgetPerp(key, secret)
 	//case model.Ftx:
 	//	orders = deprecated.queryOrdersFtx(key, secret, symbol, true)
 	//	for _, order := range deprecated.queryOrdersFtx(key, secret, symbol, false) {
@@ -655,10 +655,10 @@ func QueryOpenOrders(key, secret, market, symbol string) (orders []*model.Order)
 
 func QueryOrderById(key, secret, market, symbol, orderType, orderId string) (order *model.Order) {
 	switch market {
-	case model.BitgetPerp:
-		order = queryOrderBitgetPerp(key, secret, symbol, orderId)
-	case model.BitgetSpot:
-		order = queryOrderBitgetSpot(key, secret, orderId)
+	//case model.BitgetPerp:
+	//	order = deprecated.queryOrderBitgetPerp(key, secret, symbol, orderId)
+	//case model.BitgetSpot:
+	//	order = deprecated.queryOrderBitgetSpot(key, secret, orderId)
 	case model.Gate:
 		order = queryOrderGate(key, secret, symbol, orderId)
 	case model.OKEX:
@@ -689,8 +689,8 @@ func GetPositions(key, secret, market string) (success bool, positions []*model.
 		lock.(*sync.Mutex).Unlock()
 	}()
 	switch market {
-	case model.BitgetPerp:
-		success, positions, accountValue, availableU, mmr = getPositionsBitgetPerp(key, secret)
+	//case model.BitgetPerp:
+	//	success, positions, accountValue, availableU, mmr = deprecated.getPositionsBitgetPerp(key, secret)
 	case model.Gate:
 		_, _, total, collateral := getBalanceGate(key, secret)
 		success, positions = getPositionsGate(key, secret)
@@ -836,10 +836,10 @@ func PlaceOrder(account *model.Account, orderSide, orderType, market, symbol, or
 		isWs = false
 	}
 	switch market {
-	case model.BitgetPerp:
-		placeOrderBitgetPerp(account, isWs, order, orderSide, orderType, orderParam, symbol, price, amount)
-	case model.BitgetSpot:
-		placeOrderBitgetSpot(account, isWs, order, orderSide, orderType, symbol, price, amount)
+	//case model.BitgetPerp:
+	//	deprecated.placeOrderBitgetPerp(account, isWs, order, orderSide, orderType, orderParam, symbol, price, amount)
+	//case model.BitgetSpot:
+	//	deprecated.placeOrderBitgetSpot(account, isWs, order, orderSide, orderType, symbol, price, amount)
 	case model.Gate:
 		placeOrderGate(account, isWs, order, orderSide, orderType, orderParam, symbol, price, amount)
 	case model.OKEX:
@@ -1055,10 +1055,10 @@ func InitMarketInfos(market string) (success bool) {
 	//	deprecated.setFutureAutoDeposit()
 	case model.Bybit:
 		marketInfos = getMarketsBybit()
-	case model.BitgetSpot:
-		marketInfos = getMarketsBitgetSpot()
-	case model.BitgetPerp:
-		marketInfos = getMarketsBitgetPerp()
+		//case model.BitgetSpot:
+		//	marketInfos = deprecated.getMarketsBitgetSpot()
+		//case model.BitgetPerp:
+		//	marketInfos = deprecated.getMarketsBitgetPerp()
 	}
 	for _, setting := range model.AppEnvironment.Settings {
 		if setting.Market == market && marketInfos[setting.Symbol] == nil && strings.Trim(setting.Symbol, ` `) != `` {
@@ -1100,8 +1100,8 @@ func SetSymbolLeverage(account *model.Account, market, symbol string) (success b
 		return setSymbolLeverageBybit(account, symbol)
 	case model.OKEX:
 		return setSymbolLeverageOkx(account, symbol)
-	case model.BitgetPerp:
-		return setSymbolLeverageBitgetPerp(account, symbol)
+	//case model.BitgetPerp:
+	//	return deprecated.setSymbolLeverageBitgetPerp(account, symbol)
 	case model.Gate:
 		return setSymbolLeverageGate(account, symbol)
 	}
