@@ -445,10 +445,10 @@ var wsPriHandlerGatePerp = func(market, key string, msg []byte) {
 				status = model.CarryStatusSuccess
 			}
 			orderId := value["id"].(json.Number).String()
-			if value[`tif`].(string) == `ioc` || value[`text`].(string) == `auto_deleveraging` ||
-				strings.Contains(strings.ToLower(value[`text`].(string)), `auto`) { //判定为自动减仓，停止开单
-				util.Log(util.LogLevelInfo, fmt.Sprintf(`auto_deleveraging %s %s %s %s %s %s`,
-					coin, market, symbol, key, orderSide, string(msg)))
+			// //判定为自动减仓，停止开单 value[`tif`].(string) == `ioc`
+			if value[`text`].(string) == `auto_deleveraging` || strings.Contains(strings.ToLower(value[`text`].(string)), `auto`) {
+				util.Log(util.LogLevelInfo, fmt.Sprintf(`auto_deleveraging %v %s %s %s %s %s %s`,
+					value[`text`], coin, market, symbol, key, orderSide, string(msg)))
 				util.StoreSyncMap(&model.AppEnvironment.PauseTrade, true, coin, market, symbol, key, orderSide)
 			}
 			UpdateOrderDeal(market, orderId, status, string(msg), dealAmount)
