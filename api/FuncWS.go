@@ -236,7 +236,7 @@ func SendToConnections(market string, connections map[*model.WSConn]bool, msg []
 	return err
 }
 
-func UpdateOrderDeal(market, orderId, status, msg string, dealAmount float64) {
+func UpdateOrderDeal(market, orderId, status, msg string, dealAmount float64) (find bool) {
 	var order *model.Order
 	i := 0
 	for ; i < 10; i++ {
@@ -256,7 +256,9 @@ func UpdateOrderDeal(market, orderId, status, msg string, dealAmount float64) {
 		}
 		util.Log(util.LogLevelInfo, fmt.Sprintf(`update deal %s at %d %s %s %s %f to %f %s`,
 			orderId, i, order.Market, order.Symbol, order.OrderSide, preDeal, order.DealAmount, order.Status))
+		return true
 	} else {
 		util.Log(util.LogLevelError, fmt.Sprintf(`no order stored %s %s %s`, market, orderId, msg))
+		return false
 	}
 }

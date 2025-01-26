@@ -434,6 +434,10 @@ var wsPriHandlerGatePerp = func(market, key string, msg []byte) {
 			coin := strings.Split(dialectSymbol, "_")[0]
 			symbol := coin + model.UniStandardTail[model.MarketTypePerp]
 			_, size = model.ParseRealAmount(model.Gate, symbol, size)
+			orderSide := model.OrderSideBuy
+			if size < 0 {
+				orderSide = model.OrderSideSell
+			}
 			_, left = model.ParseRealAmount(model.Gate, symbol, left)
 			dealAmount := math.Abs(size) - math.Abs(left)
 			status := model.CarryStatusWorking
@@ -441,6 +445,12 @@ var wsPriHandlerGatePerp = func(market, key string, msg []byte) {
 				status = model.CarryStatusSuccess
 			}
 			orderId := value["id"].(json.Number).String()
+			if value[`tif`].(string) == `ioc` || value[`text`].(string) == `auto_deleveraging` ||
+				strings.Contains(strings.ToLower(value[`text`].(string)), `auto`) { //判定为自动减仓，停止开单
+				util.Log(util.LogLevelInfo, fmt.Sprintf(`auto_deleveraging %s %s %s %s %s %s`,
+					coin, market, symbol, key, orderSide, string(msg)))
+				util.StoreSyncMap(&model.AppEnvironment.PauseTrade, true, coin, market, symbol, key, orderSide)
+			}
 			UpdateOrderDeal(market, orderId, status, string(msg), dealAmount)
 		}
 	} else {

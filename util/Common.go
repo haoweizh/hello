@@ -36,7 +36,10 @@ func UnGzip(byte []byte) []byte {
 	}
 	var data, _ = io.ReadAll(r)
 	if r != nil {
-		r.Close()
+		err = r.Close()
+		if err != nil {
+			return nil
+		}
 	}
 	return data
 }
@@ -164,9 +167,9 @@ func LoadSyncMap(syncMap *sync.Map, keys ...string) (interface{}, bool) {
 }
 
 func StoreSyncMap(syncMap *sync.Map, value interface{}, keys ...string) {
-	if syncMap == nil {
-		return
-	}
+	//if syncMap == nil {
+	//	return
+	//}
 	key := ``
 	for i := 0; i < len(keys); i++ {
 		key += keys[i] + `*`

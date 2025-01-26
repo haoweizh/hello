@@ -134,8 +134,8 @@ func checkTradeLine(statusBuy, statusSell *model.CarryStatus, carryCoin *model.C
 	scoreClose, scoreSwitch float64) (valid bool, limit, scoreUse float64, scoreType string) {
 	settingBuy := statusBuy.Setting
 	settingSell := statusSell.Setting
-	pauseBuy, _ := util.LoadSyncMap(pauseTrade, settingBuy.Coin, settingBuy.Market, settingBuy.Symbol, statusBuy.Account.Key, model.OrderSideBuy)
-	pauseSell, _ := util.LoadSyncMap(pauseTrade, settingSell.Coin, settingSell.Market, settingSell.Symbol, statusSell.Account.Key, model.OrderSideSell)
+	pauseBuy, _ := util.LoadSyncMap(&model.AppEnvironment.PauseTrade, settingBuy.Coin, settingBuy.Market, settingBuy.Symbol, statusBuy.Account.Key, model.OrderSideBuy)
+	pauseSell, _ := util.LoadSyncMap(&model.AppEnvironment.PauseTrade, settingSell.Coin, settingSell.Market, settingSell.Symbol, statusSell.Account.Key, model.OrderSideSell)
 	if (pauseBuy != nil && pauseBuy.(bool)) || (pauseSell != nil && pauseSell.(bool)) {
 		return false, 0, 1, ``
 	}
