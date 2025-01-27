@@ -150,9 +150,9 @@ func createFromPosition(account *model.Account, setting *model.Setting) (carrySt
 			carryStatus.AvailableSell = math.Max(availableAmount, carryStatus.Holding)
 		}
 	}
-	if setting.Market == model.Gate && valueInUsd > 50000 {
+	if setting.Market == model.Gate && valueInUsd > 100000 {
 		doRevert = true
-		util.Log(util.LogLevelInfo, fmt.Sprintf(`do revert true gate > 50000 %s`, setting.Symbol))
+		util.Log(util.LogLevelInfo, fmt.Sprintf(`do revert true gate > 100000 %s`, setting.Symbol))
 	}
 	// bitgetperp可以开仓或减仓，不越过0反向开仓
 	if setting.Market == model.BitgetPerp && cm.positions[setting.Symbol] != nil {
@@ -243,9 +243,9 @@ func createFromBalance(account *model.Account, setting *model.Setting) (carrySta
 		if math.Abs(sm.balances[setting.Symbol].UsdValue)/handledActValueInU > rateLimitHolding {
 			doRevert = true
 		}
-		if setting.Market == model.Gate && sm.balances[setting.Symbol].UsdValue > 50000 {
+		if setting.Market == model.Gate && sm.balances[setting.Symbol].UsdValue > 100000 {
 			doRevert = true
-			util.Log(util.LogLevelInfo, fmt.Sprintf(`do revert true gate > 50000 %s`, setting.Symbol))
+			util.Log(util.LogLevelInfo, fmt.Sprintf(`do revert true gate > 100000 %s`, setting.Symbol))
 		}
 	}
 	if setting.Market == model.Bybit && sm.collateral != nil && sm.collateral.Rate > 0.7 {
