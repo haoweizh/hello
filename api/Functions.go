@@ -977,16 +977,18 @@ func InitCrossMarketInfos(markets []string) {
 			for _, info := range infos {
 				if settingsDbMap[fmt.Sprintf(`%s_%s_%s`, model.FunctionCross, info.Market, info.Symbol)] == nil {
 					setting := &model.Setting{
-						Valid:            true,
-						Liquidated:       true,
-						Function:         model.FunctionCross,
-						WSType:           model.WSTypeTicker,
-						Market:           info.Market,
-						Symbol:           info.Symbol,
-						Coin:             coin,
-						OpenShortMargin:  scoreOpen,
-						CloseShortMargin: scoreClose,
-						PriceX:           1, GridAmount: 1}
+						Valid:              true,
+						Liquidated:         true,
+						Function:           model.FunctionCross,
+						WSType:             model.WSTypeTicker,
+						Market:             info.Market,
+						Symbol:             info.Symbol,
+						Coin:               coin,
+						OpenShortMargin:    scoreOpen,
+						CloseShortMargin:   scoreClose,
+						ChanceLimit:        4,
+						ChanceLimitCombine: 2,
+						PriceX:             1, GridAmount: 1}
 					util.Log(util.LogLevelInfo, fmt.Sprintf(`save setting %s %s %s %#v`, info.Market, info.Symbol, coin, setting.Valid))
 					model.AppDB.Save(setting)
 					accounts := model.AppConfig.GetAccounts(info.Market)
@@ -1000,16 +1002,18 @@ func InitCrossMarketInfos(markets []string) {
 		} else if len(infos) == 1 && infos[0].Symbol[0:2] == `10` {
 			if settingsDbMap[fmt.Sprintf(`%s_%s_%s`, model.FunctionCross, infos[0].Market, infos[0].Symbol)] == nil {
 				setting := &model.Setting{
-					Valid:            true,
-					Liquidated:       true,
-					Function:         model.FunctionCross,
-					WSType:           model.WSTypeTicker,
-					Market:           infos[0].Market,
-					Symbol:           infos[0].Symbol,
-					Coin:             coin,
-					OpenShortMargin:  scoreOpen,
-					CloseShortMargin: scoreClose,
-					PriceX:           1, GridAmount: 1}
+					Valid:              true,
+					Liquidated:         true,
+					Function:           model.FunctionCross,
+					WSType:             model.WSTypeTicker,
+					Market:             infos[0].Market,
+					Symbol:             infos[0].Symbol,
+					Coin:               coin,
+					OpenShortMargin:    scoreOpen,
+					CloseShortMargin:   scoreClose,
+					ChanceLimit:        4,
+					ChanceLimitCombine: 2,
+					PriceX:             1, GridAmount: 1}
 				util.Log(util.LogLevelInfo, fmt.Sprintf(`save setting %s %s %s %#v`, infos[0].Market, infos[0].Symbol, coin, setting.Valid))
 				model.AppDB.Save(setting)
 			}

@@ -212,6 +212,8 @@ func checkTradeLine(statusBuy, statusSell *model.CarryStatus, carryCoin *model.C
 
 // calcAmount
 // 返回amount是经过gridAmount乘数计算之后的数量，用以针对1000PEPE与PEPE这类币种的对冲交易.priceX与gridAmount相对应
+// ChanceLimit开仓、换仓资金费率倍数
+// ChanceLimitCombine平仓资金费率倍数
 func calcAmount(index int, coin string, carryStatus, carryStatusRelate *model.CarryStatus, carryCoin *model.CarryCoin, tick, tickRelate *model.BidAsk) (
 	delay bool, statusBuy, statusSell *model.CarryStatus, amount, priceBuy, priceSell float64) {
 	var bidAmount, askAmount float64
@@ -236,28 +238,26 @@ func calcAmount(index int, coin string, carryStatus, carryStatusRelate *model.Ca
 	var score, scoreR, scoreOpen, scoreClose, scoreSwitch, scoreOpenR, scoreCloseR, scoreSwitchR float64
 	scoreOpen = (priceBid/priceX - priceAskRelate/priceXRelate) / math.Max(priceBid/priceX, priceAskRelate/priceXRelate)
 	score = scoreOpen
-	scoreClose = scoreOpen
 	scoreSwitch = scoreOpen
 	scoreOpenR = (priceBidRelate/priceXRelate - priceAsk/priceX) / math.Max(priceAsk/priceX, priceBidRelate/priceXRelate)
 	scoreR = scoreOpenR
-	scoreCloseR = scoreOpenR
 	scoreSwitchR = scoreOpenR
+	priceAskRelate = tickRelate.Asks[0].Price * (1 + float64(carryStatusRelate.Setting.ChanceLimitCombine)*handledRateRelate)
+	priceBidRelate = tickRelate.Bids[0].Price * (1 + float64(carryStatusRelate.Setting.ChanceLimitCombine)*handledRateRelate)
+	priceAsk = tick.Asks[0].Price * (1 + float64(carryStatus.Setting.ChanceLimitCombine)*handledRate)
+	priceBid = tick.Bids[0].Price * (1 + float64(carryStatus.Setting.ChanceLimitCombine)*handledRate)
+	scoreClose = (priceBid/priceX - priceAskRelate/priceXRelate) / math.Max(priceBid/priceX, priceAskRelate/priceXRelate)
+	scoreCloseR = (priceBidRelate/priceXRelate - priceAsk/priceX) / math.Max(priceAsk/priceX, priceBidRelate/priceXRelate)
 	if handledRateRelate > handledRate { // R为买方＞0
-		priceBid = tick.Bids[0].Price * (1 + 4*handledRate)
-		priceAskRelate = tickRelate.Asks[0].Price * (1 + 4*handledRateRelate)
+		priceBid = tick.Bids[0].Price * (1 + float64(carryStatus.Setting.ChanceLimit)*handledRate)
+		priceAskRelate = tickRelate.Asks[0].Price * (1 + float64(carryStatus.Setting.ChanceLimit)*handledRateRelate)
 		scoreOpen = (priceBid/priceX - priceAskRelate/priceXRelate) / math.Max(priceBid/priceX, priceAskRelate/priceXRelate)
 		scoreSwitch = scoreOpen
-		priceBid = tick.Bids[0].Price * (1 + 2*handledRate)
-		priceAskRelate = tickRelate.Asks[0].Price * (1 + 2*handledRateRelate)
-		scoreClose = (priceBid/priceX - priceAskRelate/priceXRelate) / math.Max(priceBid/priceX, priceAskRelate/priceXRelate)
 	} else if handledRateRelate < handledRate { // R为卖方<0
-		priceBidRelate = tickRelate.Bids[0].Price * (1 + 4*handledRateRelate)
-		priceAsk = tick.Asks[0].Price * (1 + 4*handledRate)
+		priceBidRelate = tickRelate.Bids[0].Price * (1 + float64(carryStatusRelate.Setting.ChanceLimit)*handledRateRelate)
+		priceAsk = tick.Asks[0].Price * (1 + float64(carryStatusRelate.Setting.ChanceLimit)*handledRate)
 		scoreOpenR = (priceBidRelate/priceXRelate - priceAsk/priceX) / math.Max(priceAsk/priceX, priceBidRelate/priceXRelate)
 		scoreSwitchR = scoreOpenR
-		priceBidRelate = tickRelate.Bids[0].Price * (1 + 2*handledRateRelate)
-		priceAsk = tick.Asks[0].Price * (1 + 2*handledRate)
-		scoreCloseR = (priceBidRelate/priceXRelate - priceAsk/priceX) / math.Max(priceAsk/priceX, priceBidRelate/priceXRelate)
 	}
 	var valid bool
 	var amountLimit, scoreUse, scoreUseR float64
