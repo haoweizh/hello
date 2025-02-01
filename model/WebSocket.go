@@ -370,8 +370,8 @@ func WsPublicClient(market, url string, subscribes []interface{}, subHandler Sub
 		}
 		go func() {
 			_ = subHandler(market, connection, stepSubscribes)
-			util.Log(util.LogLevelInfo, fmt.Sprintf("subscribe %s %s %v", market, url, stepSubscribes))
 			settle, ok := pubHandleSettle.Load(url)
+			util.Log(util.LogLevelInfo, fmt.Sprintf("subscribe %s %s %v %v %v", market, url, stepSubscribes, ok, settle))
 			if newCreate || !ok || settle.(bool) == false {
 				pubHandleSettle.Store(url, true)
 				util.Log(util.LogLevelInfo, fmt.Sprintf("new create public chan %s %s", market, url))
