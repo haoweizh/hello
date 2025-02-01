@@ -72,7 +72,7 @@ var ProcessCombineTurtle = func(settingCombine *model.Setting, tick *model.BidAs
 		return
 	}
 	if !dataCombine.OrderCleared {
-		api.ClearOrders(account.Key, account.Secret, market, symbol, map[string]bool{model.OrderTypeTrailStop: true})
+		api.ClearOrders(account, market, symbol, map[string]bool{model.OrderTypeTrailStop: true})
 		dataCombine.OrderCleared = true
 		util.Log(util.LogLevelInfo, fmt.Sprintf(`combine return not cleared %s %s %#v`, market, symbol, dataCombine.OrderCleared))
 		return
@@ -120,7 +120,7 @@ var ProcessCombineTurtle = func(settingCombine *model.Setting, tick *model.BidAs
 		}
 	}
 	if needClear {
-		api.ClearExtraOrders(account.Key, account.Secret, market, symbol, turtleData)
+		api.ClearExtraOrders(account, market, symbol, turtleData)
 	}
 	time.Sleep(time.Second * 5)
 }
@@ -155,7 +155,7 @@ func removeLongOrders(account *model.Account, setting *model.Setting, data *mode
 	if setting.Chance >= 0 {
 		if data.OrderLong != nil {
 			for _, order := range data.OrderLong {
-				api.MustCancel(account.Key, account.Secret, setting.Market, setting.Symbol, order.OrderType, order.OrderId, false)
+				api.MustCancel(account, setting.Market, setting.Symbol, order.OrderType, order.OrderId, false)
 			}
 		}
 		data.OrderLong = nil
@@ -169,7 +169,7 @@ func removeShortOrders(account *model.Account, setting *model.Setting, data *mod
 	if setting.Chance <= 0 {
 		if data.OrderShort != nil {
 			for _, order := range data.OrderShort {
-				api.MustCancel(account.Key, account.Secret, setting.Market, setting.Symbol, order.OrderType, order.OrderId, false)
+				api.MustCancel(account, setting.Market, setting.Symbol, order.OrderType, order.OrderId, false)
 			}
 		}
 		data.OrderShort = nil

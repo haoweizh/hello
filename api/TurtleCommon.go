@@ -36,9 +36,9 @@ func CalcTurtleAmount(account *model.Account, n, amountRate float64, candle *mod
 	if accountValue == 0 {
 		switch candle.Market {
 		case model.BinancePerp:
-			_, _, accountValue, _, _ = GetPositions(account.Key, account.Secret, candle.Market)
+			_, _, accountValue, _, _ = GetPositions(account, candle.Market)
 		case model.Ftx, model.OKEX:
-			_, _, accountValue, _ = GetBalances(account.Key, account.Secret, candle.Market)
+			_, _, accountValue, _ = GetBalances(account, candle.Market)
 		}
 		util.StoreSyncMap(accountValues, accountValue, candle.Market)
 		util.StoreSyncMap(accountValueTime, time.Now(), candle.Market)
@@ -51,10 +51,10 @@ var clearLock sync.Mutex
 
 // ClearOrders
 // 取消market交易所中symbol交易对的所有limit、stop单
-func ClearOrders(key, secret, market, symbol string, keepTypes map[string]bool) {
+func ClearOrders(account *model.Account, market, symbol string, keepTypes map[string]bool) {
 	defer clearLock.Unlock()
 	clearLock.Lock()
-	orders := QueryOpenOrders(key, secret, market, symbol)
+	orders := QueryOpenOrders(account, market, symbol)
 	for _, order := range orders {
 		if keepTypes != nil && keepTypes[order.OrderType] {
 			util.Log(util.LogLevelInfo, fmt.Sprintf(
@@ -64,14 +64,14 @@ func ClearOrders(key, secret, market, symbol string, keepTypes map[string]bool) 
 		if order != nil {
 			util.Log(util.LogLevelInfo, fmt.Sprintf(
 				`cancel pending turtle order %s %s %s %s`, market, symbol, order.OrderId, order.OrderType))
-			MustCancel(key, secret, market, symbol, order.OrderType, order.OrderId, false)
+			MustCancel(account, market, symbol, order.OrderType, order.OrderId, false)
 		}
 	}
 }
 
 // ClearExtraOrders
 // 取消market交易所中symbol交易对中没有被纳入管理或已经超出仓数限制的订单
-func ClearExtraOrders(key, secret, market, symbol string, dataArray []*model.TurtleData) {
+func ClearExtraOrders(account *model.Account, market, symbol string, dataArray []*model.TurtleData) {
 	keepOrders := make(map[string]*model.Order)
 	for _, data := range dataArray {
 		for _, order := range data.OrderLong {
@@ -87,20 +87,20 @@ func ClearExtraOrders(key, secret, market, symbol string, dataArray []*model.Tur
 	algoLimitOrders := make(map[string]*model.Order)
 	for _, order := range keepOrders {
 		if order != nil && order.OrderType != model.OrderTypeLimit && order.Market == model.OKEX {
-			orderLimit := QueryOrderById(key, secret, order.Market, order.Symbol, order.OrderType, order.OrderId)
+			orderLimit := QueryOrderById(account, order.Market, order.Symbol, order.OrderType, order.OrderId)
 			if orderLimit != nil && orderLimit.OrderId != `` {
 				algoLimitOrders[orderLimit.OrderId] = orderLimit
 				//util.Notice(fmt.Sprintf(`add okex algo order after break to normal order %s->%s`, order.OrderId, orderLimit.OrderId))
 			}
 		}
 	}
-	orders := QueryOpenOrders(key, secret, market, symbol)
+	orders := QueryOpenOrders(account, market, symbol)
 	for _, order := range orders {
 		if order == nil {
 			continue
 		}
 		if keepOrders[order.OrderId] == nil && algoLimitOrders[order.OrderId] == nil {
-			result := MustCancel(key, secret, market, symbol, order.OrderType, order.OrderId, false)
+			result := MustCancel(account, market, symbol, order.OrderType, order.OrderId, false)
 			util.Log(util.LogLevelInfo, fmt.Sprintf(
 				`cancel extra order %s %s %s %s return %#v`, market, symbol, order.OrderType, order.OrderId, result))
 		}
@@ -112,7 +112,7 @@ func AdjustPosHolding(account *model.Account, setting *model.Setting, data *mode
 		return
 	}
 	data.AdjustChecked = true
-	success, marketPos, _, _, _ := GetPositions(account.Key, account.Secret, setting.Market)
+	success, marketPos, _, _, _ := GetPositions(account, setting.Market)
 	if !success {
 		util.Log(util.LogLevelInfo, fmt.Sprintf(
 			`fail to adjust position holdings %s %s`, setting.Market, setting.Symbol))
@@ -246,7 +246,7 @@ func HandleOrders(account *model.Account, market, symbol string, settings []*mod
 		return false
 	}
 	turtleData[0].CheckTimeOpen = util.GetNow()
-	ClearExtraOrders(account.Key, account.Secret, market, symbol, turtleData)
+	ClearExtraOrders(account, market, symbol, turtleData)
 	return true
 }
 
@@ -257,13 +257,13 @@ func clearTurtleOrders(account *model.Account, setting *model.Setting, turtle *m
 	for _, order := range turtle.OrderLong {
 		if order != nil {
 			longAmount += order.Amount
-			go MustCancel(account.Key, account.Secret, setting.Market, setting.Symbol, order.OrderType, order.OrderId, false)
+			go MustCancel(account, setting.Market, setting.Symbol, order.OrderType, order.OrderId, false)
 		}
 	}
 	for _, order := range turtle.OrderShort {
 		if order != nil {
 			shortAmount += order.Amount
-			go MustCancel(account.Key, account.Secret, setting.Market, setting.Symbol, order.OrderType, order.OrderId, false)
+			go MustCancel(account, setting.Market, setting.Symbol, order.OrderType, order.OrderId, false)
 		}
 	}
 	for _, order := range turtle.OrderAdjust {
@@ -273,7 +273,7 @@ func clearTurtleOrders(account *model.Account, setting *model.Setting, turtle *m
 					order.Market, order.Symbol, order.OrderSide, order.Amount, order.Price, order.OrderId, order.Status))
 				trailOrders = append(trailOrders, order)
 			} else {
-				go MustCancel(account.Key, account.Secret, setting.Market, setting.Symbol, order.OrderType, order.OrderId, false)
+				go MustCancel(account, setting.Market, setting.Symbol, order.OrderType, order.OrderId, false)
 			}
 		}
 	}
@@ -419,7 +419,7 @@ func GetTurtleData(account *model.Account, setting *model.Setting, removed bool)
 		if !refreshOk || refreshValue == nil || refreshValue.(time.Time).Before(nowPeriod) {
 			if handleMarketDynamic(setting.Market) {
 				PrepareSettings()
-				success, positions, _, _, _ := GetPositions(account.Key, account.Secret, setting.Market)
+				success, positions, _, _, _ := GetPositions(account, setting.Market)
 				if success {
 					posMap := &sync.Map{}
 					for _, position := range positions {
@@ -709,15 +709,14 @@ func CheckBreak(account *model.Account, market, symbol string, settings []*model
 				orderLong.Status = model.CarryStatusSuccess
 			}
 			if orderLong.Status == model.CarryStatusWorking && (useApi || tick == nil) {
-				orderLong = QueryOrderById(account.Key, account.Secret, market, symbol, orderLong.OrderType, orderLong.OrderId)
+				orderLong = QueryOrderById(account, market, symbol, orderLong.OrderType, orderLong.OrderId)
 			}
 			if orderLong != nil && (orderLong.Status == model.CarryStatusSuccess || orderLong.DealAmount*3 > orderLong.Amount*2) {
 				data.BreakLong = true
 				for _, order := range data.OrderLong {
 					data.OrderAdjust[order.OrderId] = order
 					if order.Market == model.OKEX && order.OrderType != model.OrderTypeLimit {
-						limitOrder := QueryOrderById(account.Key, account.Secret, order.Market, order.Symbol,
-							order.OrderType, order.OrderId)
+						limitOrder := QueryOrderById(account, order.Market, order.Symbol, order.OrderType, order.OrderId)
 						if limitOrder != nil {
 							data.OrderAdjust[limitOrder.OrderId] = limitOrder
 							util.Log(util.LogLevelInfo, fmt.Sprintf(`add okex created limit order into turtle adjust %s %s->%s`,
@@ -736,15 +735,14 @@ func CheckBreak(account *model.Account, market, symbol string, settings []*model
 				orderShort.Status = model.CarryStatusSuccess
 			}
 			if orderShort.Status == model.CarryStatusWorking && (useApi || tick == nil) {
-				orderShort = QueryOrderById(account.Key, account.Secret, market, symbol, orderShort.OrderType, orderShort.OrderId)
+				orderShort = QueryOrderById(account, market, symbol, orderShort.OrderType, orderShort.OrderId)
 			}
 			if orderShort != nil && (orderShort.Status == model.CarryStatusSuccess || orderShort.DealAmount*3 > orderShort.Amount*2) {
 				data.BreakShort = true
 				for _, order := range data.OrderShort {
 					data.OrderAdjust[order.OrderId] = order
 					if order.Market == model.OKEX && order.OrderType != model.OrderTypeLimit {
-						limitOrder := QueryOrderById(account.Key, account.Secret, order.Market, order.Symbol,
-							order.OrderType, order.OrderId)
+						limitOrder := QueryOrderById(account, order.Market, order.Symbol, order.OrderType, order.OrderId)
 						if limitOrder != nil {
 							data.OrderAdjust[limitOrder.OrderId] = limitOrder
 							util.Log(util.LogLevelInfo, fmt.Sprintf(

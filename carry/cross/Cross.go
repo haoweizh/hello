@@ -12,13 +12,13 @@ import (
 	"time"
 )
 
-func createContractMarket(key, secret, market string) (cm *contractMarket) {
-	success, positions, accountValue, availableU, mmr := api.GetPositions(key, secret, market)
+func createContractMarket(account *model.Account, market string) (cm *contractMarket) {
+	success, positions, accountValue, availableU, mmr := api.GetPositions(account, market)
 	util.Log(util.LogLevelInfo, fmt.Sprintf(`get positions %s %s %#v account value %f available u %f maintain rate %f positions %d`,
-		market, key, success, accountValue, availableU, mmr, len(positions)))
+		market, account.Key, success, accountValue, availableU, mmr, len(positions)))
 	settings := api.GetSettings(model.FunctionCross, market)
 	if success {
-		cm = &contractMarket{key: key, market: market}
+		cm = &contractMarket{key: account.Key, market: market}
 		cm.positions = make(map[string]*model.Position)
 		for _, position := range positions {
 			cm.positions[position.Currency] = position
@@ -40,17 +40,17 @@ func createContractMarket(key, secret, market string) (cm *contractMarket) {
 		cm.collateralsAvailable = availableU
 		cm.mmr = mmr
 	} else {
-		util.Log(util.LogLevelError, fmt.Sprintf(`fail to createContractMarket %s %s`, market, key))
+		util.Log(util.LogLevelError, fmt.Sprintf(`fail to createContractMarket %s %s`, market, account.Key))
 		return nil
 	}
 	return
 }
 
-func createSpotMarket(key, secret, market string) (sm *spotMarket) {
-	success, balances, totalInUsd, collateral := api.GetBalances(key, secret, market)
+func createSpotMarket(account *model.Account, market string) (sm *spotMarket) {
+	success, balances, totalInUsd, collateral := api.GetBalances(account, market)
 	util.Log(util.LogLevelInfo, fmt.Sprintf(`create spot market %s %d`, market, len(balances)))
 	if success {
-		sm = &spotMarket{key: key, market: market}
+		sm = &spotMarket{key: account.Key, market: market}
 		sm.balances = make(map[string]*model.Balance)
 		sm.accountValueInU = totalInUsd
 		sm.collateral = collateral
@@ -80,7 +80,7 @@ func createSpotMarket(key, secret, market string) (sm *spotMarket) {
 		//	sm.availableU = math.Min(sm.availableU, collateral.Available)
 		//}
 	} else {
-		util.Log(util.LogLevelError, fmt.Sprintf(`fail to createSpotMarket %s %s`, market, key))
+		util.Log(util.LogLevelError, fmt.Sprintf(`fail to createSpotMarket %s %s`, market, account.Key))
 		return nil
 	}
 	return
@@ -91,12 +91,12 @@ func createFromPosition(account *model.Account, setting *model.Setting) (carrySt
 	key := account.Key
 	value, ok := contractMarkets.Load(key)
 	if value == nil || !ok {
-		contractMarkets.Store(key, createContractMarket(key, account.Secret, setting.Market))
+		contractMarkets.Store(key, createContractMarket(account, setting.Market))
 		value, _ = contractMarkets.Load(key)
 		spotValue, spotOk := spotMarkets.Load(key)
 		util.Log(util.LogLevelInfo, fmt.Sprintf(`success set cm %d %s`, account.Index, setting.Market))
 		if account.IsUnified && (spotValue == nil || !spotOk) {
-			spotMarkets.Store(key, createSpotMarket(key, account.Secret, setting.Market))
+			spotMarkets.Store(key, createSpotMarket(account, setting.Market))
 		}
 	}
 	if value == nil {
@@ -196,7 +196,7 @@ func createFromBalance(account *model.Account, setting *model.Setting) (carrySta
 	key := account.Key
 	value, ok := spotMarkets.Load(key)
 	if value == nil || !ok {
-		spotMarkets.Store(key, createSpotMarket(key, account.Secret, setting.Market))
+		spotMarkets.Store(key, createSpotMarket(account, setting.Market))
 		value, ok = spotMarkets.Load(key)
 		util.Log(util.LogLevelInfo, fmt.Sprintf(`success set sm %d %s`, account.Index, setting.Market))
 	}
@@ -300,7 +300,7 @@ func initStatus(account *model.Account, setting *model.Setting) (status *model.C
 		}
 	}
 	if setting.Market == model.OKEX {
-		success, maxBuy, maxSell := api.GetTradeMaxOKEX(account.Key, account.Secret, setting.Symbol, 600)
+		success, maxBuy, maxSell := api.GetTradeMaxOKEX(account, setting.Symbol, 600)
 		time.Sleep(time.Millisecond * 80)
 		if success {
 			status.AvailableBuy = math.Min(status.AvailableBuy, maxBuy)
@@ -608,7 +608,7 @@ func equalAccount(i int, equalChan chan int, accounts map[string]*model.Account,
 		if account.Index != i {
 			continue
 		}
-		api.CancelAll(account.Key, account.Secret, market)
+		api.CancelAll(account, market)
 	}
 	value := api.GetCoinSettings(model.FunctionCross)
 	if value != nil {
@@ -1184,9 +1184,9 @@ func handleCross(account *model.Account, order *model.Order) {
 	if order.Status == model.CarryStatusFail {
 		compOrder(account, order, leftAmt)
 	} else if leftAmt > marketInfo.SizeMin && leftAmt*order.Price > marketInfo.MoneyMin && order.Status != model.CarryStatusSuccess && order.HaveId() {
-		api.CancelOrder(account.Key, account.Secret, order.Market, order.Symbol, model.OrderTypeLimit, order.OrderId)
+		api.CancelOrder(account, order.Market, order.Symbol, model.OrderTypeLimit, order.OrderId)
 		time.Sleep(time.Second * 10)
-		queryOrder := api.QueryOrderById(account.Key, account.Secret, order.Market, order.Symbol, order.OrderType, order.OrderId)
+		queryOrder := api.QueryOrderById(account, order.Market, order.Symbol, order.OrderType, order.OrderId)
 		if queryOrder != nil {
 			leftAmt = queryOrder.Amount - queryOrder.DealAmount
 			if leftAmt > marketInfo.SizeMin && leftAmt*order.Price > marketInfo.MoneyMin && queryOrder.Status != model.CarryStatusSuccess {
@@ -1235,7 +1235,7 @@ func ContinueComp() {
 			}
 			account := model.AppConfig.GetAccountFromKeyIndex(order.Market, ``, order.AccountIndex)
 			leftAmt := order.Amount
-			queryOrder := api.QueryOrderById(account.Key, account.Secret, order.Market, order.Symbol, order.OrderType, order.OrderId)
+			queryOrder := api.QueryOrderById(account, order.Market, order.Symbol, order.OrderType, order.OrderId)
 			if queryOrder != nil {
 				leftAmt = queryOrder.Amount - queryOrder.DealAmount
 			} else {
@@ -1259,7 +1259,7 @@ func ContinueComp() {
 				}
 			}
 			if leftAmt > marketInfo.SizeMin && leftAmt*order.Price > math.Max(10, marketInfo.MoneyMin) && queryOrder.Status != model.CarryStatusSuccess {
-				result, _, _ := api.CancelOrder(account.Key, account.Secret, order.Market, order.Symbol, model.OrderTypeLimit, order.OrderId)
+				result, _, _ := api.CancelOrder(account, order.Market, order.Symbol, model.OrderTypeLimit, order.OrderId)
 				if result {
 					compOrders.Delete(order.OrderId)
 					if model.AppEnvironment.CrossEqualing {

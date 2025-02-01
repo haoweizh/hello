@@ -205,7 +205,7 @@ func getWithdraws(c *gin.Context) {
 		if account == nil {
 			continue
 		}
-		balances := api.GetTransfers(account.Key, account.Secret, account.Market)
+		balances := api.GetTransfers(account, account.Market)
 		for _, balance := range balances {
 			if balance == nil {
 				continue
@@ -423,7 +423,7 @@ func holdPage(c *gin.Context) {
 	for _, account := range queryAccounts {
 		if account != nil {
 			inAllSpot, contractAccountValue, holdingSpot, holdingFuture, unrealizedPnl :=
-				cross.GetCrossMarketValue(account.Key, account.Secret, account.Market, force == `true`)
+				cross.GetCrossMarketValue(account, account.Market, force == `true`)
 			marketValues = append(marketValues, []string{account.Market,
 				strconv.FormatFloat(inAllSpot, 'f', 0, 64),
 				strconv.FormatFloat(contractAccountValue, 'f', 0, 64),

@@ -16,7 +16,7 @@ var feeIndex int
 var balanceMaintainDay = util.GetNow()
 
 // MaintainBalance
-func _(key, secret string) {
+func _(account *model.Account) {
 	for {
 		markets := model.AppEnvironment.Markets
 		balances := make([]*model.Balance, 0)
@@ -25,10 +25,10 @@ func _(key, secret string) {
 		balanceTime = balanceTime.Add(duration)
 		for _, market := range markets {
 			if balanceTime.After(balanceMaintainDay) {
-				balances = append(balances, api.GetTransfers(key, secret, market)...)
+				balances = append(balances, api.GetTransfers(account, market)...)
 				balanceMaintainDay = util.GetNow()
 			}
-			_, balance, _, _ := api.GetBalances(key, secret, market)
+			_, balance, _, _ := api.GetBalances(account, market)
 			balances = append(balances, balance...)
 			//for _, item := range balance {
 			//	key := fmt.Sprintf(`[balance]%s_%s`, item.Market, item.Coin)
@@ -76,7 +76,7 @@ func _() {
 					util.Log(util.LogLevelError, fmt.Sprintf(`can not maintain order status for nil account %s %s`, value.Market, value.AccountIndex))
 					continue
 				}
-				order := api.QueryOrderById(account.Key, account.Secret, value.Market, value.Symbol, value.OrderType, value.OrderId)
+				order := api.QueryOrderById(account, value.Market, value.Symbol, value.OrderType, value.OrderId)
 				if order == nil {
 					//if value.Market == model.Ftx && (strings.Contains(value.RefreshType, `carry`) ||
 					//	strings.Contains(value.RefreshType, `comp`)) {

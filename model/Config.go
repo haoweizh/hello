@@ -29,13 +29,13 @@ type Config struct {
 	CoinparkKey, CoinparkSecret, CoinparkCarryClose, CoinparkCarryRate                               string
 	BitgetKey, BitgetSecret, BitgetCarryClose, BitgetCarryRate                                       string
 	MexcKey, MexcSecret, MexcCarryClose, MexcCarryRate                                               string
-	BitmexKey, BitmexSecret, BitmexCarryClose, BitmexCarryRate, FtxSubAccount, Phase                 string
+	BitmexKey, BitmexSecret, BitmexCarryClose, BitmexCarryRate, FtxSubAccount                        string
 	OKPhase, Handle, Mail, FromMail, FromMailAuth, Port, WalletKey, DBConnection, Env, FutureAddress string
 }
 
 type Account struct {
 	Index                                                int // 账户索引
-	Market, Key, Secret, FtxSubAccount                   string
+	Market, Key, Secret, OKPhase                         string
 	CarryClose, IsUnified                                bool
 	CarryRate, GateLeverMax, GateLeverMin, GateRiskLimit float64
 }
@@ -133,6 +133,9 @@ func (config *Config) GetAccounts(market string) []*Account {
 		//if market == Ftx {
 		//	account.FtxSubAccount = ftxSubAccounts[i]
 		//}
+		if market == OKEX {
+			account.OKPhase = config.OKPhase
+		}
 		if market == Gate {
 			account.GateLeverMax, _ = strconv.ParseFloat(gateLeverMax[i], 64)
 			account.GateLeverMin, _ = strconv.ParseFloat(gateLeverMin[i], 64)

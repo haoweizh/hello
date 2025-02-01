@@ -71,7 +71,7 @@ type spotMarket struct {
 
 // 2/T+(1-t/T)^2
 func handledFRate(account *model.Account, market, symbol string, interval int) (got, delayed bool, fundingRate *model.FundingRate, handledFr float64) {
-	got, delayed, fundingRate = api.GetFundingRate(account.Key, account.Secret, market, symbol, false)
+	got, delayed, fundingRate = api.GetFundingRate(account, market, symbol, false)
 	if !got {
 		return
 	}
@@ -312,7 +312,7 @@ func GetHoldings(accounts map[string]*model.Account) (holding [][]interface{}) {
 		holding[i] = append(holding[i], currentStep)
 		holding[i] = append(holding[i], moneyCurStep)
 		holding[i] = append(holding[i], moneyPerStep)
-		_, _, fr := api.GetFundingRate(``, ``, market, symbol, true)
+		_, _, fr := api.GetFundingRate(nil, market, symbol, true)
 		marketInfo := model.GetMarketInfo(market, symbol)
 		if fr != nil && marketInfo != nil {
 			fundingStr := fmt.Sprintf(`%d:%d`, util.GetNow().Hour(), util.GetNow().Minute())
@@ -330,17 +330,17 @@ func GetHoldings(accounts map[string]*model.Account) (holding [][]interface{}) {
 }
 
 // GetCrossMarketValue keepInU: 不计入总价值的保留不交易币种
-func GetCrossMarketValue(key, secret, market string, force bool) (inAllSpot, contractAccountValue, holdingSpot,
+func GetCrossMarketValue(account *model.Account, market string, force bool) (inAllSpot, contractAccountValue, holdingSpot,
 	holdingFuture, marginAvailable float64) {
-	value, ok := spotMarkets.Load(key)
+	value, ok := spotMarkets.Load(account.Key)
 	if (!ok || value == nil) && force {
 		switch market {
 		case model.BinancePerp:
-			value = createSpotMarket(key, secret, model.BinanceSpot)
+			value = createSpotMarket(account, model.BinanceSpot)
 		case model.BitgetPerp:
-			value = createSpotMarket(key, secret, model.BitgetSpot)
+			value = createSpotMarket(account, model.BitgetSpot)
 		default:
-			value = createSpotMarket(key, secret, market)
+			value = createSpotMarket(account, market)
 		}
 	}
 	if value != nil {
@@ -358,15 +358,15 @@ func GetCrossMarketValue(key, secret, market string, force bool) (inAllSpot, con
 			}
 		}
 	}
-	value, ok = contractMarkets.Load(key)
+	value, ok = contractMarkets.Load(account.Key)
 	if (!ok || value == nil) && force {
 		switch market {
 		case model.BinanceSpot:
-			value = createContractMarket(key, secret, model.BinancePerp)
+			value = createContractMarket(account, model.BinancePerp)
 		case model.BitgetSpot:
-			value = createContractMarket(key, secret, model.BitgetPerp)
+			value = createContractMarket(account, model.BitgetPerp)
 		default:
-			value = createContractMarket(key, secret, market)
+			value = createContractMarket(account, market)
 		}
 	}
 	if value != nil {
@@ -411,7 +411,7 @@ func _(order *model.Order, setting *model.Setting) {
 		if lastOrder == nil || order.OrderTime.Add(tenMin).Before(now) || order.OrderTime.Add(second).After(now) || account == nil {
 			continue
 		}
-		queryOrder := api.QueryOrderById(account.Key, account.Secret, lastOrder.Market, lastOrder.Symbol, lastOrder.OrderType, lastOrder.OrderId)
+		queryOrder := api.QueryOrderById(account, lastOrder.Market, lastOrder.Symbol, lastOrder.OrderType, lastOrder.OrderId)
 		if queryOrder == nil {
 			continue
 		}
@@ -444,7 +444,7 @@ func _(order *model.Order, setting *model.Setting) {
 }
 
 func liquidateSmallContracts(account *model.Account, market string) {
-	success, positions, _, _, _ := api.GetPositions(account.Key, account.Secret, market)
+	success, positions, _, _, _ := api.GetPositions(account, market)
 	if success {
 		for _, position := range positions {
 			holding := math.Abs(position.Holding)

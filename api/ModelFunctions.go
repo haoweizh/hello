@@ -422,7 +422,7 @@ func InitApp(refreshDynamic bool) bool {
 	for _, market := range model.AppEnvironment.Markets {
 		accounts := model.AppConfig.GetAccounts(market)
 		for _, account := range accounts {
-			go CancelAll(account.Key, account.Secret, market)
+			go CancelAll(account, market)
 			go initMarketMode(account, market)
 		}
 		MaintainConns(market)
@@ -435,10 +435,10 @@ func InitApp(refreshDynamic bool) bool {
 func initMarketMode(account *model.Account, market string) {
 	switch market {
 	case model.OKEX:
-		accountMode := getAccountConfigOKEX(account.Key, account.Secret)
+		accountMode := getAccountConfigOKEX(account)
 		util.Log(util.LogLevelInfo, `okex config and set: `+accountMode)
 		if accountMode != `net_mode` {
-			setAccountModeOKEX(account.Key, account.Secret)
+			setAccountModeOKEX(account)
 		}
 		setLeverageOkx(account)
 	case model.BinancePerp:

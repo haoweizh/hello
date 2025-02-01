@@ -19,19 +19,19 @@ var okTradeMaxResetTime = &sync.Map{} // key - symbol - init time in second
 var okexCrossing = sync.Map{}         // symbol - bool
 var USDs = map[string]bool{`USD`: true, `usd`: true, `USDT`: true, `usdt`: true, `USDC`: true, `usdc`: true, `BUSD`: true, `busd`: true}
 
-func GetTradeMaxOKEX(key, secret, symbol string, expireSecond int64) (success bool, maxBuy, maxSell float64) {
-	v, ok := util.LoadSyncMap(tradeMax, key, symbol)
+func GetTradeMaxOKEX(account *model.Account, symbol string, expireSecond int64) (success bool, maxBuy, maxSell float64) {
+	v, ok := util.LoadSyncMap(tradeMax, account.Key, symbol)
 	if expireSecond < 0 && ok && v != nil {
 		return true, v.([]float64)[0], v.([]float64)[1]
 	}
-	vTime, okTime := util.LoadSyncMap(okTradeMaxResetTime, key, symbol)
+	vTime, okTime := util.LoadSyncMap(okTradeMaxResetTime, account.Key, symbol)
 	if v != nil && ok && vTime != nil && okTime && time.Now().Unix()-vTime.(int64) < expireSecond {
 		return true, v.([]float64)[0], v.([]float64)[1]
 	}
-	success, maxBuy, maxSell = getMaxSizeOKEX(key, secret, symbol)
+	success, maxBuy, maxSell = getMaxSizeOKEX(account, symbol)
 	if success {
-		util.StoreSyncMap(tradeMax, []float64{maxBuy, maxSell}, key, symbol)
-		util.StoreSyncMap(okTradeMaxResetTime, time.Now().Unix(), key, symbol)
+		util.StoreSyncMap(tradeMax, []float64{maxBuy, maxSell}, account.Key, symbol)
+		util.StoreSyncMap(okTradeMaxResetTime, time.Now().Unix(), account.Key, symbol)
 	}
 	return success, maxBuy, maxSell
 }
@@ -124,12 +124,12 @@ func RequireConnTickReset(environment *model.Environment, market string) bool {
 	return needReset.(bool)
 }
 
-func MustCancel(key, secret, market, symbol, orderType, orderId string, mustCancel bool) (res bool) {
+func MustCancel(account *model.Account, market, symbol, orderType, orderId string, mustCancel bool) (res bool) {
 	var lock *sync.Mutex
-	lockValue, _ := mustCancelLock.Load(key)
+	lockValue, _ := mustCancelLock.Load(account.Key)
 	if lockValue == nil {
 		lock = &sync.Mutex{}
-		mustCancelLock.Store(key, lock)
+		mustCancelLock.Store(account.Key, lock)
 	} else {
 		lock = lockValue.(*sync.Mutex)
 	}
@@ -137,7 +137,7 @@ func MustCancel(key, secret, market, symbol, orderType, orderId string, mustCanc
 	lock.Lock()
 	sleepTime := 10
 	for i := 0; i < 4; i++ {
-		result, errCode, msg := CancelOrder(key, secret, market, symbol, orderType, orderId)
+		result, errCode, msg := CancelOrder(account, market, symbol, orderType, orderId)
 		res = result
 		util.Log(util.LogLevelInfo, fmt.Sprintf(`[cancel] %s %s %s %s for %d times, return %t code %s msg %s `,
 			market, symbol, orderType, orderId, i, result, errCode, msg))
@@ -162,31 +162,31 @@ func MustCancel(key, secret, market, symbol, orderType, orderId string, mustCanc
 	return res
 }
 
-func CancelAll(key, secret, market string) {
+func CancelAll(account *model.Account, market string) {
 	switch market {
 	case model.OKEX:
-		cancelAllOkex(key, secret)
+		cancelAllOkex(account)
 	case model.Bybit:
-		cancelAllBybit(key, secret, `linear`)
-		cancelAllBybit(key, secret, `spot`)
+		cancelAllBybit(account.Key, account.Secret, `linear`)
+		cancelAllBybit(account.Key, account.Secret, `spot`)
 	case model.BinanceSpot:
-		orders := queryOpenOrdersBinanceSpot(key, secret, ``)
+		orders := queryOpenOrdersBinanceSpot(account.Key, account.Secret, ``)
 		for _, order := range orders {
-			result, _ := cancelOrderBinanceSpot(key, secret, market, order.Symbol, order.OrderId)
+			result, _ := cancelOrderBinanceSpot(account.Key, account.Secret, market, order.Symbol, order.OrderId)
 			util.Log(util.LogLevelInfo, fmt.Sprintf(`cancelAll orders success BinanceSpot %s id %s return %#v`,
 				order.Symbol, order.OrderId, result))
 			time.Sleep(time.Millisecond * 100)
 		}
 	case model.BinancePerp:
-		orders := queryOpenOrdersBinancePerp(key, secret, ``)
+		orders := queryOpenOrdersBinancePerp(account.Key, account.Secret, ``)
 		for _, order := range orders {
-			result := cancelOrderBinancePerp(key, secret, order.Symbol, order.OrderId)
+			result := cancelOrderBinancePerp(account.Key, account.Secret, order.Symbol, order.OrderId)
 			util.Log(util.LogLevelInfo, fmt.Sprintf(`cancelAll orders success BinancePerp %s id %s return %#v`,
 				order.Symbol, order.OrderId, result))
 			time.Sleep(time.Millisecond * 100)
 		}
 	case model.Gate:
-		cancelAllGate(key, secret)
+		cancelAllGate(account.Key, account.Secret)
 		//case model.BitgetSpot:
 		//	// 只支持50个以内的order
 		//	orders := deprecated.queryOpenOrdersBitgetSpot(key, secret, ``)
@@ -197,32 +197,18 @@ func CancelAll(key, secret, market string) {
 }
 
 // CancelOrders 暂不支持策略订单
-func CancelOrders(key, secret, market, symbol string) (result bool) {
+func CancelOrders(account *model.Account, market, symbol string) (result bool) {
 	switch market {
-	//case model.BitgetPerp:
-	//	result = deprecated.cancelOrdersBitgetPerp(key, secret, symbol)
-	//case model.BitgetSpot:
-	//	result = deprecated.cancelOrdersBitgetSpot(key, secret, symbol)
 	case model.Gate:
-		result = cancelOrdersGate(key, secret, symbol)
+		result = cancelOrdersGate(account.Key, account.Secret, symbol)
 	case model.BinanceSpot, model.BinanceMargin:
-		result = cancelOrdersBinance(key, secret, market, symbol)
+		result = cancelOrdersBinance(account.Key, account.Secret, market, symbol)
 	case model.BinancePerp:
-		result = cancelOrdersBinancePerp(key, secret, symbol)
+		result = cancelOrdersBinancePerp(account.Key, account.Secret, symbol)
 	case model.Bybit:
-		result = cancelOrdersBybit(key, secret, symbol)
+		result = cancelOrdersBybit(account.Key, account.Secret, symbol)
 	case model.OKEX:
-		result, _, _ = cancelOrdersOKEX(key, secret, symbol)
-		//case model.HuobiSpot:
-		//	result = deprecated.cancelOrdersHuobiSpot(key, secret, symbol)
-		//case model.Ftx:
-		//	result = deprecated.cancelOrdersFtx(key, secret, symbol)
-		//case model.KucoinSpot:
-		//	result = deprecated.cancelOrdersKucoinSpot(symbol)
-		//case model.KucoinPerp:
-		//	result = deprecated.cancelOrdersKucoinPerp(symbol)
-		//case model.Mexc:
-		//	result = deprecated.cancelOrdersMexc(key, secret, symbol)
+		result, _, _ = cancelOrdersOKEX(account, symbol)
 	}
 	time.Sleep(time.Second * 2)
 	util.Log(util.LogLevelInfo, fmt.Sprintf(`cancel symbol orders %s %s return %#v`, market, symbol, result))
@@ -230,7 +216,7 @@ func CancelOrders(key, secret, market, symbol string) (result bool) {
 }
 
 // CancelOrder 支持普通订单、stop订单
-func CancelOrder(key, secret, market, symbol, orderType, orderId string) (result bool, errCode, msg string) {
+func CancelOrder(account *model.Account, market, symbol, orderType, orderId string) (result bool, errCode, msg string) {
 	if model.AppConfig.Env == `test` {
 		return true, ``, `test cancel`
 	}
@@ -238,19 +224,15 @@ func CancelOrder(key, secret, market, symbol, orderType, orderId string) (result
 	msg = `` + market
 	switch market {
 	case model.OKEX:
-		result, errCode, msg = cancelOrderOkex(key, secret, symbol, orderId, orderType)
+		result, errCode, msg = cancelOrderOkex(account, symbol, orderId, orderType)
 	case model.Bybit:
-		result = cancelOrderBybit(key, secret, symbol, orderId)
-	//case model.BitgetSpot:
-	//	result = deprecated.cancelOrderBitgetSpot(key, secret, symbol, orderId)
-	//case model.BitgetPerp:
-	//	result = deprecated.cancelOrderBitgetPerp(key, secret, symbol, orderId)
+		result = cancelOrderBybit(account.Key, account.Secret, symbol, orderId)
 	case model.Gate:
-		result = cancelOrderGate(key, secret, symbol, orderId)
+		result = cancelOrderGate(account.Key, account.Secret, symbol, orderId)
 	case model.BinancePerp:
-		result = cancelOrderBinancePerp(key, secret, symbol, orderId)
+		result = cancelOrderBinancePerp(account.Key, account.Secret, symbol, orderId)
 	case model.BinanceSpot:
-		result, _ = cancelOrderBinanceSpot(key, secret, market, symbol, orderId)
+		result, _ = cancelOrderBinanceSpot(account.Key, account.Secret, market, symbol, orderId)
 	}
 	util.Log(util.LogLevelInfo, fmt.Sprintf(`[cancel %s %#v %s %s]`, orderId, result, market, symbol))
 	return result, errCode, msg
@@ -458,9 +440,9 @@ func GetMarketEquity(index int) (msg string) {
 			continue
 		}
 		//util.Notice(fmt.Sprintf(`try to get value for %s account %s`, market, accounts[market].Key[:5]))
-		_, _, equity, _ := GetBalances(accounts[market].Key, accounts[market].Secret, market)
+		_, _, equity, _ := GetBalances(accounts[market], market)
 		if equity == 0 && !accounts[market].IsUnified {
-			_, _, equity, _, _ = GetPositions(accounts[market].Key, accounts[market].Secret, market)
+			_, _, equity, _, _ = GetPositions(accounts[market], market)
 		}
 		inAll += equity
 		msg += fmt.Sprintf("%s: %f\n", market, equity)
@@ -472,12 +454,12 @@ func GetMarketEquity(index int) (msg string) {
 	return msg
 }
 
-func GetBalances(key, secret, market string) (
+func GetBalances(account *model.Account, market string) (
 	success bool, balances []*model.Balance, totalInUsd float64, collateral *model.Collateral) {
-	lock, _ := balanceLock.Load(key)
+	lock, _ := balanceLock.Load(account.Key)
 	if lock == nil {
 		lock = &sync.Mutex{}
-		balanceLock.Store(key, lock)
+		balanceLock.Store(account.Key, lock)
 	}
 	lock.(*sync.Mutex).Lock()
 	defer func() {
@@ -494,21 +476,15 @@ func GetBalances(key, secret, market string) (
 	//case model.BitgetSpot:
 	//	success, balances = deprecated.getBalanceBitgetSpot(key, secret)
 	case model.Gate:
-		success, balances, totalInUsd, collateral = getBalanceGate(key, secret)
+		success, balances, totalInUsd, collateral = getBalanceGate(account.Key, account.Key)
 	case model.OKEX:
-		success, balances, totalInUsd, collateral = getBalanceOKEX(key, secret)
+		success, balances, totalInUsd, collateral = getBalanceOKEX(account)
 	case model.BinanceSpot:
-		success, totalInUsd, balances = getBalanceBinanceSpot(key, secret)
+		success, totalInUsd, balances = getBalanceBinanceSpot(account.Key, account.Secret)
 	case model.BinanceMargin:
-		success, balances = getBalanceBinanceMargin(key, secret)
+		success, balances = getBalanceBinanceMargin(account.Key, account.Secret)
 	case model.Bybit:
-		success, balances, totalInUsd, collateral = getBalanceBybit(key, secret)
-		//case model.HuobiSpot:
-		//	success, balances = deprecated.getBalanceHuobiSpot(key, secret)
-		//case model.Ftx:
-		//	success, balances, totalInUsd = deprecated.getBalanceFtx(key, secret)
-		//case model.KucoinSpot:
-		//	success, balances = deprecated.getBalanceKucoinSpot(key, secret)
+		success, balances, totalInUsd, collateral = getBalanceBybit(account.Key, account.Secret)
 	}
 	accounts := model.AppConfig.GetAccounts(market)
 	if len(accounts) > 0 && !accounts[0].IsUnified && totalInUsd == 0 {
@@ -522,7 +498,7 @@ func GetBalances(key, secret, market string) (
 				if price == 0 && balance.Amount > 0 {
 					setting := GetSetting(model.FunctionCross, market, symbolStandard)
 					msg := fmt.Sprintf(`can not get usd value for %s %s %s value%f amt %f`,
-						key, market, symbolStandard, totalInUsd, balance.Amount)
+						account.Key, market, symbolStandard, totalInUsd, balance.Amount)
 					if setting != nil {
 						msg = `with setting ` + msg
 					} else {
@@ -538,19 +514,17 @@ func GetBalances(key, secret, market string) (
 	return success, balances, totalInUsd, collateral
 }
 
-func GetTransfers(key, secret, market string) (balances []*model.Balance) {
+func GetTransfers(account *model.Account, market string) (balances []*model.Balance) {
 	switch market {
-	//case model.Ftx:
-	//	return deprecated.getTransferFtx(key, secret)
 	case model.OKEX:
-		return getTransferOKEX(key, secret)
+		return getTransferOKEX(account)
 	case model.BinanceSpot, model.BinancePerp, model.BinanceMargin:
-		return GetWithdrawInfo(market, key, secret)
+		return GetWithdrawInfo(market, account.Key, account.Secret)
 	}
 	return balances
 }
 
-func GetFundingRate(key, secret, market, symbol string, cacheOnly bool) (success, useRest bool, rate *model.FundingRate) {
+func GetFundingRate(account *model.Account, market, symbol string, cacheOnly bool) (success, useRest bool, rate *model.FundingRate) {
 	//非永续合约的资金费率为0
 	_, marketType, _, _ := model.GetFromStandard(market, symbol)
 	if marketType != model.MarketTypePerp {
@@ -596,11 +570,11 @@ func GetFundingRate(key, secret, market, symbol string, cacheOnly bool) (success
 	case model.Bybit:
 		fundingRate = getFundingRateBybit(symbol)
 	case model.OKEX:
-		fundingRate = getFundingRateOKEX(key, secret, symbol)
+		fundingRate = getFundingRateOKEX(account, symbol)
 	case model.BinancePerp:
-		fundingRate = getFundingRateBinancePerp(key, secret, symbol)
+		fundingRate = getFundingRateBinancePerp(account.Key, account.Secret, symbol)
 	case model.Gate:
-		fundingRate = getFundingRateGate(key, secret, symbol)
+		fundingRate = getFundingRateGate(account.Key, account.Secret, symbol)
 	}
 	if fundingRate == nil || now > fundingRate.ExpireTime {
 		time.Sleep(time.Minute)
@@ -613,62 +587,53 @@ func GetFundingRate(key, secret, market, symbol string, cacheOnly bool) (success
 }
 
 // GetMaxLoan
-func _(key, secret, market, symbol string) (success bool, maxLoan float64) {
+func _(account *model.Account, market, symbol string) (success bool, maxLoan float64) {
 	switch market {
 	case model.Gate:
 		return getMaxLoanGate(symbol)
 	case model.OKEX:
-		return getMaxLoanOKEX(key, secret, symbol)
+		return getMaxLoanOKEX(account, symbol)
 	}
 	return false, 0
 }
 
-func QueryOpenOrders(key, secret, market, symbol string) (orders []*model.Order) {
+func QueryOpenOrders(account *model.Account, market, symbol string) (orders []*model.Order) {
 	orders = make([]*model.Order, 0)
 	switch market {
 	case model.OKEX:
-		orders = queryOpenOrdersOKEX(key, secret, symbol, true)
-		temp := queryOpenOrdersOKEX(key, secret, symbol, false)
+		orders = queryOpenOrdersOKEX(account, symbol, true)
+		temp := queryOpenOrdersOKEX(account, symbol, false)
 		for _, order := range temp {
 			orders = append(orders, order)
 		}
 	case model.Bybit:
-		orders = queryOpenOrdersBybit(key, secret, symbol)
-	//case model.BitgetSpot:
-	//	orders = deprecated.queryOpenOrdersBitgetSpot(key, secret, symbol)
-	//case model.BitgetPerp:
-	//	orders = deprecated.queryOpenOrdersBitgetPerp(key, secret)
-	//case model.Ftx:
-	//	orders = deprecated.queryOrdersFtx(key, secret, symbol, true)
-	//	for _, order := range deprecated.queryOrdersFtx(key, secret, symbol, false) {
-	//		orders = append(orders, order)
-	//	}
+		orders = queryOpenOrdersBybit(account.Key, account.Secret, symbol)
 	case model.Gate:
-		orders = queryOpenOrdersGate(key, secret, symbol)
+		orders = queryOpenOrdersGate(account.Key, account.Secret, symbol)
 	case model.BinancePerp:
-		orders = queryOpenOrdersBinancePerp(key, secret, symbol)
+		orders = queryOpenOrdersBinancePerp(account.Key, account.Secret, symbol)
 	case model.BinanceSpot:
-		orders = queryOpenOrdersBinanceSpot(key, secret, symbol)
+		orders = queryOpenOrdersBinanceSpot(account.Key, account.Secret, symbol)
 	}
 	return orders
 }
 
-func QueryOrderById(key, secret, market, symbol, orderType, orderId string) (order *model.Order) {
+func QueryOrderById(account *model.Account, market, symbol, orderType, orderId string) (order *model.Order) {
 	switch market {
 	//case model.BitgetPerp:
 	//	order = deprecated.queryOrderBitgetPerp(key, secret, symbol, orderId)
 	//case model.BitgetSpot:
 	//	order = deprecated.queryOrderBitgetSpot(key, secret, orderId)
 	case model.Gate:
-		order = queryOrderGate(key, secret, symbol, orderId)
+		order = queryOrderGate(account.Key, account.Secret, symbol, orderId)
 	case model.OKEX:
-		order = queryOrderOKEX(key, secret, symbol, orderId, orderType)
+		order = queryOrderOKEX(account, symbol, orderId, orderType)
 	case model.BinanceSpot:
-		order = queryOrderBinanceSpot(key, secret, symbol, orderId)
+		order = queryOrderBinanceSpot(account.Key, account.Secret, symbol, orderId)
 	case model.BinancePerp:
-		order = queryOrderBinancePerp(key, secret, symbol, orderId)
+		order = queryOrderBinancePerp(account.Key, account.Secret, symbol, orderId)
 	case model.Bybit:
-		order = queryOrderBybit(key, secret, symbol, orderId)
+		order = queryOrderBybit(account.Key, account.Secret, symbol, orderId)
 	}
 	util.Log(util.LogLevelInfo, fmt.Sprintf(`query by id %s %s %s %#v`, market, symbol, orderId, order))
 	return order
@@ -677,11 +642,11 @@ func QueryOrderById(key, secret, market, symbol, orderType, orderId string) (ord
 // GetPositions
 // accountValue: 账户权益
 // availableU: 可用usd
-func GetPositions(key, secret, market string) (success bool, positions []*model.Position, accountValue, availableU, mmr float64) {
-	lock, _ := positionLock.Load(key)
+func GetPositions(account *model.Account, market string) (success bool, positions []*model.Position, accountValue, availableU, mmr float64) {
+	lock, _ := positionLock.Load(account.Key)
 	if lock == nil {
 		lock = &sync.Mutex{}
-		positionLock.Store(key, lock)
+		positionLock.Store(account.Key, lock)
 	}
 	lock.(*sync.Mutex).Lock()
 	defer func() {
@@ -692,18 +657,18 @@ func GetPositions(key, secret, market string) (success bool, positions []*model.
 	//case model.BitgetPerp:
 	//	success, positions, accountValue, availableU, mmr = deprecated.getPositionsBitgetPerp(key, secret)
 	case model.Gate:
-		_, _, total, collateral := getBalanceGate(key, secret)
-		success, positions = getPositionsGate(key, secret)
+		_, _, total, collateral := getBalanceGate(account.Key, account.Secret)
+		success, positions = getPositionsGate(account.Key, account.Secret)
 		accountValue, availableU, mmr = total, collateral.Available, collateral.Rate
 	case model.BinancePerp:
-		success, positions, accountValue, availableU, mmr = getPositionsBinancePerp(key, secret)
+		success, positions, accountValue, availableU, mmr = getPositionsBinancePerp(account.Key, account.Secret)
 	case model.Bybit:
-		_, _, total, collateral := getBalanceBybit(key, secret)
-		success, positions, _ = getPositionsBybit(key, secret)
+		_, _, total, collateral := getBalanceBybit(account.Key, account.Secret)
+		success, positions, _ = getPositionsBybit(account.Key, account.Secret)
 		accountValue, availableU, mmr = total, collateral.Available, collateral.Rate
 	case model.OKEX:
-		_, _, total, collateral := getBalanceOKEX(key, secret)
-		success, positions = getPositionsOKEX(key, secret)
+		_, _, total, collateral := getBalanceOKEX(account)
+		success, positions = getPositionsOKEX(account)
 		accountValue, availableU, mmr = total, collateral.Available, collateral.Rate
 	}
 	//util.Notice(fmt.Sprintf(`get positions %s %s %f %f %d %#v`,
@@ -1043,7 +1008,7 @@ func InitMarketInfos(market string) (success bool) {
 	//case model.Ftx:
 	//	marketInfos = deprecated.getMarketsFtx(accounts[0].Key, accounts[0].Secret)
 	case model.OKEX:
-		marketInfos = getMarketsOKEX(accounts[0].Key, accounts[0].Secret)
+		marketInfos = getMarketsOKEX(accounts[0])
 	//case model.HuobiSpot:
 	//	marketInfos = deprecated.getMarketsHuobiSpot(accounts[0].Key, accounts[0].Secret)
 	case model.BinanceSpot:
