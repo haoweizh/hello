@@ -154,6 +154,7 @@ func Maintain() {
 	model.TickHandlers[model.FunctionTurtle] = Turtle.ProcessTurtle
 	model.TickHandlers[model.FunctionCross] = cross.ProcessCross
 	model.TickHandlers[model.FunctionCombineTurtle] = Turtle.ProcessCombineTurtle
+	model.TickHandlers[model.FunctionMove] = ProcessMove
 	model.AccountHandlerMap[model.FunctionCross] = cross.PostOrderCross
 	model.CandleHandlers[model.FunctionMonitorKLine] = monitor.ProcessMonitor
 	model.CollateralHandler = cross.ProcessCollateral

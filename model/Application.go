@@ -21,7 +21,7 @@ var CarryInfo sync.Map        // userKey - function - msg
 var monitorInfo = &sync.Map{} // userIndex - table - syncMap[string -array[]string]
 var AppMetric = &MetricManager{}
 var IgnoreFunctions = map[string]bool{FunctionDynamicTurtle: true, FunctionTurtleNormal: true,
-	FunctionDynamicCombine: true, FunctionDynamicBoost: true}
+	FunctionDynamicCombine: true, FunctionDynamicBoost: true, FunctionMoveMarket: true}
 var NonRTTicker = map[string]bool{Bybit: true, BitgetSpot: true, BitgetPerp: true}
 
 const BitgetPosLimit = 140 // 不能超过150
@@ -62,6 +62,7 @@ const FunctionTurtleAdjust = `turtle_adjust`
 const FunctionDynamicTurtle = `dynamic_turtle`
 const FunctionDynamicCombine = `dynamic_combine`
 const FunctionDynamicBoost = `dynamic_boost`
+const FunctionMoveMarket = `move_market`
 const FunctionCombineTurtle = `combine_turtle`
 const FunctionTurtleNormal = `turtle_normal`
 const FunctionCross = `cross`

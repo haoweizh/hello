@@ -254,6 +254,20 @@ func handleCombineSettings(mumSetting *model.Setting, topMarketInfos map[string]
 	})
 }
 
+func handleMoveMarkets(setting *model.Setting) {
+	account := model.AppConfig.GetAccounts(setting.Market)[0]
+	_, positions, _, _, _ := GetPositions(account, setting.Market)
+	_, balances, _, _ := GetBalances(account, setting.Market)
+	for _, position := range positions {
+		settingNew := &model.Setting{Valid: true, Function: model.FunctionMove, Market: setting.Market, Symbol: position.Currency}
+		model.AppDB.Save(settingNew)
+	}
+	for _, balance := range balances {
+		settingNew := &model.Setting{Valid: true, Function: model.FunctionMove, Market: setting.Market, Symbol: balance.Coin + model.UniStandardTail[model.MarketTypeSpot]}
+		model.AppDB.Save(settingNew)
+	}
+}
+
 func handleSingleSettings(mumSetting *model.Setting, topMarketInfos map[string]*model.MarketInfo, function string) {
 	settingMap := &sync.Map{}
 	value, ok := util.LoadSyncMap(symbolSettings, function, mumSetting.Market)
@@ -379,6 +393,7 @@ func getDynamicMarketInfos(mumSetting *model.Setting, accounts []*model.Account,
 func handleMarketDynamic(market string) (handled bool) {
 	settingDynamicTurtle := GetSetting(model.FunctionDynamicTurtle, market, ``)
 	settingDynamicCombine := GetSetting(model.FunctionDynamicCombine, market, ``)
+	settingMoveMarket := GetSetting(model.FunctionMoveMarket, market, ``)
 	accounts := model.AppConfig.GetAccounts(market)
 	if (settingDynamicTurtle == nil && settingDynamicCombine == nil) ||
 		accounts == nil || len(accounts) == 0 {
@@ -393,6 +408,9 @@ func handleMarketDynamic(market string) (handled bool) {
 	if settingDynamicTurtle != nil {
 		topMarketInfos := getDynamicMarketInfos(settingDynamicTurtle, accounts, settingDynamicTurtle.Function, topLen, int(settingDynamicTurtle.OpenShortMargin))
 		handleSingleSettings(settingDynamicTurtle, topMarketInfos, model.FunctionTurtle)
+	}
+	if settingMoveMarket != nil {
+		handleMoveMarkets(settingMoveMarket)
 	}
 	DynamicHandleTime.Store(market, time.Now())
 	util.Log(util.LogLevelInfo, fmt.Sprintf(`handle Dynamic settings %s`, market))
