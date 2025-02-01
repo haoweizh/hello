@@ -621,7 +621,9 @@ func getBalanceBinanceSpot(key string, secret string) (success bool, totalInUsdt
 			symbolStandard := balance.Coin + model.UniStandardTail[model.MarketTypeSpot]
 			_, price := GetPriceForce(symbolStandard, model.BinanceSpot)
 			balance.UsdValue = balance.Amount * price
-			fmt.Println(fmt.Sprintf(`usd value binance %s %s amt %f price %f value %f`, balance.Coin, symbolStandard, balance.Amount, price, balance.UsdValue))
+			if price > 0 {
+				fmt.Println(fmt.Sprintf(`usd value binance %s %s amt %f price %f value %f`, balance.Coin, symbolStandard, balance.Amount, price, balance.UsdValue))
+			}
 		}
 		//if asset[`netAsset`] != nil {
 		//	balance.Amount, _ = strconv.ParseFloat(asset[`netAsset`].(string), 64)
