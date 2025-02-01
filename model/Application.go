@@ -65,6 +65,7 @@ const FunctionDynamicBoost = `dynamic_boost`
 const FunctionCombineTurtle = `combine_turtle`
 const FunctionTurtleNormal = `turtle_normal`
 const FunctionCross = `cross`
+const FunctionMove = `move`
 const FunctionMonitorKLine = `monitor_kline`
 const TurtleTypeChange = `change`
 const MarketTypePerp = `perp`

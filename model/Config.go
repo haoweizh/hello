@@ -15,6 +15,7 @@ type Config struct {
 	PriceThreshold                float64
 	Delay                         float64
 	Debug, KucoinSpot, MetricTick bool
+	ToKey, ToSecret, ToPhase      string
 	// SpecialChan 1 代表使用特殊通道
 	SpecialChan, CrossStyle, MoneyPerStep                                                            string
 	KucoinRelatedKey, KucoinRelatedSecret, KucoinFutureKey, KucoinFutureSecret                       string

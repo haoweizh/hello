@@ -48,30 +48,30 @@ type WSResp struct {
 }
 
 type Environment struct {
-	markPriceInfos            sync.Map // symbol - market - ticker 行情包含标记价格
-	bidAsks                   sync.Map // market*symbol - bidAsk
-	kLines                    sync.Map // symbol - market - *candle
-	MsgChanKLine              sync.Map // market - []chan struct{}
-	WsInitTime                sync.Map // market - time
-	ConnTick                  sync.Map // market(特殊处理gate） - map[*websocket.conn]bool for depth sockets
-	ConnOrder                 sync.Map // market*accountKey / Gate*marketType*accountKey - *WSConn;
-	ConnOrderUpdate           sync.Map // market*accountKey / Gate*marketType*accountKey - *WSConn;
-	ReqIdOrders               sync.Map // requestId - *Order
-	OrderIdOrders             sync.Map // orderId - *Order
-	RiskLimitsGate            sync.Map // accountKey * symbol - money in usdt
-	PauseTrade                sync.Map // coin*market*symbol*key*orderSide bool
-	WSRespChan                chan WSResp
-	MonitorSettings           sync.Map // sync.Map[market]*sync.Map[symbol]*sync.Map[interval]*sync.Map[address]*MonitorSetting
-	WsManager                 *WSManager
-	Markets                   []string
-	Settings                  []Setting
-	CrossEqualing, CrossPause bool
-	PriConnecting             sync.Map // accountKey * market - bool
-	SpecialChans              sync.Map // tsCode * wsType *WSConn
-	LastOrderMilli            sync.Map // account.Key - last order time in million-seconds
-	PubChanNeedReset          sync.Map // market - bool
-	PubSubscribes             sync.Map // market*wsUrl - []interface{}
-	OkexPubMarkets            sync.Map // channel*instid- string
+	markPriceInfos                    sync.Map // symbol - market - ticker 行情包含标记价格
+	bidAsks                           sync.Map // market*symbol - bidAsk
+	kLines                            sync.Map // symbol - market - *candle
+	MsgChanKLine                      sync.Map // market - []chan struct{}
+	WsInitTime                        sync.Map // market - time
+	ConnTick                          sync.Map // market(特殊处理gate） - map[*websocket.conn]bool for depth sockets
+	ConnOrder                         sync.Map // market*accountKey / Gate*marketType*accountKey - *WSConn;
+	ConnOrderUpdate                   sync.Map // market*accountKey / Gate*marketType*accountKey - *WSConn;
+	ReqIdOrders                       sync.Map // requestId - *Order
+	OrderIdOrders                     sync.Map // orderId - *Order
+	RiskLimitsGate                    sync.Map // accountKey * symbol - money in usdt
+	PauseTrade                        sync.Map // coin*market*symbol*key*orderSide bool
+	WSRespChan                        chan WSResp
+	MonitorSettings                   sync.Map // sync.Map[market]*sync.Map[symbol]*sync.Map[interval]*sync.Map[address]*MonitorSetting
+	WsManager                         *WSManager
+	Markets                           []string
+	Settings                          []Setting
+	CrossEqualing, CrossPause, Moving bool
+	PriConnecting                     sync.Map // accountKey * market - bool
+	SpecialChans                      sync.Map // tsCode * wsType *WSConn
+	LastOrderMilli                    sync.Map // account.Key - last order time in million-seconds
+	PubChanNeedReset                  sync.Map // market - bool
+	PubSubscribes                     sync.Map // market*wsUrl - []interface{}
+	OkexPubMarkets                    sync.Map // channel*instid- string
 }
 
 type MarkPriceInfo struct {

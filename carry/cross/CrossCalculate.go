@@ -239,25 +239,27 @@ func calcAmount(index int, coin string, carryStatus, carryStatusRelate *model.Ca
 	scoreOpen = (priceBid/priceX - priceAskRelate/priceXRelate) / math.Max(priceBid/priceX, priceAskRelate/priceXRelate)
 	score = scoreOpen
 	scoreSwitch = scoreOpen
+	scoreClose = scoreOpen
 	scoreOpenR = (priceBidRelate/priceXRelate - priceAsk/priceX) / math.Max(priceAsk/priceX, priceBidRelate/priceXRelate)
 	scoreR = scoreOpenR
 	scoreSwitchR = scoreOpenR
-	priceAskRelate = tickRelate.Asks[0].Price * (1 + float64(carryStatusRelate.Setting.ChanceLimitCombine)*handledRateRelate)
-	priceBidRelate = tickRelate.Bids[0].Price * (1 + float64(carryStatusRelate.Setting.ChanceLimitCombine)*handledRateRelate)
-	priceAsk = tick.Asks[0].Price * (1 + float64(carryStatus.Setting.ChanceLimitCombine)*handledRate)
-	priceBid = tick.Bids[0].Price * (1 + float64(carryStatus.Setting.ChanceLimitCombine)*handledRate)
-	scoreClose = (priceBid/priceX - priceAskRelate/priceXRelate) / math.Max(priceBid/priceX, priceAskRelate/priceXRelate)
-	scoreCloseR = (priceBidRelate/priceXRelate - priceAsk/priceX) / math.Max(priceAsk/priceX, priceBidRelate/priceXRelate)
+	scoreCloseR = scoreOpenR
 	if handledRateRelate > handledRate { // R为买方＞0
 		priceBid = tick.Bids[0].Price * (1 + float64(carryStatus.Setting.ChanceLimit)*handledRate)
 		priceAskRelate = tickRelate.Asks[0].Price * (1 + float64(carryStatus.Setting.ChanceLimit)*handledRateRelate)
 		scoreOpen = (priceBid/priceX - priceAskRelate/priceXRelate) / math.Max(priceBid/priceX, priceAskRelate/priceXRelate)
 		scoreSwitch = scoreOpen
+		priceBid = tick.Bids[0].Price * (1 + float64(carryStatus.Setting.ChanceLimitCombine)*handledRate)
+		priceAskRelate = tickRelate.Asks[0].Price * (1 + float64(carryStatusRelate.Setting.ChanceLimitCombine)*handledRateRelate)
+		scoreClose = (priceBid/priceX - priceAskRelate/priceXRelate) / math.Max(priceBid/priceX, priceAskRelate/priceXRelate)
 	} else if handledRateRelate < handledRate { // R为卖方<0
 		priceBidRelate = tickRelate.Bids[0].Price * (1 + float64(carryStatusRelate.Setting.ChanceLimit)*handledRateRelate)
 		priceAsk = tick.Asks[0].Price * (1 + float64(carryStatusRelate.Setting.ChanceLimit)*handledRate)
 		scoreOpenR = (priceBidRelate/priceXRelate - priceAsk/priceX) / math.Max(priceAsk/priceX, priceBidRelate/priceXRelate)
 		scoreSwitchR = scoreOpenR
+		priceBidRelate = tickRelate.Bids[0].Price * (1 + float64(carryStatusRelate.Setting.ChanceLimitCombine)*handledRateRelate)
+		priceAsk = tick.Asks[0].Price * (1 + float64(carryStatus.Setting.ChanceLimitCombine)*handledRate)
+		scoreCloseR = (priceBidRelate/priceXRelate - priceAsk/priceX) / math.Max(priceAsk/priceX, priceBidRelate/priceXRelate)
 	}
 	var valid bool
 	var amountLimit, scoreUse, scoreUseR float64

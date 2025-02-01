@@ -570,11 +570,11 @@ func GetFundingRate(key, secret, market, symbol string, cacheOnly bool) (success
 	if fundingRate != nil && now < fundingRate.ExpireTime && now-fundingRate.UpdateTime.Unix() < 300 {
 		return true, false, fundingRate
 	}
-	if fundingRate == nil {
-		util.Log(util.LogLevelInfo, fmt.Sprintf(`get funding rate fail from ws nil %s %s %#v`, market, symbol, fundingRate))
-	} else {
-		util.Log(util.LogLevelInfo, fmt.Sprintf(`get funding rate fail from ws %s %s %d %#v`, market, symbol, now-fundingRate.UpdateTime.Unix(), fundingRate))
-	}
+	//if fundingRate == nil {
+	//	util.Log(util.LogLevelInfo, fmt.Sprintf(`get funding rate fail from ws nil %s %s %#v`, market, symbol, fundingRate))
+	//} else {
+	//	util.Log(util.LogLevelInfo, fmt.Sprintf(`get funding rate fail from ws %s %s %d %#v`, market, symbol, now-fundingRate.UpdateTime.Unix(), fundingRate))
+	//}
 	if cacheOnly {
 		return false, false, nil
 	}
@@ -606,7 +606,7 @@ func GetFundingRate(key, secret, market, symbol string, cacheOnly bool) (success
 		time.Sleep(time.Minute)
 		return false, true, nil
 	}
-	util.Log(util.LogLevelInfo, fmt.Sprintf(`get funding rate from rest %s %s %#v`, market, symbol, fundingRate))
+	//util.Log(util.LogLevelInfo, fmt.Sprintf(`get funding rate from rest %s %s %#v`, market, symbol, fundingRate))
 	time.Sleep(time.Millisecond * 200)
 	SetFundingRate(market, symbol, fundingRate)
 	return true, true, fundingRate
