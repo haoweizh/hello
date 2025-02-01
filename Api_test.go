@@ -11,6 +11,7 @@ import (
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
 	"hello/api"
+	"hello/carry/cross"
 	"hello/model"
 	"hello/regret"
 	"hello/util"
@@ -792,14 +793,9 @@ func Test_map(t *testing.T) {
 
 func Test_wallet(t *testing.T) {
 	model.NewConfig()
-	market := model.BitgetPerp
-	symbol := `BTC_PERP`
+	market := model.Gate
 	account := model.GetAccounts(0)[market]
-	_, _, rate := api.GetFundingRate(account.Key, account.Secret, market, symbol, false)
-	if rate != nil {
-		fmt.Println(rate.ExpireTime)
-		return
-	}
+	cross.GetCrossMarketValue(account.Key, account.Secret, market, true)
 	var key, secret string
 	switch market {
 	case model.Ftx:
@@ -820,8 +816,6 @@ func Test_wallet(t *testing.T) {
 	//for _, order := range orders {
 	//	fmt.Println(order.OrderId)
 	//}
-	orderQuery0 := api.QueryOrderById(key, secret, market, symbol, model.OrderTypeMarket, `1841956120781220352`)
-	fmt.Println(orderQuery0.OrderId)
 	success, price := api.GetPriceForce(`LDBNB_USDT`, market)
 	success, price = api.GetPriceForce(`BTC_USDT`, market)
 	fmt.Println(fmt.Sprintf(`%#v %f`, success, price))
