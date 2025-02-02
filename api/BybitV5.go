@@ -394,17 +394,23 @@ var tickHandlerBybit = func(market string, conn *model.WSConn, event []byte) {
 		if !success {
 			return
 		}
-		rate, _ := strconv.ParseFloat(tickResp.Data.FundingRate, 64)
-		nextFundingTime, _ := strconv.ParseInt(tickResp.Data.NextFundingTime, 10, 64)
-		if nextFundingTime > time.Now().Unix() {
-			fundingRate := &model.FundingRate{
-				Rate:       rate,
-				UpdateTime: time.UnixMilli(tickResp.Ts),
-				ExpireTime: nextFundingTime / 1000,
-			}
-			util.Log(util.LogLevelInfo, fmt.Sprintf(`set funding rate from bybit %s %#v`, symbol, fundingRate))
-			SetFundingRate(model.Bybit, symbol, fundingRate)
+		rate, err := strconv.ParseFloat(tickResp.Data.FundingRate, 64)
+		if err != nil {
+			return
 		}
+		nextFundingTime, _ := strconv.ParseInt(tickResp.Data.NextFundingTime, 10, 64)
+		var fundingRate *model.FundingRate
+		if nextFundingTime > time.Now().Unix() {
+			fundingRate = &model.FundingRate{Rate: rate, UpdateTime: time.UnixMilli(tickResp.Ts), ExpireTime: nextFundingTime / 1000}
+		} else {
+			_, _, fundingRate = GetFundingRate(nil, model.Bybit, symbol, true)
+			if fundingRate != nil {
+				fundingRate.Rate = rate
+				fundingRate.UpdateTime = time.UnixMilli(tickResp.Ts)
+			}
+		}
+		//util.Log(util.LogLevelInfo, fmt.Sprintf(`set funding rate from bybit %s %#v`, symbol, fundingRate))
+		SetFundingRate(model.Bybit, symbol, fundingRate)
 	}
 }
 

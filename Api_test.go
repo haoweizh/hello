@@ -115,15 +115,7 @@ func Test_getCommonMarketInfos(t *testing.T) {
 }
 
 func TestWs(t *testing.T) {
-	event := []byte(`{"e":"bookTicker","u":6397175163774,"s":"PENGUUSDT","b":"0.0329280","B":"304","a":"0.0329290","A":"31817","T":1736654662773,"E":1736654662774}`)
-	result, _ := util.NewJSON(event)
-	if result.Get(`data`).MustMap() != nil {
-		result = result.Get(`data`)
-	}
-	dialectSymbol := result.Get(`s`).MustString()
-	//success, _, standardSymbol := model.GetFromDialect(model.BinancePerp, model.MarketTypePerp, dialectSymbol)
-	fmt.Println(dialectSymbol)
-	market := model.BinancePerp
+	market := model.Bybit
 	model.NewConfig()
 	//api.MaintainConns(market)
 	//model.AppDB, _ = gorm.Open(postgres.Open(model.AppConfig.DBConnection), &gorm.Config{})

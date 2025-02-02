@@ -492,7 +492,7 @@ func GetMarketSymbols(market string) map[string]bool {
 		} else if market == model.Gate {
 			return map[string]bool{`AAVE_PERP`: true}
 		} else if market == model.Bybit {
-			return map[string]bool{`ORBS_PERP`: true}
+			return map[string]bool{`VTHO_PERP`: true}
 		} else if market == model.BinanceSpot {
 			return map[string]bool{`ADA_USDT`: true}
 		}
