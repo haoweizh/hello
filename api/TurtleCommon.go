@@ -185,11 +185,11 @@ func AdjustPosHolding(account *model.Account, setting *model.Setting, data *mode
 }
 
 func CheckActiveTrail(account *model.Account, setting *model.Setting, data *model.TurtleData, bidAsk *model.BidAsk) (trailed bool) {
-	if data.Liquidated || model.CommonTurtleSymbols[setting.Symbol] || int64(math.Abs(float64(setting.Chance))) < setting.ChanceLimit {
+	if data.Liquidated || int64(math.Abs(float64(setting.Chance))) < setting.ChanceLimit {
 		return false
 	}
 	var trails []*model.Order
-	if setting.Chance > 0 && data.LowActTrail*data.ActivationRate > 0 && bidAsk.Bids[0].Price > data.LowActTrail*data.ActivationRate {
+	if setting.Chance > 0 && data.LowActTrail*data.ActivationRate > 0 && bidAsk.Bids[0].Price > data.LowActTrail*(1+data.ActivationRate) {
 		trailed = true
 		data.OrderShort = nil
 		trails = MustPlaceOrder(account, model.OrderSideSell, model.OrderTypeTrailStop, setting.Market, setting.Symbol, ``,
@@ -198,10 +198,10 @@ func CheckActiveTrail(account *model.Account, setting *model.Setting, data *mode
 			order.Function = model.Close
 			data.OrderAdjust[order.OrderId] = order
 			util.Log(util.LogLevelInfo, fmt.Sprintf(`success trail sell %s %s amt %f at %f ratio %f ordId %s`,
-				setting.Market, setting.Symbol, setting.GridAmount, data.LowActTrail*data.ActivationRate, data.CallBackRatio, order.OrderId))
+				setting.Market, setting.Symbol, setting.GridAmount, data.LowActTrail*(1+data.ActivationRate), data.CallBackRatio, order.OrderId))
 			go model.AppDB.Save(order)
 		}
-	} else if setting.Chance < 0 && data.ActivationRate > 0 && bidAsk.Asks[0].Price < data.HighActTrail/data.ActivationRate {
+	} else if setting.Chance < 0 && data.ActivationRate > 0 && bidAsk.Asks[0].Price < data.HighActTrail*(1-data.ActivationRate) {
 		trailed = true
 		data.OrderLong = nil
 		trails = MustPlaceOrder(account, model.OrderSideBuy, model.OrderTypeTrailStop, setting.Market, setting.Symbol, ``,
@@ -210,7 +210,7 @@ func CheckActiveTrail(account *model.Account, setting *model.Setting, data *mode
 			order.Function = model.Close
 			data.OrderAdjust[order.OrderId] = order
 			util.Log(util.LogLevelInfo, fmt.Sprintf(`success trail buy %s %s amt %f at %f ratio %f ordId %s`,
-				setting.Market, setting.Symbol, setting.GridAmount, data.HighActTrail/data.ActivationRate, data.CallBackRatio, order.OrderId))
+				setting.Market, setting.Symbol, setting.GridAmount, data.HighActTrail*(1-data.ActivationRate), data.CallBackRatio, order.OrderId))
 			go model.AppDB.Save(order)
 		}
 	}
@@ -361,7 +361,7 @@ func GetRankTurtleData(account *model.Account, symbol string, setting *model.Set
 	nowPeriod, nowStr := model.GetNowPeriod(setting.Market, setting.Seconds, now)
 	data = &model.TurtleData{TurtleTime: nowPeriod, Expire: nowPeriod.Add(time.Second * time.Duration(setting.Seconds)),
 		IsBig: true, Symbol: symbol, DaysFar: int(setting.Far), DaysNear: int(setting.Near), DaysAdjust: 5,
-		OrderAdjust: make(map[string]*model.Order), CallBackRatio: 0.03, ActivationRate: 2}
+		OrderAdjust: make(map[string]*model.Order), CallBackRatio: 0.03, ActivationRate: 0.5}
 	util.Log(util.LogLevelInfo, fmt.Sprintf(
 		`need to create turtle data rank %s %s %s %s %d`, setting.Function, setting.Market, symbol, nowStr, setting.Far))
 	candles := getTurtleCandles(account, setting.Market, symbol, int(setting.Far), int(setting.Seconds), nowPeriod)
@@ -442,9 +442,15 @@ func GetTurtleData(account *model.Account, setting *model.Setting, removed bool)
 			removed = false
 		}
 	}
+	activationRate := 0.5
+	if strings.ToLower(setting.Symbol) == `btc_perp` {
+		activationRate = 0.3
+	} else if strings.ToLower(setting.Symbol) == `eth_perp` {
+		activationRate = 0.4
+	}
 	data = &model.TurtleData{TurtleTime: nowPeriod, Expire: nowPeriod.Add(time.Second * time.Duration(setting.Seconds)),
 		IsBig: true, Symbol: setting.Symbol, DaysFar: int(setting.Far), DaysNear: int(setting.Near), DaysAdjust: 5,
-		OrderAdjust: make(map[string]*model.Order), OrderCleared: lastHandled, CallBackRatio: 0.03, ActivationRate: 2}
+		OrderAdjust: make(map[string]*model.Order), OrderCleared: lastHandled, CallBackRatio: 0.03, ActivationRate: activationRate}
 	if removed {
 		data.CheckTimeOpen = time.Now()
 		util.StoreSyncMap(&TurtleDataSet, data, setting.Function, setting.Market, setting.Symbol, nowStr)
@@ -784,7 +790,7 @@ func CanOpenCombine(settingCombine, settingNormal *model.Setting, dataTurtle *mo
 		}
 		return true
 	}
-	// 计算海龟持仓币种的数目，持多仓的+1，空仓的-1
+	// 计算非主流海龟持仓币种的数目，持多仓的+1，空仓的-1
 	sumTurtle := func(symbol, value any) bool {
 		if value != nil {
 			valueSetting := value.(*model.Setting)
@@ -816,7 +822,22 @@ func CanOpenCombine(settingCombine, settingNormal *model.Setting, dataTurtle *mo
 	if model.CommonTurtleSymbols[settingCombine.Symbol] {
 		canOpen = true
 		canStartCombine = true
-		canStartTurtle = true
+		canStartTurtle = false
+		var commonTurtleChances int64
+		settingsNormal.Range(func(symbol, value any) bool {
+			if value != nil {
+				valueSetting := value.(*model.Setting)
+				if model.CommonTurtleSymbols[valueSetting.Symbol] && valueSetting.Valid {
+					if valueSetting.Function == model.FunctionTurtleNormal {
+						commonTurtleChances += valueSetting.Chance
+					}
+				}
+			}
+			return true
+		})
+		if int64(math.Abs(float64(commonTurtleChances))) < settingNormal.ChanceLimit {
+			canStartTurtle = true
+		}
 	} else {
 		settingsNormal.Range(sumTurtle)
 		settingsCombine.Range(sumCombineOnly)

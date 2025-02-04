@@ -13,7 +13,7 @@ import (
 var positions = &sync.Map{}
 var balances = &sync.Map{}
 
-const moveLimitU = 20
+const moveLimitU = 1000
 
 func initPos(account *model.Account, market string) {
 	success, pos, _, _, _ := api.GetPositions(account, market)
@@ -111,5 +111,5 @@ var ProcessMove = func(setting *model.Setting, tick *model.BidAsk) {
 			pos.(*model.Position).Holding -= holding
 		}
 	}
-	time.Sleep(time.Second * 3)
+	time.Sleep(time.Second * 30)
 }
