@@ -10,8 +10,10 @@ import (
 
 var MarketInfos = &sync.Map{} // market - symbol - *MarketInfo
 
-var CommonCoins = map[string]bool{`btc`: true, `eth`: true, `ltc`: true, `bch`: true, `eos`: true, `xrp`: true,
-	`usdt`: true, `etc`: true, `link`: true, `trx`: true, `bnb`: true}
+var CommonCoins = map[string]bool{`btc`: true, `eth`: true}
+
+//, `ltc`: true, `bch`: true, `eos`: true, `xrp`: true,
+//	`usdt`: true, `etc`: true, `link`: true, `trx`: true, `bnb`: true}
 
 var CommonTurtleSymbols = map[string]bool{`btc_perp`: true, `BTC_PERP`: true, `ETH_PERP`: true, `eth_perp`: true}
 
