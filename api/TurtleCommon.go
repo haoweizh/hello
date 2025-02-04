@@ -768,11 +768,11 @@ func CheckBreak(account *model.Account, market, symbol string, settings []*model
 // CanOpenCombine
 // change算法 币种数=海龟仓数绝对值+单汤币数
 func CanOpenCombine(settingCombine, settingNormal *model.Setting, dataTurtle *model.TurtleData) (
-	canOpen, canStartCombine, canStartTurtle bool, turtleSymbolNum, inAll float64) {
+	canOpen, canStartCombine, canStartTurtle bool, turtleSymbolNum, inAll float64, commonTurtleChances int64) {
 	settingsCombine := GetSettings(settingCombine.Function, settingCombine.Market)
 	settingsNormal := GetSettings(settingNormal.Function, settingCombine.Market)
 	if settingsCombine == nil || settingsNormal == nil {
-		return false, false, false, 0, 0
+		return false, false, false, 0, 0, 0
 	}
 	tradingCombines := make(map[string]bool)
 	// 计算龟汤持仓币种的数目，持多仓的和空仓的都+1
@@ -823,7 +823,6 @@ func CanOpenCombine(settingCombine, settingNormal *model.Setting, dataTurtle *mo
 		canOpen = true
 		canStartCombine = true
 		canStartTurtle = false
-		var commonTurtleChances int64
 		settingsNormal.Range(func(symbol, value any) bool {
 			if value != nil {
 				valueSetting := value.(*model.Setting)
@@ -875,7 +874,7 @@ func CanOpenCombine(settingCombine, settingNormal *model.Setting, dataTurtle *mo
 	if dataTurtle.HighFar < settingCombine.CloseShortMargin*dataTurtle.LowFar {
 		canStartCombine = false
 	}
-	return canOpen, canStartCombine, canStartTurtle, turtleSymbolNum, inAll
+	return canOpen, canStartCombine, canStartTurtle, turtleSymbolNum, inAll, commonTurtleChances
 }
 
 // CanOpenTurtle CanOpenTurtle  主流币检查仓位总数;非主流检查交易币种个数

@@ -87,7 +87,7 @@ var ProcessCombineTurtle = func(settingCombine *model.Setting, tick *model.BidAs
 	//if settingCombine.Seconds >= 43200 || settingCombine.Market == model.OKEX {
 	//	checkFulled = false
 	//}
-	canOpen, canStartCombine, canStartTurtle, turtleSymbolNum, turtleCoins := api.CanOpenCombine(settingCombine, settingNormal, dataNormal)
+	canOpen, canStartCombine, canStartTurtle, turtleSymbolNum, turtleCoins, commonTurtleChances := api.CanOpenCombine(settingCombine, settingNormal, dataNormal)
 	if api.HandleOrders(account, market, symbol, settings, turtleData, tick) ||
 		api.CheckBreak(account, market, symbol, settings, turtleData, tick) ||
 		api.CheckActiveTrail(account, settingNormal, dataNormal, tick) {
@@ -100,8 +100,8 @@ var ProcessCombineTurtle = func(settingCombine *model.Setting, tick *model.BidAs
 		dataCombine.TurtleTime.Month(), dataCombine.TurtleTime.Day(), time.Now().Hour(), time.Now().Minute(), msgKey,
 		dataCombine.NVolume, canOpen, int64(turtleSymbolNum), canStartTurtle, canStartCombine, int(turtleCoins),
 		int(settingCombine.AmountLimit), turtleCoins >= settingCombine.AmountLimit, tick.Bids[0].Price, tick.Asks[0].Price)
-	msg += fmt.Sprintf("海龟:仓数/持仓量/开仓价 %d of %d/%e/%e 平过%v 数量 %e %s%v big:%d 日:%e-%e %d日:%e-%e N:%e\n",
-		settingNormal.Chance, settingNormal.ChanceLimit, settingNormal.GridAmount, settingNormal.PriceX, dataNormal.Liquidated,
+	msg += fmt.Sprintf("海龟:仓数/持仓量/开仓价%d 主流仓%d of %d/%e/%e 平过%v 数量 %e %s%v big:%d 日:%e-%e %d日:%e-%e N:%e\n",
+		settingNormal.Chance, commonTurtleChances, settingNormal.ChanceLimit, settingNormal.GridAmount, settingNormal.PriceX, dataNormal.Liquidated,
 		dataNormal.Amount*float64(settingNormal.ChanceLimit), dataNormal.GetIds(), dataNormal.IsBig, dataNormal.DaysFar,
 		dataNormal.LowFar, dataNormal.HighFar, dataNormal.DaysNear, dataNormal.LowNear, dataNormal.HighNear, dataNormal.N)
 	msg += fmt.Sprintf("龟汤:仓数/持仓量/开仓价 %d of %d/%e/%e 平过%v 数量 %e %s%v big:%d 日:%e-%e %d日:%e-%e N:%e",
