@@ -81,10 +81,11 @@ func handledFRate(account *model.Account, market, symbol string, interval int) (
 		util.Log(util.LogLevelError, fmt.Sprintf(`funding rate expired %s %s %d %d`, market, symbol, fundingRate.ExpireTime, interval))
 		leftHours = 2
 	}
-	handledFr = fundingRate.Rate * (max(min(1/hours, 1/3), 1/6) + (1-leftHours/hours)*(1-leftHours/hours)*(1-leftHours/hours))
-	if symbol == `BAN_PERP` {
-		util.LogLess(util.LogLevelInfo, fmt.Sprintf(`handle funding rate %s %s %f %f %f %f`, market, symbol, fundingRate.Rate, hours, leftHours, handledFr))
+	if leftHours > hours {
+		leftHours = hours
 	}
+
+	handledFr = fundingRate.Rate * (math.Max(math.Min(1/hours, 1/3), 1/6) + (1-leftHours/hours)*(1-leftHours/hours)*(1-leftHours/hours))
 	if handledFr > 0.1 || handledFr < -0.1 {
 		got = false
 		util.Log(util.LogLevelError, fmt.Sprintf(`fatal error funding rate break %s %s %f %#v %d`,

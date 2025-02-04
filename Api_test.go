@@ -14,6 +14,7 @@ import (
 	"hello/model"
 	"hello/regret"
 	"hello/util"
+	"math"
 	"math/rand"
 	"net/http"
 	"net/url"
@@ -778,6 +779,12 @@ func Test_map(t *testing.T) {
 }
 
 func Test_wallet(t *testing.T) {
+	hours := 2.0
+	leftHours := 0.333
+	base := 1 / float64(hours)
+	a := math.Max(math.Min(1/hours, 0.3333), 0.16666) + (1-leftHours/hours)*(1-leftHours/hours)*(1-leftHours/hours)
+	fmt.Println(base)
+	fmt.Println(a)
 	model.NewConfig()
 	market := model.BitgetPerp
 	symbol := `BTC_PERP`
