@@ -84,8 +84,7 @@ func handledFRate(account *model.Account, market, symbol string, interval int) (
 	if leftHours > hours {
 		leftHours = hours
 	}
-
-	handledFr = fundingRate.Rate * (math.Max(math.Min(1/hours, 1/3), 1/6) + (1-leftHours/hours)*(1-leftHours/hours)*(1-leftHours/hours))
+	handledFr = fundingRate.Rate * (math.Max(math.Min(1/hours, 0.3333), 0.16666) + (1-leftHours/hours)*(1-leftHours/hours)*(1-leftHours/hours))
 	if handledFr > 0.1 || handledFr < -0.1 {
 		got = false
 		util.Log(util.LogLevelError, fmt.Sprintf(`fatal error funding rate break %s %s %f %#v %d`,
