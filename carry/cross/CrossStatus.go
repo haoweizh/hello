@@ -69,7 +69,7 @@ type spotMarket struct {
 	reduceOnly      bool // 只减仓模式
 }
 
-// 3/T+(1-t/T)^3
+// 1/T+(1-t/T)^3
 func handledFRate(account *model.Account, market, symbol string, interval int) (got, delayed bool, fundingRate *model.FundingRate, handledFr float64) {
 	got, delayed, fundingRate = api.GetFundingRate(account, market, symbol, false)
 	if !got {
@@ -81,7 +81,7 @@ func handledFRate(account *model.Account, market, symbol string, interval int) (
 		util.Log(util.LogLevelError, fmt.Sprintf(`funding rate expired %s %s %d %d`, market, symbol, fundingRate.ExpireTime, interval))
 		leftHours = 2
 	}
-	handledFr = fundingRate.Rate * (3/hours + (1-leftHours/hours)*(1-leftHours/hours)*(1-leftHours/hours))
+	handledFr = fundingRate.Rate * (min(1/hours, 1/3) + (1-leftHours/hours)*(1-leftHours/hours)*(1-leftHours/hours))
 	if handledFr > 0.1 || handledFr < -0.1 {
 		got = false
 		util.Log(util.LogLevelError, fmt.Sprintf(`fatal error funding rate break %s %s %f %#v %d`,
