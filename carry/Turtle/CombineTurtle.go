@@ -204,15 +204,15 @@ func handleBreak(setting *model.Setting, data *model.TurtleData, orders []*model
 			data.Liquidated = true
 		}
 	} else if orders[0].Function == model.Open {
-		util.Log(util.LogLevelInfo, fmt.Sprintf(`加%s %s %s chance:%d Amount:%e px:%e order type %s`,
-			orders[0].OrderSide, setting.Market, setting.Symbol, setting.Chance, setting.GridAmount, setting.PriceX, orders[0].OrderType))
 		if orders[0].OrderSide == model.OrderSideSell {
 			setting.Chance--
 		} else if orders[0].OrderSide == model.OrderSideBuy {
 			setting.Chance++
 		}
-		for _, order := range orders {
+		for i, order := range orders {
 			setting.GridAmount += order.Amount
+			util.Log(util.LogLevelInfo, fmt.Sprintf(`add break %s %s %s index %d chance:%d Amount:%e px:%e order type %s len %d`,
+				orders[0].OrderSide, setting.Market, setting.Symbol, i, setting.Chance, setting.GridAmount, setting.PriceX, orders[0].OrderType, len(orders)))
 		}
 	}
 	// 保护起来，不进行主动撤单，以免未完全成交
@@ -313,8 +313,8 @@ func placeTurtleLong(account *model.Account, orderType string, data *model.Turtl
 			data.OrderAdjust = make(map[string]*model.Order)
 		}
 		util.Log(util.LogLevelInfo, fmt.Sprintf(
-			`place long %s %s %s %s %s %d %#v at %e %e amt %e, useNear %#v priceX %f n:%f seconds %d near %f %f far %f %f`,
-			orderType, setting.Function, market, symbol, orderType, setting.Chance, canOpen, priceDeal, price, amount,
+			`place long %s %s %s %s %d %#v at %e %e amt %e setting amt %e, useNear %#v priceX %f n:%f seconds %d near %f %f far %f %f`,
+			orderType, setting.Function, market, symbol, setting.Chance, canOpen, priceDeal, price, amount, setting.GridAmount,
 			data.UseNear, setting.PriceX, data.N, setting.Seconds, data.LowNear, data.HighNear, data.LowFar, data.HighFar))
 		for _, order := range data.OrderLong {
 			order.LineBuy = data.N
@@ -407,8 +407,8 @@ func placeTurtleShort(account *model.Account, orderType string, data *model.Turt
 			priceDeal = tick.Bids[0].Price * (1 - turtleTriggerDelta)
 			price = tick.Bids[0].Price
 		}
-		util.Log(util.LogLevelInfo, fmt.Sprintf(`place short %s %s %s %s %s %d %#v at %e %e amt %e, useNear %#v priceX %f n:%f seconds %d near %f %f far %f %f`,
-			orderType, setting.Function, market, symbol, orderType, setting.Chance, canOpen, priceDeal, price, amount,
+		util.Log(util.LogLevelInfo, fmt.Sprintf(`place short %s %s %s %s %d %#v at %e %e amt %e setting amt %e, useNear %#v priceX %f n:%f seconds %d near %f %f far %f %f`,
+			orderType, setting.Function, market, symbol, setting.Chance, canOpen, priceDeal, price, amount, setting.GridAmount,
 			data.UseNear, setting.PriceX, data.N, setting.Seconds, data.LowNear, data.HighNear, data.LowFar, data.HighFar))
 		data.OrderShort = api.MustPlaceOrder(account, model.OrderSideSell, orderType, market, symbol,
 			``, setting.Function, priceDeal, price, amount, true)
