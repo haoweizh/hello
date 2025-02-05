@@ -168,8 +168,8 @@ func AdjustPosHolding(account *model.Account, setting *model.Setting, data *mode
 				}
 			}
 		} else if setting.GridAmount != math.Abs(posMap[setting.Symbol].Holding) {
-			util.Log(util.LogLevelInfo, fmt.Sprintf(`update turtle grid Amount %s %s %e to %e`,
-				setting.Market, setting.Symbol, setting.GridAmount, posMap[setting.Symbol].Holding))
+			util.Log(util.LogLevelInfo, fmt.Sprintf(`update turtle grid Amount %s %s %s %e to %e`,
+				setting.Market, setting.Symbol, setting.Function, setting.GridAmount, posMap[setting.Symbol].Holding))
 			setting.GridAmount = math.Abs(posMap[setting.Symbol].Holding)
 		}
 	} else {
@@ -414,7 +414,7 @@ func GetTurtleData(account *model.Account, setting *model.Setting, removed bool)
 		_, lastStr := model.GetNowPeriod(setting.Market, setting.Seconds, lastTime)
 		lastHandled, trailOrders = handleLastTurtleData(account, setting.Function, setting.Market, setting.Symbol, lastStr)
 	}
-	if !model.CommonTurtleSymbols[setting.Symbol] {
+	if !model.CommonSymbols[setting.Symbol] {
 		refreshValue, refreshOk := DynamicHandleTime.Load(setting.Market)
 		if !refreshOk || refreshValue == nil || refreshValue.(time.Time).Before(nowPeriod) {
 			if handleMarketDynamic(setting.Market) {
@@ -553,7 +553,7 @@ func CalcTurtleData(account *model.Account, data *model.TurtleData, candles []*m
 	} else if function == model.FunctionCombineTurtle {
 		data.UseNear = false
 	}
-	if model.CommonTurtleSymbols[data.Symbol] {
+	if model.CommonSymbols[data.Symbol] {
 		if function == model.FunctionCombineTurtle {
 			data.Amount = math.Min(data.Amount, 1920000/priceClose/chanceLimit)
 		} else {
@@ -779,7 +779,7 @@ func CanOpenCombine(settingCombine, settingNormal *model.Setting, dataTurtle *mo
 	sumCombineOnly := func(symbol, value any) bool {
 		if value != nil {
 			valueSetting := value.(*model.Setting)
-			if !model.CommonTurtleSymbols[valueSetting.Symbol] && valueSetting.Valid {
+			if !model.CommonSymbols[valueSetting.Symbol] && valueSetting.Valid {
 				if valueSetting.Chance != 0 && valueSetting.Function == model.FunctionCombineTurtle {
 					normal := GetSetting(model.FunctionTurtleNormal, valueSetting.Market, valueSetting.Symbol)
 					if normal != nil && normal.Chance == 0 {
@@ -794,7 +794,7 @@ func CanOpenCombine(settingCombine, settingNormal *model.Setting, dataTurtle *mo
 	sumTurtle := func(symbol, value any) bool {
 		if value != nil {
 			valueSetting := value.(*model.Setting)
-			if !model.CommonTurtleSymbols[valueSetting.Symbol] && valueSetting.Valid {
+			if !model.CommonSymbols[valueSetting.Symbol] && valueSetting.Valid {
 				if valueSetting.Function == model.FunctionTurtleNormal {
 					if valueSetting.Chance > 0 {
 						turtleSymbolNum++
@@ -819,14 +819,14 @@ func CanOpenCombine(settingCombine, settingNormal *model.Setting, dataTurtle *mo
 	//	}
 	//	return true
 	//}
-	if model.CommonTurtleSymbols[settingCombine.Symbol] {
+	if model.CommonSymbols[settingCombine.Symbol] {
 		canOpen = true
 		canStartCombine = true
 		canStartTurtle = false
 		settingsNormal.Range(func(symbol, value any) bool {
 			if value != nil {
 				valueSetting := value.(*model.Setting)
-				if model.CommonTurtleSymbols[valueSetting.Symbol] && valueSetting.Valid {
+				if model.CommonSymbols[valueSetting.Symbol] && valueSetting.Valid {
 					if valueSetting.Function == model.FunctionTurtleNormal {
 						commonTurtleChances += valueSetting.Chance
 					}
@@ -887,12 +887,12 @@ func CanOpenTurtle(setting *model.Setting, data *model.TurtleData) (canOpen bool
 	if settings == nil {
 		return false, 0
 	}
-	if model.CommonTurtleSymbols[setting.Symbol] {
+	if model.CommonSymbols[setting.Symbol] {
 		settings.Range(func(symbol, value any) bool {
 			if value != nil {
 				valueSetting := value.(*model.Setting)
 				if valueSetting.Market == setting.Market && valueSetting.Function == setting.Function &&
-					model.CommonTurtleSymbols[valueSetting.Symbol] {
+					model.CommonSymbols[valueSetting.Symbol] {
 					inAll += float64(valueSetting.Chance)
 				}
 			}
@@ -910,7 +910,7 @@ func CanOpenTurtle(setting *model.Setting, data *model.TurtleData) (canOpen bool
 			if value != nil {
 				valueSetting := value.(*model.Setting)
 				if valueSetting.Market == setting.Market && valueSetting.Function == setting.Function &&
-					!model.CommonTurtleSymbols[valueSetting.Symbol] {
+					!model.CommonSymbols[valueSetting.Symbol] {
 					if valueSetting.Chance != 0 {
 						inAll++
 					}

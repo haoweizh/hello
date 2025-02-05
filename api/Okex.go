@@ -1402,12 +1402,8 @@ func setLeverageOkx(account *model.Account) (success bool) {
 }
 
 func setSymbolLeverageOkx(account *model.Account, symbol string) (setSuc bool) {
-	ok, _, coin, _ := model.GetFromStandard(model.OKEX, symbol)
-	if !ok {
-		return false
-	}
 	leverage := model.DefaultLeverage
-	if model.CommonCoins[strings.ToLower(coin)] {
+	if model.CommonSymbols[symbol] {
 		leverage = 10
 	}
 	response, _ := sendSignRequestOKEX(account, http.MethodPost, `/api/v5/account/set-leverage`,

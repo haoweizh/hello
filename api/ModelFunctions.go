@@ -217,7 +217,7 @@ func handleCombineSettings(mumSetting *model.Setting, topMarketInfos map[string]
 		} else {
 			normalSetting = normalValue.(*model.Setting)
 		}
-		if topMarketInfos[symbol.(string)] == nil && !model.CommonTurtleSymbols[symbol.(string)] {
+		if topMarketInfos[symbol.(string)] == nil && !model.CommonSymbols[symbol.(string)] {
 			if setting.(*model.Setting).Chance == 0 && normalSetting.Chance == 0 {
 				setting.(*model.Setting).SymbolRelated = model.SettingTurtleRemoved
 			}
@@ -242,7 +242,7 @@ func handleCombineSettings(mumSetting *model.Setting, topMarketInfos map[string]
 		} else {
 			combineSetting = combineValue.(*model.Setting)
 		}
-		if topMarketInfos[symbol.(string)] == nil && !model.CommonTurtleSymbols[symbol.(string)] {
+		if topMarketInfos[symbol.(string)] == nil && !model.CommonSymbols[symbol.(string)] {
 			if setting.(*model.Setting).Chance == 0 && combineSetting.Chance == 0 {
 				setting.(*model.Setting).SymbolRelated = model.SettingTurtleRemoved
 			}
@@ -300,7 +300,7 @@ func handleSingleSettings(mumSetting *model.Setting, topMarketInfos map[string]*
 		if setting == nil {
 			return true
 		}
-		if topMarketInfos[symbol.(string)] == nil && !model.CommonTurtleSymbols[symbol.(string)] {
+		if topMarketInfos[symbol.(string)] == nil && !model.CommonSymbols[symbol.(string)] {
 			//if setting.(*model.Setting).Chance == 0 {
 			//}
 			setting.(*model.Setting).SymbolRelated = model.SettingTurtleRemoved
@@ -339,7 +339,7 @@ func getDynamicMarketInfos(mumSetting *model.Setting, accounts []*model.Account,
 	marketInfoArray, _ := getSortedInfos(mumSetting.Market, lenInfo)
 	for i := 0; i < marketInfoArray.Len() && len(topMarketInfos) < lenInfo; i++ {
 		_, marketType, coinValue, _ := model.GetFromStandard(mumSetting.Market, marketInfoArray[i].Symbol)
-		if strings.EqualFold(marketType, model.MarketTypePerp) && !model.CommonTurtleSymbols[marketInfoArray[i].Symbol] &&
+		if strings.EqualFold(marketType, model.MarketTypePerp) && !model.CommonSymbols[marketInfoArray[i].Symbol] &&
 			!model.NoTurtleCoins[strings.ToLower(coinValue)] {
 			tried := false
 			var turtleData *model.TurtleData

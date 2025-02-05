@@ -629,8 +629,7 @@ func createTurtleLines(function, market string, account *model.Account) (msg str
 			if msgValue != nil {
 				size++
 				sortable := &Sortable{Key: symbol.(string), Value: msgValue.(string) + "\n"}
-				_, _, coin, _ := model.GetFromStandard(market, symbol.(string))
-				if model.CommonCoins[strings.ToLower(coin)] {
+				if model.CommonSymbols[symbol.(string)] {
 					commonLines = append(commonLines, msgValue.(string))
 				} else {
 					lines = append(lines, sortable)
