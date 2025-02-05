@@ -816,13 +816,13 @@ func _(key, secret, symbol string) (success bool, price float64) {
 }
 
 func setSymbolLeverageBinancePerp(account *model.Account, symbol string) (success bool) {
-	ok, _, coin, dialectSymbol := model.GetFromStandard(model.BinancePerp, symbol)
+	ok, _, _, dialectSymbol := model.GetFromStandard(model.BinancePerp, symbol)
 	if !ok {
 		return false
 	}
 	client := futures.NewClient(account.Key, account.Secret)
 	leverage := model.DefaultLeverage
-	if model.CommonCoins[strings.ToLower(coin)] {
+	if model.CommonSymbols[symbol] {
 		leverage = 10
 	}
 	_, err := client.NewChangeLeverageService().Symbol(dialectSymbol).Leverage(leverage).Do(context.Background())
@@ -840,13 +840,13 @@ func setLeverageBinancePerp(key, secret string) (success bool) {
 		if value == false {
 			continue
 		}
-		ok, _, coin, dialectSymbol := model.GetFromStandard(model.BinancePerp, symbol)
+		ok, _, _, dialectSymbol := model.GetFromStandard(model.BinancePerp, symbol)
 		if !ok {
 			continue
 		}
 		client := futures.NewClient(key, secret)
 		leverage := model.DefaultLeverage
-		if model.CommonCoins[strings.ToLower(coin)] {
+		if model.CommonSymbols[symbol] {
 			leverage = 10
 		}
 		_, err := client.NewChangeLeverageService().Symbol(dialectSymbol).Leverage(leverage).Do(context.Background())
