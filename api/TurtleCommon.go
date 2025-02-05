@@ -445,7 +445,7 @@ func GetTurtleData(account *model.Account, setting *model.Setting, removed bool)
 	activationRate := 0.5
 	if strings.ToLower(setting.Symbol) == `btc_perp` {
 		activationRate = 0.3
-	} else if strings.ToLower(setting.Symbol) == `eth_perp` {
+	} else if strings.ToLower(setting.Symbol) == `eth_perp` || strings.ToLower(setting.Symbol) == `sol_perp` {
 		activationRate = 0.4
 	}
 	data = &model.TurtleData{TurtleTime: nowPeriod, Expire: nowPeriod.Add(time.Second * time.Duration(setting.Seconds)),
