@@ -834,7 +834,7 @@ func CanOpenCombine(settingCombine, settingNormal *model.Setting, dataTurtle *mo
 			}
 			return true
 		})
-		if int64(math.Abs(float64(commonTurtleChances))) < settingNormal.ChanceLimit {
+		if math.Abs(float64(commonTurtleChances)) < settingNormal.AmountLimit {
 			canStartTurtle = true
 		}
 	} else {
