@@ -23,6 +23,13 @@ type Balance struct {
 	CreatedAt           time.Time
 	UpdatedAt           time.Time
 }
+type FundingFee struct {
+	Market string
+	Symbol string
+	BalChg float64
+	Ts     int64
+	Ccy    string
+}
 
 //var balanceValue = make(map[string][]*Balance) // market -
 //var balanceUpdate = make(map[string]int64)     // market - update time in unix seconds

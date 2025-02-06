@@ -1094,7 +1094,13 @@ func SetFundingRate(market, symbol string, fundingRate *model.FundingRate) {
 }
 
 func QueryFunding(account *model.Account, begin, end int64) {
-	queryFundingGate(account, begin, end)
+	switch account.Market {
+	case model.OKEX:
+		getOkexBills(account, begin, end)
+	case model.Gate:
+		queryFundingGate(account, begin, end)
+	}
+
 }
 
 //func InitCoinBalance(key, secret, function, market string) {

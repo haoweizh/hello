@@ -1609,3 +1609,47 @@ func getCandlesOKEX(account *model.Account, symbol string, before, after time.Ti
 	}
 	return
 }
+
+// getBills 获取指定账户的账单信息 https://www.okx.com/docs-v5/zh/#trading-account-rest-api-get-bills-details-last-7-days
+// 该函数通过发送HTTP GET请求到OKEX交易所的API接口，获取账户的账单详情
+// 参数:
+//
+//	account: 账户模型的指针，包含发送请求所需的账户信息
+//	instType: 产品类型，用于筛选账单
+//	instId: 产品ID，用于筛选账单
+//	typeAccount: 账户类型，用于筛选账单
+//	begin: 账单开始时间
+//	end: 账单结束时间
+//
+// 返回值:
+//
+//	请求是否成功
+//	响应的原始数据，仅在请求成功时返回
+func getOkexBills(account *model.Account, begin, end int64) (bool, []*model.FundingFee) {
+	param := map[string]interface{}{`instType`: `SWAP`, `type`: `8`, `begin`: begin, `end`: end}
+	response, _ := sendSignRequestOKEX(account, http.MethodGet, `/api/v5/account/bills`, param, nil)
+	loanJson, err := util.NewJSON(response)
+	if loanJson == nil || err != nil || loanJson.Get(`data`) == nil {
+		return false, nil
+	}
+	var fundingFees = make([]*model.FundingFee, 0)
+	for _, item := range loanJson.Get(`data`).MustArray() {
+		data := item.(map[string]interface{})
+		ts, _ := strconv.ParseInt(data[`ts`].(string), 10, 64)
+		balChg, _ := strconv.ParseFloat(data[`balChg`].(string), 64)
+		success, _, symbol := model.GetFromDialect(model.OKEX, model.MarketTypePerp, data[`instId`].(string))
+		if !success {
+			util.Log(util.LogLevelError, fmt.Sprintf(`market %s to getbills instId %s can not get standardSymbol`, model.OKEX, data[`instId`].(string)))
+			continue
+		}
+		fundingFee := &model.FundingFee{
+			Market: model.OKEX,
+			Ccy:    data[`ccy`].(string),
+			Ts:     ts,
+			BalChg: balChg,
+			Symbol: symbol,
+		}
+		fundingFees = append(fundingFees, fundingFee)
+	}
+	return true, fundingFees
+}
