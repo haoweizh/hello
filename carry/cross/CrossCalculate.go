@@ -262,8 +262,8 @@ func calcAmount(index int, coin string, carryStatus, carryStatusRelate *model.Ca
 		priceAsk = tick.Asks[0].Price * (1 + float64(carryStatus.Setting.ChanceLimitCombine)*handledRate)
 		scoreCloseR = (priceBidRelate/priceXRelate - priceAsk/priceX) / math.Max(priceAsk/priceX, priceBidRelate/priceXRelate)
 	}
-	//if coin == `BAN` {
-	//	util.LogLess(util.LogLevelInfo, fmt.Sprintf(`BAN score %s %s %f %s %s %f %d %d %d %d`,
+	//if coin == `BERA` {
+	//	util.LogLess(util.LogLevelInfo, fmt.Sprintf(`BERA score %s %s %f %s %s %f %d %d %d %d`,
 	//		carryStatus.Market, carryStatus.Symbol, handledRate, carryStatusRelate.Market, carryStatusRelate.Symbol, handledRateRelate,
 	//		carryStatus.Setting.ChanceLimit, carryStatusRelate.Setting.ChanceLimit, carryStatus.Setting.ChanceLimitCombine, carryStatusRelate.Setting.ChanceLimitCombine))
 	//}

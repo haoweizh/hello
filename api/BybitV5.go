@@ -1105,23 +1105,34 @@ func getBillsBybit(account *model.Account, begin, end int64) (bool, []*model.Fun
 		return false, nil
 	}
 	var fundingFees = make([]*model.FundingFee, 0)
-	for _, item := range loanJson.GetPath(`result`, `list`).MustArray() {
-		data := item.(map[string]interface{})
-		ts, _ := strconv.ParseInt(data[`transactionTime`].(string), 10, 64)
-		balChg, _ := strconv.ParseFloat(data[`funding`].(string), 64)
-		success, _, symbol := model.GetFromDialect(model.Bybit, model.MarketTypePerp, data[`symbol`].(string))
-		if !success {
-			util.Log(util.LogLevelError, fmt.Sprintf(`market %s to getbills instId %s can not get standardSymbol`, model.Bybit, data[`symbol`].(string)))
-			continue
+	for {
+		for _, item := range loanJson.GetPath(`result`, `list`).MustArray() {
+			data := item.(map[string]interface{})
+			ts, _ := strconv.ParseInt(data[`transactionTime`].(string), 10, 64)
+			balChg, _ := strconv.ParseFloat(data[`funding`].(string), 64)
+			success, _, symbol := model.GetFromDialect(model.Bybit, model.MarketTypePerp, data[`symbol`].(string))
+			if !success {
+				util.Log(util.LogLevelError, fmt.Sprintf(`market %s to getbills instId %s can not get standardSymbol`, model.Bybit, data[`symbol`].(string)))
+				continue
+			}
+			fundingFee := &model.FundingFee{
+				Market: model.Bybit,
+				Ccy:    data[`currency`].(string),
+				Ts:     ts,
+				BalChg: balChg,
+				Symbol: symbol,
+			}
+			fundingFees = append(fundingFees, fundingFee)
 		}
-		fundingFee := &model.FundingFee{
-			Market: model.Bybit,
-			Ccy:    data[`currency`].(string),
-			Ts:     ts,
-			BalChg: balChg,
-			Symbol: symbol,
+		nextPageCursor := loanJson.GetPath(`result`, `nextPageCursor`).MustString()
+		if nextPageCursor != "" {
+			param[`cursor`] = nextPageCursor
+			response, _ = SignedRequestBybit(account.Key, account.Secret, http.MethodGet, bybitRestUrl, "/v5/account/transaction-log", param)
+			loanJson, err = util.NewJSON(response)
+		} else {
+			break
 		}
-		fundingFees = append(fundingFees, fundingFee)
 	}
+
 	return true, fundingFees
 }
