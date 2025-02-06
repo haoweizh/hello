@@ -1097,7 +1097,7 @@ func queryOrderBybit(key, secret, symbol, orderId string) *model.Order {
 //	bool - 表示操作是否成功的标志
 //	[]*model.FundingFee - 融资费用记录的切片
 func getBillsBybit(account *model.Account, begin, end int64) (bool, []*model.FundingFee) {
-	param := map[string]interface{}{`accountType`: `UNIFIED`, `type`: `TRADE`, `startTime`: begin, `endTime`: end}
+	param := map[string]interface{}{`accountType`: `UNIFIED`, `type`: `SETTLEMENT`, `startTime`: begin, `endTime`: end}
 	response, _ := SignedRequestBybit(account.Key, account.Secret, http.MethodGet, bybitRestUrl, "/v5/account/transaction-log", param)
 	loanJson, err := util.NewJSON(response)
 	if loanJson == nil || err != nil || loanJson.Get(`result`) == nil || loanJson.Get(`retCode`).MustInt() != 0 {
@@ -1108,7 +1108,7 @@ func getBillsBybit(account *model.Account, begin, end int64) (bool, []*model.Fun
 	for _, item := range loanJson.GetPath(`result`, `list`).MustArray() {
 		data := item.(map[string]interface{})
 		ts, _ := strconv.ParseInt(data[`transactionTime`].(string), 10, 64)
-		balChg, _ := strconv.ParseFloat(data[`bonusChange`].(string), 64)
+		balChg, _ := strconv.ParseFloat(data[`funding`].(string), 64)
 		success, _, symbol := model.GetFromDialect(model.Bybit, model.MarketTypePerp, data[`symbol`].(string))
 		if !success {
 			util.Log(util.LogLevelError, fmt.Sprintf(`market %s to getbills instId %s can not get standardSymbol`, model.Bybit, data[`symbol`].(string)))

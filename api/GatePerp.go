@@ -7,14 +7,15 @@ import (
 	"hello/model"
 	"hello/util"
 	"strconv"
+	"strings"
 )
 
 // getBillsGate 获取Gate交易所的账户资金费用记录 https://www.gate.io/docs/developers/apiv4/zh_CN/#%E6%9F%A5%E8%AF%A2%E5%90%88%E7%BA%A6%E8%B4%A6%E6%88%B7%E5%8F%98%E6%9B%B4%E5%8E%86%E5%8F%B2
 // 参数:
 //
 //	account: 包含账户信息的指针，包括API密钥和密钥
-//	begin: 开始时间戳，用于筛选记录
-//	end: 结束时间戳，用于筛选记录
+//	begin: unix second 开始时间戳，用于筛选记录
+//	end: unix second 结束时间戳，用于筛选记录
 //
 // 返回值:
 //
@@ -23,7 +24,7 @@ import (
 func getBillsGate(account *model.Account, begin, end int64) (bool, []*model.FundingFee) {
 	settle := `usdt`
 	client, ctx := getClientGate(account.Key, account.Secret)
-	opts := &gateapi.ListFuturesAccountBookOpts{From: optional.NewInt64(begin), To: optional.NewInt64(end), Type_: optional.NewString("fund")}
+	opts := &gateapi.ListFuturesAccountBookOpts{From: optional.NewInt64(begin / 1000), To: optional.NewInt64(end / 1000), Type_: optional.NewString("fund")}
 	book, _, err := client.FuturesApi.ListFuturesAccountBook(ctx, settle, opts)
 	if err != nil {
 		util.Log(util.LogLevelError, fmt.Sprintf(`market %s to getbills http error %v`, model.Gate, err))
@@ -40,8 +41,8 @@ func getBillsGate(account *model.Account, begin, end int64) (bool, []*model.Fund
 		}
 		fundingFee := &model.FundingFee{
 			Market: model.Gate,
-			Ccy:    settle,
-			Ts:     ts,
+			Ccy:    strings.ToUpper(settle),
+			Ts:     ts * 1000,
 			BalChg: balChg,
 			Symbol: symbol,
 		}

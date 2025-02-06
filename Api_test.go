@@ -912,8 +912,11 @@ func Test_C(t *testing.T) {
 }
 
 func Test_Funding(t *testing.T) {
-	market := model.Gate
+	market := model.Bybit
 	model.NewConfig()
 	account := model.GetAccounts(0)[market]
-	api.GetBills(account, time.Now().UnixMilli()-7200000, time.Now().UnixMilli())
+	_, fees := api.GetBills(account, time.Now().UnixMilli()-86400000, time.Now().UnixMilli())
+	for _, fee := range fees {
+		fmt.Println(fee)
+	}
 }
