@@ -1085,7 +1085,7 @@ func queryOrderBybit(key, secret, symbol, orderId string) *model.Order {
 	return order
 }
 
-// getBybitBills 获取 Bybit 账户的账单信息https://bybit-exchange.github.io/docs/v5/account/transaction-log
+// getBillsBybit 获取 Bybit 账户的账单信息https://bybit-exchange.github.io/docs/v5/account/transaction-log
 // 参数:
 //
 //	account - 指向账户信息的指针，包含访问 Bybit API 所需的密钥和密钥
@@ -1096,7 +1096,7 @@ func queryOrderBybit(key, secret, symbol, orderId string) *model.Order {
 //
 //	bool - 表示操作是否成功的标志
 //	[]*model.FundingFee - 融资费用记录的切片
-func getBybitBills(account *model.Account, begin, end int64) (bool, []*model.FundingFee) {
+func getBillsBybit(account *model.Account, begin, end int64) (bool, []*model.FundingFee) {
 	param := map[string]interface{}{`accountType`: `UNIFIED`, `type`: `TRADE`, `startTime`: begin, `endTime`: end}
 	response, _ := SignedRequestBybit(account.Key, account.Secret, http.MethodGet, bybitRestUrl, "/v5/account/transaction-log", param)
 	loanJson, err := util.NewJSON(response)

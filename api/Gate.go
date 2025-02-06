@@ -633,11 +633,15 @@ func maintainConnsGate(accounts []*model.Account) {
 			connKeyPerp := getPrivateConnKey(model.Gate, account.Key, model.MarketTypePerp)
 			wsFuture, _ := model.AppEnvironment.ConnOrder.Load(connKeyPerp)
 			if wsFuture != nil {
-				if err := wsFuture.(*model.WSConn).WriteMsg([]byte(fmt.Sprintf(`{"time": %d, "channel" : "futures.ping"}`, time.Now().Unix()))); err != nil {
+				pingMsg := fmt.Sprintf(`{"time": %d, "channel" : "futures.ping"}`, time.Now().Unix())
+				if err := wsFuture.(*model.WSConn).WriteMsg([]byte(pingMsg)); err != nil {
 					model.AppEnvironment.ConnOrder.Delete(connKeyPerp)
 					util.Log(util.LogLevelError, fmt.Sprintf("send account futures ping message err:%s %s", model.Gate, err.Error()))
 					//wsFuture.(*model.WSConn).Close()
 					successPerp = false
+				} else {
+					util.Log(util.LogLevelInfo, fmt.Sprintf("send account futures ping message %s type %v %s",
+						model.Gate, wsFuture.(*model.WSConn).WSType, pingMsg))
 				}
 				if time.Now().Unix()-loginTSPerp > 600 {
 					wsLoginGateOrder(account, wsFuture.(*model.WSConn), model.MarketTypePerp)

@@ -24,11 +24,14 @@ type Balance struct {
 	UpdatedAt           time.Time
 }
 type FundingFee struct {
-	Market string
-	Symbol string
-	BalChg float64
-	Ts     int64
-	Ccy    string
+	Market    string `gorm:"index:market_symbol_ts,unique"`
+	Symbol    string
+	BalChg    float64
+	Ts        int64
+	Ccy       string
+	ID        string `gorm:"primary_key"`
+	CreatedAt time.Time
+	UpdatedAt time.Time
 }
 
 //var balanceValue = make(map[string][]*Balance) // market -

@@ -9,7 +9,7 @@ import (
 	"strconv"
 )
 
-// getGateBills 获取Gate交易所的账户资金费用记录 https://www.gate.io/docs/developers/apiv4/zh_CN/#%E6%9F%A5%E8%AF%A2%E5%90%88%E7%BA%A6%E8%B4%A6%E6%88%B7%E5%8F%98%E6%9B%B4%E5%8E%86%E5%8F%B2
+// getBillsGate 获取Gate交易所的账户资金费用记录 https://www.gate.io/docs/developers/apiv4/zh_CN/#%E6%9F%A5%E8%AF%A2%E5%90%88%E7%BA%A6%E8%B4%A6%E6%88%B7%E5%8F%98%E6%9B%B4%E5%8E%86%E5%8F%B2
 // 参数:
 //
 //	account: 包含账户信息的指针，包括API密钥和密钥
@@ -20,9 +20,8 @@ import (
 //
 //	bool: 请求是否成功
 //	[]*model.FundingFee: 资金费用记录的切片
-func getGateBills(account *model.Account, begin, end int64) (bool, []*model.FundingFee) {
+func getBillsGate(account *model.Account, begin, end int64) (bool, []*model.FundingFee) {
 	settle := `usdt`
-func getBillsGate(account *model.Account, begin, end int64) {
 	client, ctx := getClientGate(account.Key, account.Secret)
 	opts := &gateapi.ListFuturesAccountBookOpts{From: optional.NewInt64(begin), To: optional.NewInt64(end), Type_: optional.NewString("fund")}
 	book, _, err := client.FuturesApi.ListFuturesAccountBook(ctx, settle, opts)

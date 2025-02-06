@@ -1093,21 +1093,20 @@ func SetFundingRate(market, symbol string, fundingRate *model.FundingRate) {
 	util.StoreSyncMap(model.FundingRates, fundingRate, market, symbol)
 }
 
-func GetBills(account *model.Account, begin, end int64) {
+func GetBills(account *model.Account, begin, end int64) (success bool, fundingFees []*model.FundingFee) {
 	switch account.Market {
 	case model.OKEX:
-		getBillsOkx(account, begin, end)
+		return getBillsOkx(account, begin, end)
 	case model.Gate:
-		getGateBills(account, begin, end)
+		return getBillsGate(account, begin, end)
 	case model.Bybit:
-		getBybitBills(account, begin, end)
+		return getBillsBybit(account, begin, end)
 	case model.BinancePerp:
-		getBinanceBills(account, begin, end)
+		return getBillsBinance(account, begin, end)
 	default:
 		util.Log(util.LogLevelInfo, fmt.Sprintf(`un-support market %s`, account.Market))
-		getBillsGate(account, begin, end)
 	}
-
+	return false, nil
 }
 
 //func InitCoinBalance(key, secret, function, market string) {
