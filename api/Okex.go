@@ -1625,7 +1625,7 @@ func getCandlesOKEX(account *model.Account, symbol string, before, after time.Ti
 //
 //	请求是否成功
 //	响应的原始数据，仅在请求成功时返回
-func getOkexBills(account *model.Account, begin, end int64) (bool, []*model.FundingFee) {
+func getBillsOkx(account *model.Account, begin, end int64) (bool, []*model.FundingFee) {
 	param := map[string]interface{}{`instType`: `SWAP`, `type`: `8`, `begin`: begin, `end`: end}
 	response, _ := sendSignRequestOKEX(account, http.MethodGet, `/api/v5/account/bills`, param, nil)
 	loanJson, err := util.NewJSON(response)

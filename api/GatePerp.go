@@ -8,7 +8,7 @@ import (
 	"hello/util"
 )
 
-func queryFundingGate(account *model.Account, begin, end int64) {
+func getBillsGate(account *model.Account, begin, end int64) {
 	client, ctx := getClientGate(account.Key, account.Secret)
 	opts := &gateapi.ListFuturesAccountBookOpts{From: optional.NewInt64(begin), To: optional.NewInt64(end), Type_: optional.NewString("fund")}
 	book, h, err := client.FuturesApi.ListFuturesAccountBook(ctx, `usdt`, opts)

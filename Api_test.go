@@ -915,5 +915,5 @@ func Test_Funding(t *testing.T) {
 	market := model.Gate
 	model.NewConfig()
 	account := model.GetAccounts(0)[market]
-	api.QueryFunding(account, time.Now().UnixMilli()-7200000, time.Now().UnixMilli())
+	api.GetBills(account, time.Now().UnixMilli()-7200000, time.Now().UnixMilli())
 }

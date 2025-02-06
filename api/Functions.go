@@ -1093,12 +1093,12 @@ func SetFundingRate(market, symbol string, fundingRate *model.FundingRate) {
 	util.StoreSyncMap(model.FundingRates, fundingRate, market, symbol)
 }
 
-func QueryFunding(account *model.Account, begin, end int64) {
+func GetBills(account *model.Account, begin, end int64) {
 	switch account.Market {
 	case model.OKEX:
-		getOkexBills(account, begin, end)
+		getBillsOkx(account, begin, end)
 	case model.Gate:
-		queryFundingGate(account, begin, end)
+		getBillsGate(account, begin, end)
 	}
 
 }
