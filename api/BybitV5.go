@@ -1084,3 +1084,44 @@ func queryOrderBybit(key, secret, symbol, orderId string) *model.Order {
 	}
 	return order
 }
+
+// getBybitBills 获取 Bybit 账户的账单信息https://bybit-exchange.github.io/docs/v5/account/transaction-log
+// 参数:
+//
+//	account - 指向账户信息的指针，包含访问 Bybit API 所需的密钥和密钥
+//	begin - 开始时间戳（毫秒），用于筛选账单记录
+//	end - 结束时间戳（毫秒），用于筛选账单记录
+//
+// 返回值:
+//
+//	bool - 表示操作是否成功的标志
+//	[]*model.FundingFee - 融资费用记录的切片
+func getBybitBills(account *model.Account, begin, end int64) (bool, []*model.FundingFee) {
+	param := map[string]interface{}{`accountType`: `UNIFIED`, `type`: `TRADE`, `startTime`: begin, `endTime`: end}
+	response, _ := SignedRequestBybit(account.Key, account.Secret, http.MethodGet, bybitRestUrl, "/v5/account/transaction-log", param)
+	loanJson, err := util.NewJSON(response)
+	if loanJson == nil || err != nil || loanJson.Get(`result`) == nil || loanJson.Get(`retCode`).MustInt() != 0 {
+		util.Log(util.LogLevelError, fmt.Sprintf(`market %s to getbills http error %v `, model.Bybit, err))
+		return false, nil
+	}
+	var fundingFees = make([]*model.FundingFee, 0)
+	for _, item := range loanJson.GetPath(`result`, `list`).MustArray() {
+		data := item.(map[string]interface{})
+		ts, _ := strconv.ParseInt(data[`transactionTime`].(string), 10, 64)
+		balChg, _ := strconv.ParseFloat(data[`bonusChange`].(string), 64)
+		success, _, symbol := model.GetFromDialect(model.Bybit, model.MarketTypePerp, data[`symbol`].(string))
+		if !success {
+			util.Log(util.LogLevelError, fmt.Sprintf(`market %s to getbills instId %s can not get standardSymbol`, model.Bybit, data[`symbol`].(string)))
+			continue
+		}
+		fundingFee := &model.FundingFee{
+			Market: model.Bybit,
+			Ccy:    data[`currency`].(string),
+			Ts:     ts,
+			BalChg: balChg,
+			Symbol: symbol,
+		}
+		fundingFees = append(fundingFees, fundingFee)
+	}
+	return true, fundingFees
+}

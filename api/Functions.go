@@ -1098,7 +1098,13 @@ func QueryFunding(account *model.Account, begin, end int64) {
 	case model.OKEX:
 		getOkexBills(account, begin, end)
 	case model.Gate:
-		queryFundingGate(account, begin, end)
+		getGateBills(account, begin, end)
+	case model.Bybit:
+		getBybitBills(account, begin, end)
+	case model.BinancePerp:
+		getBinanceBills(account, begin, end)
+	default:
+		util.Log(util.LogLevelInfo, fmt.Sprintf(`un-support market %s`, account.Market))
 	}
 
 }

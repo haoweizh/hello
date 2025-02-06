@@ -859,3 +859,41 @@ func setLeverageBinancePerp(key, secret string) (success bool) {
 	}
 	return true
 }
+
+// getBinanceBills 获取Binance资金费用记录 https://developers.binance.com/docs/zh-CN/derivatives/usds-margined-futures/account/rest-api/Get-Income-History
+// account: 用户账户信息
+// begin: 开始时间戳
+// end: 结束时间戳
+// 返回值:
+// - bool: 请求是否成功
+// - []*model.FundingFee: 资金费用记录列表
+func getBinanceBills(account *model.Account, begin, end int64) (bool, []*model.FundingFee) {
+	param := map[string]interface{}{`incomeType`: `FUNDING_FEE`, `startTime`: begin, `endTime`: end}
+	response := signedRequestBinance(account.Key, account.Secret, model.BinancePerp,
+		http.MethodGet, restBinancePerp+"/fapi/v1/income", true, param)
+	loanJson, err := util.NewJSON(response)
+	if loanJson == nil || err != nil {
+		util.Log(util.LogLevelError, fmt.Sprintf(`market %s to getbills http error %v `, model.BinancePerp, err))
+		return false, nil
+	}
+	var fundingFees = make([]*model.FundingFee, 0)
+	for _, item := range loanJson.MustArray() {
+		data := item.(map[string]interface{})
+		ts, _ := strconv.ParseInt(data[`time`].(string), 10, 64)
+		balChg, _ := strconv.ParseFloat(data[`income`].(string), 64)
+		success, _, symbol := model.GetFromDialect(model.BinancePerp, model.MarketTypePerp, data[`symbol`].(string))
+		if !success {
+			util.Log(util.LogLevelError, fmt.Sprintf(`market %s to getbills instId %s can not get standardSymbol`, model.BinancePerp, data[`symbol`].(string)))
+			continue
+		}
+		fundingFee := &model.FundingFee{
+			Market: model.BinancePerp,
+			Ccy:    data[`asset`].(string),
+			Ts:     ts,
+			BalChg: balChg,
+			Symbol: symbol,
+		}
+		fundingFees = append(fundingFees, fundingFee)
+	}
+	return true, fundingFees
+}
