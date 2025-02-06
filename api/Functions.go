@@ -1093,6 +1093,10 @@ func SetFundingRate(market, symbol string, fundingRate *model.FundingRate) {
 	util.StoreSyncMap(model.FundingRates, fundingRate, market, symbol)
 }
 
+func QueryFunding(account *model.Account, begin, end int64) {
+	queryFundingGate(account, begin, end)
+}
+
 //func InitCoinBalance(key, secret, function, market string) {
 //	InitMarketInfos()
 //	settings := model.GetSettings(function, market)

@@ -14,7 +14,6 @@ import (
 	"hello/model"
 	"hello/regret"
 	"hello/util"
-	"math"
 	"math/rand"
 	"net/http"
 	"net/url"
@@ -779,12 +778,11 @@ func Test_map(t *testing.T) {
 }
 
 func Test_wallet(t *testing.T) {
-	hours := 2.0
-	leftHours := 0.333
-	base := 1 / float64(hours)
-	a := math.Max(math.Min(1/hours, 0.3333), 0.16666) + (1-leftHours/hours)*(1-leftHours/hours)*(1-leftHours/hours)
-	fmt.Println(base)
-	fmt.Println(a)
+	set := &model.Setting{
+		Market: model.BinanceSpot,
+	}
+	set.GridAmount += 100
+	fmt.Println(set.GridAmount)
 	model.NewConfig()
 	market := model.BitgetPerp
 	symbol := `BTC_PERP`
@@ -911,4 +909,11 @@ func Test_C(t *testing.T) {
 	if msgSize > 0 {
 		fmt.Printf("Received from order: %s\n", string(buf[:msgSize]))
 	}
+}
+
+func Test_Funding(t *testing.T) {
+	market := model.Gate
+	model.NewConfig()
+	account := model.GetAccounts(0)[market]
+	api.QueryFunding(account, time.Now().UnixMilli()-7200000, time.Now().UnixMilli())
 }

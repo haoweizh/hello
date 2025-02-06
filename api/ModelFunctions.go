@@ -190,11 +190,17 @@ func handleCombineSettings(mumSetting *model.Setting, topMarketInfos map[string]
 		} else {
 			settingCombine = valueCombine.(*model.Setting)
 			settingCombine.SymbolRelated = ``
+			if settingCombine.Chance == 0 {
+				settingCombine.GridAmount = 0
+			}
 			util.Log(util.LogLevelInfo, fmt.Sprintf(`add back combine %s %s of tops %d`, mumSetting.Market, info.Symbol, len(topMarketInfos)))
 		}
 		if valueNormal != nil {
 			settingNormal = valueNormal.(*model.Setting)
 			settingNormal.SymbolRelated = ``
+			if settingNormal.Chance == 0 {
+				settingNormal.GridAmount = 0
+			}
 			util.Log(util.LogLevelInfo, fmt.Sprintf(`add back normal %s %s of tops %d`, mumSetting.Market, info.Symbol, len(topMarketInfos)))
 		}
 		combineMap.Store(info.Symbol, settingCombine)
