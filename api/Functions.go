@@ -952,7 +952,7 @@ func InitCrossMarketInfos(markets []string) {
 						Coin:               coin,
 						OpenShortMargin:    scoreOpen,
 						CloseShortMargin:   scoreClose,
-						ChanceLimit:        4,
+						ChanceLimit:        10,
 						ChanceLimitCombine: 2,
 						PriceX:             1, GridAmount: 1}
 					util.Log(util.LogLevelInfo, fmt.Sprintf(`save setting %s %s %s %#v`, info.Market, info.Symbol, coin, setting.Valid))
@@ -977,7 +977,7 @@ func InitCrossMarketInfos(markets []string) {
 					Coin:               coin,
 					OpenShortMargin:    scoreOpen,
 					CloseShortMargin:   scoreClose,
-					ChanceLimit:        4,
+					ChanceLimit:        10,
 					ChanceLimitCombine: 2,
 					PriceX:             1, GridAmount: 1}
 				util.Log(util.LogLevelInfo, fmt.Sprintf(`save setting %s %s %s %#v`, infos[0].Market, infos[0].Symbol, coin, setting.Valid))

@@ -912,11 +912,12 @@ func Test_C(t *testing.T) {
 }
 
 func Test_Funding(t *testing.T) {
-	market := model.Bybit
+	market := model.OKEX
 	model.NewConfig()
 	account := model.GetAccounts(0)[market]
-	_, fees := api.GetBills(account, time.Now().UnixMilli()-86400000, time.Now().UnixMilli())
-	for _, fee := range fees {
+	_, fees := api.GetBills(account, time.Now().UnixMilli()-7200000, time.Now().UnixMilli())
+	for i, fee := range fees {
+		fmt.Println(i)
 		fmt.Println(fee)
 	}
 }
