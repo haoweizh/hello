@@ -179,7 +179,7 @@ func WsOrderServeBybit(account *model.Account) {
 	}
 	defer func() {
 		select {
-		case <-time.After(time.Second * 30):
+		case <-time.After(time.Second * 10):
 		}
 		model.AppEnvironment.PriConnecting.Store(model.Bybit+account.Key, false)
 	}()

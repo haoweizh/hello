@@ -332,7 +332,7 @@ func WsOrderServeOKEX(account *model.Account) {
 	}
 	defer func() {
 		select {
-		case <-time.After(time.Second * 30):
+		case <-time.After(time.Second * 10):
 		}
 		model.AppEnvironment.PriConnecting.Store(model.OKEX+account.Key, false)
 	}()

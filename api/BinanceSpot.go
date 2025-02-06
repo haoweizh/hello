@@ -474,7 +474,7 @@ func WsOrderServeBinance(account *model.Account, market string) {
 	}
 	defer func() {
 		select {
-		case <-time.After(time.Second * 30):
+		case <-time.After(time.Second * 10):
 		}
 		model.AppEnvironment.PriConnecting.Store(market+account.Key, false)
 	}()

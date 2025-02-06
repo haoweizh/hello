@@ -627,7 +627,7 @@ func maintainConnsGate(accounts []*model.Account) {
 				successSpot = false
 			}
 			if !successSpot {
-				WSOrderServeGate(account, model.MarketTypeSpot)
+				go WSOrderServeGate(account, model.MarketTypeSpot)
 			}
 			successPerp := true
 			connKeyPerp := getPrivateConnKey(model.Gate, account.Key, model.MarketTypePerp)
@@ -639,9 +639,6 @@ func maintainConnsGate(accounts []*model.Account) {
 					util.Log(util.LogLevelError, fmt.Sprintf("send account futures ping message err:%s %s", model.Gate, err.Error()))
 					//wsFuture.(*model.WSConn).Close()
 					successPerp = false
-				} else {
-					util.Log(util.LogLevelInfo, fmt.Sprintf("send account futures ping message %s type %v %s",
-						model.Gate, wsFuture.(*model.WSConn).WSType, pingMsg))
 				}
 				if time.Now().Unix()-loginTSPerp > 600 {
 					wsLoginGateOrder(account, wsFuture.(*model.WSConn), model.MarketTypePerp)
@@ -651,7 +648,7 @@ func maintainConnsGate(accounts []*model.Account) {
 				successPerp = false
 			}
 			if !successPerp {
-				WSOrderServeGate(account, model.MarketTypePerp)
+				go WSOrderServeGate(account, model.MarketTypePerp)
 			}
 		}
 		time.Sleep(time.Second * 20)
@@ -709,7 +706,7 @@ func WSOrderServeGate(account *model.Account, marketType string) {
 	}
 	defer func() {
 		select {
-		case <-time.After(time.Second * 30):
+		case <-time.After(time.Second * 3):
 		}
 		model.AppEnvironment.PriConnecting.Store(model.Gate+marketType+account.Key, false)
 	}()
