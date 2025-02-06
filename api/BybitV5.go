@@ -1129,10 +1129,12 @@ func getBillsBybit(account *model.Account, begin, end int64) (bool, []*model.Fun
 			param[`cursor`] = nextPageCursor
 			response, _ = SignedRequestBybit(account.Key, account.Secret, http.MethodGet, bybitRestUrl, "/v5/account/transaction-log", param)
 			loanJson, err = util.NewJSON(response)
+			if loanJson == nil || err != nil || loanJson.Get(`result`) == nil {
+				break
+			}
 		} else {
 			break
 		}
 	}
-
 	return true, fundingFees
 }
