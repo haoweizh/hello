@@ -549,11 +549,22 @@ func holdPage(c *gin.Context) {
 		}
 		if carryRows.Close() != nil {
 			util.Log(util.LogLevelInfo, fmt.Sprintf(`fail to close DB for carry rows`))
-			return
+		}
+	}
+	fundingFee := 0.0
+	carryRows, _ = model.AppDB.Model(model.FundingFee{}).Select(`sum(bal_chg)`).
+		Where(`ccy=? and ts>=? and index=?`, `USDT`, util.GetToday().UnixMilli(), index).Rows()
+	if carryRows != nil {
+		for carryRows.Next() {
+			_ = carryRows.Scan(&fundingFee)
+			util.Log(util.LogLevelInfo, fmt.Sprintf(`funding fee in all %d %f`, index, fundingFee))
+		}
+		if carryRows.Close() != nil {
+			util.Log(util.LogLevelInfo, fmt.Sprintf(`fail to close DB for funding rows`))
 		}
 	}
 	c.HTML(http.StatusOK, `hold.gohtml`, gin.H{`marketValue`: marketValues,
-		`trade`: tradeInfo, `orders`: orders, `holdings`: cross.GetHoldings(queryAccounts)})
+		`trade`: tradeInfo, `orders`: orders, `holdings`: cross.GetHoldings(queryAccounts), `fundingFee`: fundingFee})
 }
 
 func crossRefresh(c *gin.Context) {
