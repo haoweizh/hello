@@ -53,7 +53,7 @@ func getBillsGate(account *model.Account, begin, end int64) (bool, []*model.Fund
 			}
 			fundingFees = append(fundingFees, fundingFee)
 		}
-		if len(book) < 100 {
+		if len(book) < limit {
 			break
 		}
 		offset += len(book)

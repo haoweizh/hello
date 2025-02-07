@@ -1628,9 +1628,9 @@ func getCandlesOKEX(account *model.Account, symbol string, before, after time.Ti
 func getBillsOkx(account *model.Account, begin, end int64) (bool, []*model.FundingFee) {
 	param := map[string]interface{}{`instType`: `SWAP`, `type`: `8`, `begin`: begin, `end`: end, `limit`: 100}
 	response, _ := sendSignRequestOKEX(account, http.MethodGet, `/api/v5/account/bills`, param, nil)
-	loanJson, err := util.NewJSON(response)
 	var fundingFees = make([]*model.FundingFee, 0)
 	for {
+		loanJson, err := util.NewJSON(response)
 		if loanJson == nil || err != nil || loanJson.Get(`data`) == nil {
 			break
 		}
@@ -1665,7 +1665,6 @@ func getBillsOkx(account *model.Account, begin, end int64) (bool, []*model.Fundi
 		}
 		param[`after`] = billId
 		response, _ = sendSignRequestOKEX(account, http.MethodGet, `/api/v5/account/bills`, param, nil)
-		loanJson, err = util.NewJSON(response)
 		time.Sleep(time.Second)
 	}
 	return true, fundingFees
