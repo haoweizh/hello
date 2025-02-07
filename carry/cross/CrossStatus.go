@@ -6,6 +6,7 @@ import (
 	"hello/model"
 	"hello/util"
 	"math"
+	"strconv"
 	"sync"
 	"time"
 )
@@ -323,9 +324,11 @@ func GetHoldings(accounts map[string]*model.Account) (holding [][]interface{}) {
 				updateTime := fr.UpdateTime.In(loc)
 				fundingStr = fmt.Sprintf(`%e %dH %d:%d`,
 					100*fr.Rate, marketInfo.FundingRateInterval/3600000, updateTime.Hour(), updateTime.Minute())
-				fundingFeeValue, _ := util.LoadSyncMap(&model.AppEnvironment.FundingFeeToday, market, symbol)
+				fundingFeeValue, _ := util.LoadSyncMap(&model.AppEnvironment.FundingFeeToday, strconv.Itoa(accounts[market].Index), market, symbol)
 				if fundingFeeValue != nil {
-					fundingStr = fundingStr + fmt.Sprintf(`%.2f`, fundingFeeValue.(float64))
+					fundingStr = fundingStr + fmt.Sprintf(` %.2fU`, fundingFeeValue.(float64))
+				} else {
+					util.Log(util.LogLevelInfo, fmt.Sprintf(`set funding fee fail %s %s %s`, strconv.Itoa(accounts[market].Index), market, symbol))
 				}
 			}
 			holding[i] = append(holding[i], fundingStr)
@@ -457,19 +460,21 @@ func syncFundingFees(account *model.Account) {
 			model.AppDB.Save(&fee)
 		}
 	}
+	fundingFeeMap := make(map[string]float64)
+	idxStr := strconv.Itoa(account.Index)
 	fundingRows, _ := model.AppDB.Model(model.FundingFee{}).Select(`symbol,bal_chg`).
-		Where(`ccy=? and ts>=? and market=?`, `USDT`, util.GetToday().UnixMilli(), account.Market).Rows()
+		Where(`ccy=? and ts>=? and market=? and index=?`, `USDT`, util.GetToday().UnixMilli(), account.Market, account.Index).Rows()
 	if fundingRows != nil {
 		for fundingRows.Next() {
 			var symbol string
-			var balChg float64
+			balChg := 0.0
 			_ = fundingRows.Scan(&symbol, &balChg)
-			value, loadSuccess := util.LoadSyncMap(&model.AppEnvironment.FundingFeeToday, account.Market, symbol)
-			if loadSuccess {
-				balChg += value.(float64)
-			}
-			util.Log(util.LogLevelInfo, fmt.Sprintf(`set funding fee %s %s %f`, account.Market, symbol, balChg))
-			util.StoreSyncMap(&model.AppEnvironment.FundingFeeToday, balChg, account.Market, symbol)
+			fundingFeeMap[symbol] += balChg
+			util.Log(util.LogLevelInfo, fmt.Sprintf(`set funding fee %s %s %s %f`, idxStr, account.Market, symbol, balChg))
+		}
+		for symbol, value := range fundingFeeMap {
+			util.StoreSyncMap(&model.AppEnvironment.FundingFeeToday, value, idxStr, account.Market, symbol)
+			util.Log(util.LogLevelInfo, fmt.Sprintf(`set funding fee in all %s %s %s %f`, idxStr, account.Market, symbol, value))
 		}
 		err := fundingRows.Close()
 		if err != nil {

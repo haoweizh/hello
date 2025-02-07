@@ -50,6 +50,7 @@ func getBillsGate(account *model.Account, begin, end int64) (bool, []*model.Fund
 				Ts:     ts * 1000,
 				BalChg: balChg,
 				Symbol: symbol,
+				Index:  account.Index,
 			}
 			fundingFees = append(fundingFees, fundingFee)
 		}

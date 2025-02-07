@@ -1657,6 +1657,7 @@ func getBillsOkx(account *model.Account, begin, end int64) (bool, []*model.Fundi
 				Ts:     ts,
 				BalChg: balChg,
 				Symbol: symbol,
+				Index:  account.Index,
 			}
 			fundingFees = append(fundingFees, fundingFee)
 		}

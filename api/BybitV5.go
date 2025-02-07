@@ -1121,6 +1121,7 @@ func getBillsBybit(account *model.Account, begin, end int64) (bool, []*model.Fun
 				Ts:     ts,
 				BalChg: balChg,
 				Symbol: symbol,
+				Index:  account.Index,
 			}
 			fundingFees = append(fundingFees, fundingFee)
 		}

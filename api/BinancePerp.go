@@ -897,6 +897,7 @@ func getBillsBinance(account *model.Account, begin, end int64) (bool, []*model.F
 				Ts:     ts,
 				BalChg: balChg,
 				Symbol: symbol,
+				Index:  account.Index,
 			}
 			fundingFees = append(fundingFees, fundingFee)
 		}
