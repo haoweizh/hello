@@ -321,8 +321,9 @@ func GetHoldings(accounts map[string]*model.Account) (holding [][]interface{}) {
 			fundingStr := fmt.Sprintf(`%d:%d`, util.GetNow().Hour(), util.GetNow().Minute())
 			if marketType == model.MarketTypePerp {
 				updateTime := fr.UpdateTime.In(loc)
-				fundingStr = fmt.Sprintf(`%e %dH %d:%d`,
-					100*fr.Rate, marketInfo.FundingRateInterval/3600000, updateTime.Hour(), updateTime.Minute())
+				fundingFeeValue, _ := util.LoadSyncMap(&model.AppEnvironment.FundingFeeToday, market, symbol)
+				fundingStr = fmt.Sprintf(`%e %dH %d:%d %.2fU`,
+					100*fr.Rate, marketInfo.FundingRateInterval/3600000, updateTime.Hour(), updateTime.Minute(), fundingFeeValue.(float64))
 			}
 			holding[i] = append(holding[i], fundingStr)
 		} else {
@@ -444,6 +445,33 @@ func _(order *model.Order, setting *model.Setting) {
 		}
 	}
 	//util.Notice(`---- add done %s`, setting.Symbol)
+}
+
+func syncFundingFees(account *model.Account) {
+	success, fundingFees := api.GetBills(account, time.Now().UnixMilli()-3600000, time.Now().UnixMilli())
+	if success {
+		for _, fee := range fundingFees {
+			model.AppDB.Save(&fee)
+		}
+	}
+	fundingRows, _ := model.AppDB.Model(model.FundingFee{}).Select(`symbol,bal_chg`).
+		Where(`ccy=? and ts>=? and market=?`, `USDT`, util.GetToday().UnixMilli(), account.Market).Rows()
+	if fundingRows != nil {
+		for fundingRows.Next() {
+			var symbol string
+			var balChg float64
+			_ = fundingRows.Scan(&symbol, &balChg)
+			value, loadSuccess := util.LoadSyncMap(&model.AppEnvironment.FundingFeeToday, account.Market, symbol)
+			if loadSuccess {
+				balChg += value.(float64)
+			}
+			util.StoreSyncMap(&model.AppEnvironment.FundingFeeToday, balChg, account.Market, symbol)
+		}
+		err := fundingRows.Close()
+		if err != nil {
+			return
+		}
+	}
 }
 
 func liquidateSmallContracts(account *model.Account, market string) {

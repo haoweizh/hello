@@ -1099,13 +1099,13 @@ func queryOrderBybit(key, secret, symbol, orderId string) *model.Order {
 func getBillsBybit(account *model.Account, begin, end int64) (bool, []*model.FundingFee) {
 	param := map[string]interface{}{`accountType`: `UNIFIED`, `type`: `SETTLEMENT`, `startTime`: begin, `endTime`: end}
 	response, _ := SignedRequestBybit(account.Key, account.Secret, http.MethodGet, bybitRestUrl, "/v5/account/transaction-log", param)
-	loanJson, err := util.NewJSON(response)
-	if loanJson == nil || err != nil || loanJson.Get(`result`) == nil || loanJson.Get(`retCode`).MustInt() != 0 {
-		util.Log(util.LogLevelError, fmt.Sprintf(`market %s to getbills http error %v `, model.Bybit, err))
-		return false, nil
-	}
 	var fundingFees = make([]*model.FundingFee, 0)
 	for {
+		loanJson, err := util.NewJSON(response)
+		if loanJson == nil || err != nil || loanJson.Get(`result`) == nil || loanJson.Get(`retCode`).MustInt() != 0 {
+			util.Log(util.LogLevelError, fmt.Sprintf(`market %s to getbills http error %v `, model.Bybit, err))
+			break
+		}
 		for _, item := range loanJson.GetPath(`result`, `list`).MustArray() {
 			data := item.(map[string]interface{})
 			ts, _ := strconv.ParseInt(data[`transactionTime`].(string), 10, 64)
@@ -1128,13 +1128,10 @@ func getBillsBybit(account *model.Account, begin, end int64) (bool, []*model.Fun
 		if nextPageCursor != "" {
 			param[`cursor`] = nextPageCursor
 			response, _ = SignedRequestBybit(account.Key, account.Secret, http.MethodGet, bybitRestUrl, "/v5/account/transaction-log", param)
-			loanJson, err = util.NewJSON(response)
-			if loanJson == nil || err != nil || loanJson.Get(`result`) == nil {
-				break
-			}
 		} else {
 			break
 		}
+		time.Sleep(time.Second)
 	}
 	return true, fundingFees
 }

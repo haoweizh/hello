@@ -868,32 +868,43 @@ func setLeverageBinancePerp(key, secret string) (success bool) {
 // - bool: 请求是否成功
 // - []*model.FundingFee: 资金费用记录列表
 func getBillsBinance(account *model.Account, begin, end int64) (bool, []*model.FundingFee) {
-	param := map[string]interface{}{`incomeType`: `FUNDING_FEE`, `startTime`: begin, `endTime`: end}
+	page := 1
+	param := map[string]interface{}{`incomeType`: `FUNDING_FEE`, `startTime`: begin, `endTime`: end, `limit`: 100, `page`: strconv.Itoa(page)}
 	response := signedRequestBinance(account.Key, account.Secret, model.BinancePerp,
 		http.MethodGet, restBinancePerp+"/fapi/v1/income", true, param)
-	loanJson, err := util.NewJSON(response)
-	if loanJson == nil || err != nil {
-		util.Log(util.LogLevelError, fmt.Sprintf(`market %s to getbills http error %v `, model.BinancePerp, err))
-		return false, nil
-	}
 	var fundingFees = make([]*model.FundingFee, 0)
-	for _, item := range loanJson.MustArray() {
-		data := item.(map[string]interface{})
-		ts, _ := strconv.ParseInt(data[`time`].(string), 10, 64)
-		balChg, _ := strconv.ParseFloat(data[`income`].(string), 64)
-		success, _, symbol := model.GetFromDialect(model.BinancePerp, model.MarketTypePerp, data[`symbol`].(string))
-		if !success {
-			util.Log(util.LogLevelError, fmt.Sprintf(`market %s to getbills instId %s can not get standardSymbol`, model.BinancePerp, data[`symbol`].(string)))
-			continue
+	for {
+		loanJson, err := util.NewJSON(response)
+		if loanJson == nil || err != nil {
+			break
 		}
-		fundingFee := &model.FundingFee{
-			Market: model.BinancePerp,
-			Ccy:    data[`asset`].(string),
-			Ts:     ts,
-			BalChg: balChg,
-			Symbol: symbol,
+		array := loanJson.MustArray()
+		if len(array) == 0 {
+			break
 		}
-		fundingFees = append(fundingFees, fundingFee)
+		for _, item := range array {
+			data := item.(map[string]interface{})
+			ts, _ := data[`time`].(json.Number).Int64()
+			balChg, _ := strconv.ParseFloat(data[`income`].(string), 64)
+			success, _, symbol := model.GetFromDialect(model.BinancePerp, model.MarketTypePerp, data[`symbol`].(string))
+			if !success {
+				util.Log(util.LogLevelError, fmt.Sprintf(`market %s to getbills instId %s can not get standardSymbol`, model.BinancePerp, data[`symbol`].(string)))
+				continue
+			}
+			fundingFee := &model.FundingFee{
+				Market: model.BinancePerp,
+				Ccy:    data[`asset`].(string),
+				Ts:     ts,
+				BalChg: balChg,
+				Symbol: symbol,
+			}
+			fundingFees = append(fundingFees, fundingFee)
+		}
+		page++
+		param[`page`] = strconv.Itoa(page)
+		response = signedRequestBinance(account.Key, account.Secret, model.BinancePerp,
+			http.MethodGet, restBinancePerp+"/fapi/v1/income", true, param)
+		time.Sleep(time.Second)
 	}
 	return true, fundingFees
 }

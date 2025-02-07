@@ -419,6 +419,7 @@ var ClearCross = func() {
 	contractMarkets.Clear()
 	coinCrossing.Clear()
 	model.AppEnvironment.ReqIdOrders.Clear()
+	model.AppEnvironment.FundingFeeToday.Clear()
 	if model.AppConfig.Handle == `1` {
 		equalAccounts(doEqual, traceId)
 	}
@@ -466,6 +467,7 @@ func equalAccounts(doEqual bool, traceId int64) {
 		for _, market := range model.AppEnvironment.Markets {
 			if !doEqual {
 				liquidateSmallContracts(indexAccounts[market], market)
+				go syncFundingFees(indexAccounts[market])
 				account := indexAccounts[market]
 				if market == model.Gate && account != nil && model.AppConfig.GetCrossStyles()[i] == crossGrid {
 					gateCm, _ := contractMarkets.Load(account.Key)

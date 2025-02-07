@@ -164,6 +164,7 @@ func Maintain() {
 	_ = model.AppDB.AutoMigrate(&model.Candle{})
 	_ = model.AppDB.AutoMigrate(&model.SettingMonitor{})
 	_ = model.AppDB.AutoMigrate(&model.CarryCoin{})
+	_ = model.AppDB.AutoMigrate(&model.FundingFee{})
 	//go CheckPastRefresh()
 	//go util.StartMidNightTimer(CancelAllOrders)
 	//go MaintainBalance()

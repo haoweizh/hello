@@ -1626,30 +1626,47 @@ func getCandlesOKEX(account *model.Account, symbol string, before, after time.Ti
 //	请求是否成功
 //	响应的原始数据，仅在请求成功时返回
 func getBillsOkx(account *model.Account, begin, end int64) (bool, []*model.FundingFee) {
-	param := map[string]interface{}{`instType`: `SWAP`, `type`: `8`, `begin`: begin, `end`: end}
+	param := map[string]interface{}{`instType`: `SWAP`, `type`: `8`, `begin`: begin, `end`: end, `limit`: 100}
 	response, _ := sendSignRequestOKEX(account, http.MethodGet, `/api/v5/account/bills`, param, nil)
 	loanJson, err := util.NewJSON(response)
-	if loanJson == nil || err != nil || loanJson.Get(`data`) == nil {
-		return false, nil
-	}
 	var fundingFees = make([]*model.FundingFee, 0)
-	for _, item := range loanJson.Get(`data`).MustArray() {
-		data := item.(map[string]interface{})
-		ts, _ := strconv.ParseInt(data[`ts`].(string), 10, 64)
-		balChg, _ := strconv.ParseFloat(data[`balChg`].(string), 64)
-		success, _, symbol := model.GetFromDialect(model.OKEX, model.MarketTypePerp, data[`instId`].(string))
-		if !success {
-			util.Log(util.LogLevelError, fmt.Sprintf(`market %s to getbills instId %s can not get standardSymbol`, model.OKEX, data[`instId`].(string)))
-			continue
+	for {
+		if loanJson == nil || err != nil || loanJson.Get(`data`) == nil {
+			break
 		}
-		fundingFee := &model.FundingFee{
-			Market: model.OKEX,
-			Ccy:    data[`ccy`].(string),
-			Ts:     ts,
-			BalChg: balChg,
-			Symbol: symbol,
+		array := loanJson.Get(`data`).MustArray()
+		if len(array) == 0 {
+			break
 		}
-		fundingFees = append(fundingFees, fundingFee)
+		billId := ``
+		for i := 0; i < len(array); i++ {
+			data := array[i].(map[string]interface{})
+			if i == 99 {
+				billId = data[`billId`].(string)
+			}
+			ts, _ := strconv.ParseInt(data[`ts`].(string), 10, 64)
+			balChg, _ := strconv.ParseFloat(data[`balChg`].(string), 64)
+			success, _, symbol := model.GetFromDialect(model.OKEX, model.MarketTypePerp, data[`instId`].(string))
+			if !success {
+				util.Log(util.LogLevelError, fmt.Sprintf(`market %s to getbills instId %s can not get standardSymbol`, model.OKEX, data[`instId`].(string)))
+				continue
+			}
+			fundingFee := &model.FundingFee{
+				Market: model.OKEX,
+				Ccy:    data[`ccy`].(string),
+				Ts:     ts,
+				BalChg: balChg,
+				Symbol: symbol,
+			}
+			fundingFees = append(fundingFees, fundingFee)
+		}
+		if billId == `` {
+			break
+		}
+		param[`after`] = billId
+		response, _ = sendSignRequestOKEX(account, http.MethodGet, `/api/v5/account/bills`, param, nil)
+		loanJson, err = util.NewJSON(response)
+		time.Sleep(time.Second)
 	}
 	return true, fundingFees
 }

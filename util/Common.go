@@ -92,6 +92,11 @@ func JsonEncodeToByte(stringMap interface{}) []byte {
 	return jsonBytes
 }
 
+func GetToday() (today time.Time) {
+	today = GetNow()
+	return time.Date(today.Year(), today.Month(), today.Day(), 0, 0, 0, 0, today.Location())
+}
+
 func GetNow() time.Time {
 	location, err := time.LoadLocation("Asia/Shanghai")
 	if err == nil {

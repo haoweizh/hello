@@ -23,13 +23,14 @@ type Balance struct {
 	CreatedAt           time.Time
 	UpdatedAt           time.Time
 }
+
 type FundingFee struct {
 	Market    string `gorm:"index:market_symbol_ts,unique"`
-	Symbol    string
+	Symbol    string `gorm:"index:market_symbol_ts,unique"`
 	BalChg    float64
-	Ts        int64
+	Ts        int64 `gorm:"index:market_symbol_ts,unique"`
 	Ccy       string
-	ID        string `gorm:"primary_key"`
+	Id        uint `json:"id" gorm:"unique;primaryKey;autoIncrement"`
 	CreatedAt time.Time
 	UpdatedAt time.Time
 }
