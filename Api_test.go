@@ -912,33 +912,15 @@ func Test_C(t *testing.T) {
 }
 
 func Test_Funding(t *testing.T) {
-	market := model.BinancePerp
+	market := model.OKEX
 	model.NewConfig()
 	model.AppDB, _ = gorm.Open(postgres.Open(model.AppConfig.DBConnection), &gorm.Config{})
 	//_ = model.AppDB.AutoMigrate(&model.FundingFee{})
 	account := model.GetAccounts(0)[market]
-	//_, fees := api.GetBills(account, time.Now().UnixMilli()-28800000, time.Now().UnixMilli())
-	//for i, fee := range fees {
-	//	fmt.Println(i)
-	//	fmt.Println(fee)
-	//	model.AppDB.Save(&fee)
-	//}
-	fundingRows, _ := model.AppDB.Model(model.FundingFee{}).Select(`symbol,bal_chg`).
-		Where(`ccy=? and ts>=? and market=?`, `USDT`, util.GetToday().UnixMilli(), account.Market).Rows()
-	if fundingRows != nil {
-		for fundingRows.Next() {
-			var symbol string
-			var balChg float64
-			_ = fundingRows.Scan(&symbol, &balChg)
-			value, loadSuccess := util.LoadSyncMap(&model.AppEnvironment.FundingFeeToday, account.Market, symbol)
-			if loadSuccess {
-				balChg += value.(float64)
-			}
-			util.StoreSyncMap(&model.AppEnvironment.FundingFeeToday, balChg, account.Market, symbol)
-		}
-		err := fundingRows.Close()
-		if err != nil {
-			return
-		}
+	_, fees := api.GetBills(account, time.Now().UnixMilli()-61200000, time.Now().UnixMilli())
+	for i, fee := range fees {
+		fmt.Println(i)
+		fmt.Println(fee)
+		model.AppDB.Save(&fee)
 	}
 }

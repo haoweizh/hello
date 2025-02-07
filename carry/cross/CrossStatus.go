@@ -321,9 +321,12 @@ func GetHoldings(accounts map[string]*model.Account) (holding [][]interface{}) {
 			fundingStr := fmt.Sprintf(`%d:%d`, util.GetNow().Hour(), util.GetNow().Minute())
 			if marketType == model.MarketTypePerp {
 				updateTime := fr.UpdateTime.In(loc)
+				fundingStr = fmt.Sprintf(`%e %dH %d:%d`,
+					100*fr.Rate, marketInfo.FundingRateInterval/3600000, updateTime.Hour(), updateTime.Minute())
 				fundingFeeValue, _ := util.LoadSyncMap(&model.AppEnvironment.FundingFeeToday, market, symbol)
-				fundingStr = fmt.Sprintf(`%e %dH %d:%d %.2fU`,
-					100*fr.Rate, marketInfo.FundingRateInterval/3600000, updateTime.Hour(), updateTime.Minute(), fundingFeeValue.(float64))
+				if fundingFeeValue != nil {
+					fundingStr = fundingStr + fmt.Sprintf(`%.2f`, fundingFeeValue.(float64))
+				}
 			}
 			holding[i] = append(holding[i], fundingStr)
 		} else {
@@ -465,6 +468,7 @@ func syncFundingFees(account *model.Account) {
 			if loadSuccess {
 				balChg += value.(float64)
 			}
+			util.Log(util.LogLevelInfo, fmt.Sprintf(`set funding fee %s %s %f`, account.Market, symbol, balChg))
 			util.StoreSyncMap(&model.AppEnvironment.FundingFeeToday, balChg, account.Market, symbol)
 		}
 		err := fundingRows.Close()
