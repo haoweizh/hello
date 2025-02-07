@@ -72,7 +72,7 @@ type Environment struct {
 	PubChanNeedReset                  sync.Map // market - bool
 	PubSubscribes                     sync.Map // market*wsUrl - []interface{}
 	OkexPubMarkets                    sync.Map // channel*instid - string
-	FundingFeeToday                   sync.Map // accountKey*market*symbol - value in usdt
+	FundingFeeToday                   sync.Map // account index*market*symbol - value in usdt
 }
 
 type MarkPriceInfo struct {
