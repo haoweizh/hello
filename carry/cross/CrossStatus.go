@@ -70,9 +70,7 @@ type spotMarket struct {
 	reduceOnly      bool // 只减仓模式
 }
 
-// （1+（1-t/T）^2）*2/T
-// t = leftHours
-// T == hours
+// 2/周期*（1+（1-剩余/周期）^2）
 func handledFRate(account *model.Account, market, symbol string, interval int) (got, delayed bool, fundingRate *model.FundingRate, handledFr float64) {
 	got, delayed, fundingRate = api.GetFundingRate(account, market, symbol, false)
 	if !got {
