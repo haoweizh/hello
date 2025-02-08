@@ -563,8 +563,8 @@ func holdPage(c *gin.Context) {
 			util.Log(util.LogLevelInfo, fmt.Sprintf(`fail to close DB for funding rows`))
 		}
 	}
-	c.HTML(http.StatusOK, `hold.gohtml`, gin.H{`marketValue`: marketValues,
-		`trade`: tradeInfo, `orders`: orders, `holdings`: cross.GetHoldings(queryAccounts), `fundingFee`: fundingFee})
+	c.HTML(http.StatusOK, `hold.gohtml`, gin.H{`marketValue`: marketValues, `trade`: tradeInfo,
+		`orders`: orders, `holdings`: cross.GetHoldings(queryAccounts), `fundingFee`: fmt.Sprintf(`%.2f`, fundingFee)})
 }
 
 func crossRefresh(c *gin.Context) {
