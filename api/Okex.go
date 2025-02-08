@@ -283,7 +283,17 @@ var wsAccountHandlerOKEX = func(market, key string, event []byte) {
 			collateral := &model.Collateral{AccountKey: key}
 			collateral.Occupied, _ = strconv.ParseFloat(dataArray[0].(map[string]interface{})[`imr`].(string), 64) // 被占用保证金
 			collateral.Rate, _ = strconv.ParseFloat(dataArray[0].(map[string]interface{})[`mgnRatio`].(string), 64)
-			collateral.Available, _ = strconv.ParseFloat(dataArray[0].(map[string]interface{})[`adjEq`].(string), 64)
+			//collateral.Available, _ = strconv.ParseFloat(dataArray[0].(map[string]interface{})[`adjEq`].(string), 64)
+			data := dataArray[0].(map[string]interface{})
+			if data[`details`] != nil {
+				for _, item := range data[`details`].([]interface{}) {
+					value := item.(map[string]interface{})
+					if value[`ccy`] != nil && value[`ccy`].(string) == `USDT` {
+						//fmt.Println(value[`availEq`].(string))
+						collateral.Available, _ = strconv.ParseFloat(data[`availEq`].(string), 64) // 可用保证金
+					}
+				}
+			}
 			collateral.AccountValueInU, _ = strconv.ParseFloat(dataArray[0].(map[string]interface{})[`totalEq`].(string), 64)
 			//util.Log(util.LogLevelInfo, fmt.Sprintf("okex unified %s %f", collateral.AccountKey, collateral.Available))
 			model.CollateralHandler(key, ``, false, collateral)
@@ -1354,9 +1364,18 @@ func getBalanceOKEX(account *model.Account) (success bool, balances []*model.Bal
 		totalInUsd, _ = strconv.ParseFloat(data[`totalEq`].(string), 64)
 	}
 	collateral = &model.Collateral{}
-	if data[`adjEq`] != nil {
-		collateral.Available, _ = strconv.ParseFloat(data[`adjEq`].(string), 64) // 可用保证金
+	if data[`details`] != nil {
+		for _, item := range data[`details`].([]interface{}) {
+			value := item.(map[string]interface{})
+			if value[`ccy`] != nil && value[`ccy`].(string) == `USDT` {
+				//fmt.Println(value[`availEq`].(string))
+				collateral.Available, _ = strconv.ParseFloat(data[`availEq`].(string), 64) // 可用保证金
+			}
+		}
 	}
+	//if data[`adjEq`] != nil {
+	//	collateral.Available, _ = strconv.ParseFloat(data[`adjEq`].(string), 64) // 可用保证金
+	//}
 	if data[`imr`] != nil {
 		collateral.Occupied, _ = strconv.ParseFloat(data[`imr`].(string), 64) // 被占用保证金
 	}

@@ -92,7 +92,7 @@ func Test_ws(t *testing.T) {
 
 func Test_getCommonMarketInfos(t *testing.T) {
 	model.NewConfig()
-	market := model.Bybit
+	market := model.OKEX
 	account := model.AppConfig.GetAccounts(market)[0]
 	_, _, total, _ := api.GetBalances(account, market)
 	fmt.Println(total)
