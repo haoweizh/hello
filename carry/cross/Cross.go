@@ -394,6 +394,11 @@ func FailOrdersReconnect() {
 	for index, marketMap := range failOrders {
 		accounts := model.GetAccounts(index)
 		for market, order := range marketMap {
+			// special chan无需重连
+			if model.AppConfig.SpecialChan == "1" && accounts[market].Index == 0 {
+				//ok交易所不允许一个private conn二次登录，而special chan重连会二次登录，故不进行重连
+				continue
+			}
 			api.HandleWsOrderConnFail(accounts[market], market, order)
 		}
 	}
