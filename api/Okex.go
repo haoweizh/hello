@@ -290,7 +290,7 @@ var wsAccountHandlerOKEX = func(market, key string, event []byte) {
 					value := item.(map[string]interface{})
 					if value[`ccy`] != nil && value[`ccy`].(string) == `USDT` {
 						//fmt.Println(value[`availEq`].(string))
-						collateral.Available, _ = strconv.ParseFloat(data[`availEq`].(string), 64) // 可用保证金
+						collateral.Available, _ = strconv.ParseFloat(value[`availEq`].(string), 64) // 可用保证金
 					}
 				}
 			}
@@ -1369,7 +1369,7 @@ func getBalanceOKEX(account *model.Account) (success bool, balances []*model.Bal
 			value := item.(map[string]interface{})
 			if value[`ccy`] != nil && value[`ccy`].(string) == `USDT` {
 				//fmt.Println(value[`availEq`].(string))
-				collateral.Available, _ = strconv.ParseFloat(data[`availEq`].(string), 64) // 可用保证金
+				collateral.Available, _ = strconv.ParseFloat(value[`availEq`].(string), 64) // 可用保证金
 			}
 		}
 	}
