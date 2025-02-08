@@ -292,7 +292,7 @@ func calcAmount(index int, coin string, carryStatus, carryStatusRelate *model.Ca
 		}
 	}
 	generateMonitorMsg(index, coin, scoreType, scoreTypeR, scoreUse, scoreUseR, carryStatus, carryStatusRelate, marketInfo, marketInfoRelate, fundingRate, fundingRateRelate, valid)
-	//valid = false
+	valid = false
 	if !valid {
 		return false, nil, nil, 0, 0, 0
 	}
