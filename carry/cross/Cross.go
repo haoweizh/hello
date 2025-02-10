@@ -472,7 +472,7 @@ func equalAccounts(doEqual bool, traceId int64) {
 		indexAccounts := model.GetAccounts(i)
 		for _, market := range model.AppEnvironment.Markets {
 			if doEqual {
-				liquidateSmallContracts(indexAccounts[market], market)
+				go liquidateSmallContracts(indexAccounts[market], market)
 			} else {
 				go syncFundingFees(indexAccounts[market])
 				account := indexAccounts[market]
@@ -652,10 +652,10 @@ func equalAccount(i int, equalChan chan int, accounts map[string]*model.Account,
 				}
 			}
 			if model.AppConfig.GetCrossStyles()[i] == crossGrid {
-				_, _, _, _, bidHolding, price, _ := getHolding(equalStatuses)
-				if price == 0 {
-					return true
-				}
+				//_, _, _, _, bidHolding, price, _ := getHolding(equalStatuses)
+				//if price == 0 {
+				//	return true
+				//}
 				valueCarryCoin, ok := util.LoadSyncMap(carryCoinMap, coin.(string), `0`)
 				if !ok || valueCarryCoin == nil {
 					carryCoin := api.GetCarryCoin(coin.(string))
@@ -666,7 +666,7 @@ func equalAccount(i int, equalChan chan int, accounts map[string]*model.Account,
 						go model.AppDB.Save(carryCoin)
 					} else {
 						util.StoreSyncMap(carryCoinMap, carryCoin, coin.(string), `0`)
-						util.Log(util.LogLevelInfo, fmt.Sprintf(`get a carry coin from db %d %v %f value %f`, i, coin, bidHolding, bidHolding*price))
+						util.Log(util.LogLevelInfo, fmt.Sprintf(`get a carry coin from db %d %v`, i, coin))
 					}
 				}
 			}
