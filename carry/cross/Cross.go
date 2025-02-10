@@ -471,8 +471,9 @@ func equalAccounts(doEqual bool, traceId int64) {
 	for i := 0; i < api.GetCrossLen(); i++ {
 		indexAccounts := model.GetAccounts(i)
 		for _, market := range model.AppEnvironment.Markets {
-			if !doEqual {
+			if doEqual {
 				liquidateSmallContracts(indexAccounts[market], market)
+			} else {
 				go syncFundingFees(indexAccounts[market])
 				account := indexAccounts[market]
 				if market == model.Gate && account != nil && model.AppConfig.GetCrossStyles()[i] == crossGrid {
@@ -662,7 +663,7 @@ func equalAccount(i int, equalChan chan int, accounts map[string]*model.Account,
 						moneyPerStep, _ := strconv.ParseFloat(model.AppConfig.GetMoneyPerStep()[i], 64)
 						carryCoin = &model.CarryCoin{Coin: coin.(string), MoneyPerStep: moneyPerStep}
 						util.StoreSyncMap(carryCoinMap, carryCoin, coin.(string), `0`)
-						model.AppDB.Save(carryCoin)
+						go model.AppDB.Save(carryCoin)
 					} else {
 						util.StoreSyncMap(carryCoinMap, carryCoin, coin.(string), `0`)
 						util.Log(util.LogLevelInfo, fmt.Sprintf(`get a carry coin from db %d %v %f value %f`, i, coin, bidHolding, bidHolding*price))

@@ -917,7 +917,7 @@ func Test_Funding(t *testing.T) {
 	model.AppDB, _ = gorm.Open(postgres.Open(model.AppConfig.DBConnection), &gorm.Config{})
 	//_ = model.AppDB.AutoMigrate(&model.FundingFee{})
 	account := model.GetAccounts(0)[market]
-	_, fees := api.GetBills(account, time.Now().UnixMilli()-68400000, time.Now().UnixMilli())
+	_, fees := api.GetBills(account, time.Now().UnixMilli()-3600000, time.Now().UnixMilli())
 	for i, fee := range fees {
 		fmt.Println(i)
 		fmt.Println(fee)
