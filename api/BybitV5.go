@@ -560,10 +560,11 @@ func getBalanceBybit(key string, secret string) (success bool, balances []*model
 			}
 		}
 	}
-	if collateral == nil {
+	if collateral == nil || len(balances) == 0 {
 		util.Log(util.LogLevelError, fmt.Sprintf(
-			"fail to refresh spot balance bybit, resp: %s httpErr: %#v, jsonErr: %#v", httpResp, httpErr, jsonErr))
-		time.Sleep(time.Minute)
+			"fail to refresh spot balance bybit, resp: %s httpErr: %#v, jsonErr: %#v balances %d",
+			httpResp, httpErr, jsonErr, len(balances)))
+		time.Sleep(time.Second * 5)
 		return getBalanceBybit(key, secret)
 	}
 	return true, balances, totalInUsd, collateral
@@ -612,6 +613,11 @@ func getPositionsBybit(key, secret string) (success bool, positions []*model.Pos
 		}
 		cursor = positionResp.Result.NextPageCursor
 		if cursor == "" {
+			if len(positions) == 0 {
+				util.Log(util.LogLevelError, fmt.Sprintf("fail to refresh perp position bybit positions len 0 resp %s httpErr: %#v, jsonErr: %#v",
+					positionHttpResp, positionHttpErr, positionJsonErr))
+				return getPositionsBybit(key, secret)
+			}
 			return true, positions, 0
 		}
 	}

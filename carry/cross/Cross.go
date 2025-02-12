@@ -14,8 +14,8 @@ import (
 
 func createContractMarket(account *model.Account, market string) (cm *contractMarket) {
 	success, positions, accountValue, availableU, mmr := api.GetPositions(account, market)
-	util.Log(util.LogLevelInfo, fmt.Sprintf(`get positions %s %s %#v account value %f available u %f maintain rate %f positions %d`,
-		market, account.Key, success, accountValue, availableU, mmr, len(positions)))
+	util.Log(util.LogLevelInfo, fmt.Sprintf(`get positions %s %d %#v account value %f available u %f maintain rate %f positions %d`,
+		market, account.Index, success, accountValue, availableU, mmr, len(positions)))
 	settings := api.GetSettings(model.FunctionCross, market)
 	if success {
 		cm = &contractMarket{key: account.Key, market: market}
@@ -1147,7 +1147,7 @@ func placeStatus(status *model.CarryStatus, price float64, amount float64) {
 			position.Holding += amount
 			position.EntryPrice = price
 		}
-		changeU := (originFreeAbs - math.Abs(position.Holding)) * price
+		changeU := (math.Abs(position.Holding) - originFreeAbs) * price
 		valueContract.(*contractMarket).collateralsAvailable += changeU * 0.2
 		valueContract.(*contractMarket).contractValueInU += changeU
 		if valueSpot != nil {

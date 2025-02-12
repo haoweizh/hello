@@ -533,7 +533,7 @@ func getPositionsBinancePerp(key, secret string) (success bool, positions []*mod
 		time.Sleep(time.Minute)
 		return getPositionsBinancePerp(key, secret)
 	}
-	if (unrealizedProfit != 0 && len(positions) == 0) || err != nil {
+	if len(positions) == 0 || err != nil {
 		util.Log(util.LogLevelError,
 			fmt.Sprintf(`getPositionsBinancePerp pos error binanceperp %f %f %f 0 pos items %d`, accountValue, availableU, unrealizedProfit, len(data)))
 		time.Sleep(time.Minute)

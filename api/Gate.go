@@ -1052,16 +1052,20 @@ func getBalanceGate(key, secret string) (success bool, balances []*model.Balance
 		balance.UsdValue = balance.Amount * price
 		balances = append(balances, balance)
 	}
+	if len(balances) == 0 {
+		util.Log(util.LogLevelInfo, "balances is empty gate")
+		return getBalanceGate(key, secret)
+	}
 	return true, balances, totalInUsd, collateral
 }
 
 func getPositionsGate(key string, secret string) (success bool, positions []*model.Position) {
 	client, ctx := getClientGate(key, secret)
 	positionList, _, positionsErr := client.FuturesApi.ListPositions(ctx, `usdt`, nil)
-	if positionsErr != nil {
+	if positionsErr != nil || len(positionList) == 0 {
 		panicGateError(key, `getPositionsGate`, positionsErr)
 		time.Sleep(time.Minute)
-		util.Log(util.LogLevelError, `fail to refresh future balance gate`)
+		util.Log(util.LogLevelError, fmt.Sprintf(`fail to refresh future balance gate %d`, len(positionList)))
 		return getPositionsGate(key, secret)
 	}
 	positions = make([]*model.Position, 0)

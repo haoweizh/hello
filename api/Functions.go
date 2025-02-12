@@ -454,6 +454,8 @@ func GetMarketEquity(index int) (msg string) {
 	return msg
 }
 
+// GetBalances 本方法用于搬砖过程中获取现货，由于某些交易所在有持仓的情况下可能返回现货持仓为0且接口显示正确返回，故判断所有持仓为0时为接口错误
+// 如果是新账户，需要手动下单产生持仓
 func GetBalances(account *model.Account, market string) (
 	success bool, balances []*model.Balance, totalInUsd float64, collateral *model.Collateral) {
 	lock, _ := balanceLock.Load(account.Key)
@@ -639,7 +641,8 @@ func QueryOrderById(account *model.Account, market, symbol, orderType, orderId s
 	return order
 }
 
-// GetPositions
+// GetPositions 本方法用于搬砖过程中获取持仓，由于某些交易所在有持仓的情况下可能返回positions为0且接口显示正确返回，故判断所有持仓为0时为接口错误
+// 如果是新账户，需要手动下单产生持仓
 // accountValue: 账户权益
 // availableU: 可用usd
 func GetPositions(account *model.Account, market string) (success bool, positions []*model.Position, accountValue, availableU, mmr float64) {

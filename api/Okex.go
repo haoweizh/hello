@@ -1388,6 +1388,10 @@ func getBalanceOKEX(account *model.Account) (success bool, balances []*model.Bal
 			balances = append(balances, balance)
 		}
 	}
+	if len(balances) == 0 {
+		util.Log(util.LogLevelError, fmt.Sprintf(`balance len 0 account %d`, account.Index))
+		return getBalanceOKEX(account)
+	}
 	return true, balances, totalInUsd, collateral
 }
 
@@ -1473,6 +1477,10 @@ func getPositionsOKEX(account *model.Account) (success bool, positions []*model.
 			positions = append(positions, position)
 			//util.Log(util.LogLevelInfo, fmt.Sprintf(`get position okex %#v`, position))
 		}
+	}
+	if len(positions) == 0 {
+		util.Log(util.LogLevelError, fmt.Sprintf("fail to refresh perp position okx positions 0 httpErr %s", string(responseBody)))
+		return getPositionsOKEX(account)
 	}
 	return true, positions
 }

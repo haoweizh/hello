@@ -583,6 +583,11 @@ func getBalanceBinanceMargin(key, secret string) (success bool, balances []*mode
 		}
 		balances = append(balances, balance)
 	}
+	if len(balances) == 0 {
+		util.Log(util.LogLevelError, `fail to refresh binance balance len 0`)
+		time.Sleep(time.Second * 5)
+		return getBalanceBinanceMargin(key, secret)
+	}
 	return true, balances
 }
 
@@ -629,6 +634,11 @@ func getBalanceBinanceSpot(key string, secret string) (success bool, totalInUsdt
 		//	balance.Borrow, _ = strconv.ParseFloat(asset[`borrowed`].(string), 64)
 		//}
 		balances = append(balances, balance)
+	}
+	if len(balances) == 0 {
+		util.Log(util.LogLevelError, `fail to refresh binance balance 0`)
+		time.Sleep(time.Second * 5)
+		return getBalanceBinanceSpot(key, secret)
 	}
 	_, btcPrice := GetPriceForce(`BTC_USDT`, model.BinanceSpot)
 	if btcPrice == 0 {
