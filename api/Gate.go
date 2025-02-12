@@ -1062,7 +1062,7 @@ func getBalanceGate(key, secret string) (success bool, balances []*model.Balance
 func getPositionsGate(key string, secret string) (success bool, positions []*model.Position) {
 	client, ctx := getClientGate(key, secret)
 	positionList, _, positionsErr := client.FuturesApi.ListPositions(ctx, `usdt`, nil)
-	if positionsErr != nil || len(positionList) == 0 {
+	if positionsErr != nil {
 		panicGateError(key, `getPositionsGate`, positionsErr)
 		time.Sleep(time.Minute)
 		util.Log(util.LogLevelError, fmt.Sprintf(`fail to refresh future balance gate %d`, len(positionList)))
@@ -1089,6 +1089,11 @@ func getPositionsGate(key string, secret string) (success bool, positions []*mod
 		position.RiskLimit, _ = strconv.ParseFloat(item.RiskLimit, 64)
 		// 由于需要获取某个币种的风险限额，所以无论是否有holding都要保存position
 		positions = append(positions, position)
+	}
+	if len(positions) == 0 {
+		time.Sleep(time.Second * 5)
+		util.Log(util.LogLevelError, fmt.Sprintf(`fail to refresh future positions gate %d`, len(positionList)))
+		return getPositionsGate(key, secret)
 	}
 	return true, positions
 }
