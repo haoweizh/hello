@@ -189,7 +189,7 @@ func CheckActiveTrail(account *model.Account, setting *model.Setting, data *mode
 		return false
 	}
 	var trails []*model.Order
-	if setting.Chance > 0 && data.LowActTrail*data.ActivationRate > 0 && bidAsk.Bids[0].Price > data.LowActTrail*(1+data.ActivationRate) {
+	if setting.Chance > 0 && data.LowActTrail*data.ActivationRate > 0 && data.LowActTrail < bidAsk.Bids[0].Price*(1-data.ActivationRate) {
 		trailed = true
 		data.OrderShort = nil
 		trails = MustPlaceOrder(account, model.OrderSideSell, model.OrderTypeTrailStop, setting.Market, setting.Symbol, ``,
@@ -444,9 +444,9 @@ func GetTurtleData(account *model.Account, setting *model.Setting, removed bool)
 	}
 	activationRate := 0.5
 	if strings.ToLower(setting.Symbol) == `btc_perp` {
-		activationRate = 0.3
+		activationRate = 0.23
 	} else if strings.ToLower(setting.Symbol) == `eth_perp` || strings.ToLower(setting.Symbol) == `sol_perp` {
-		activationRate = 0.4
+		activationRate = 0.29
 	}
 	data = &model.TurtleData{TurtleTime: nowPeriod, Expire: nowPeriod.Add(time.Second * time.Duration(setting.Seconds)),
 		IsBig: true, Symbol: setting.Symbol, DaysFar: int(setting.Far), DaysNear: int(setting.Near), DaysAdjust: 5,
