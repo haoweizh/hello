@@ -35,11 +35,7 @@ var wsOrdUdtHandlerBybit = func(market, key string, msg []byte) {
 		if value == nil {
 			return
 		}
-		//新增wallet通道
-		err := value.(*model.WSConn).WriteMsg([]byte(`{"op":"subscribe","args": ["order","wallet"]}`))
-		if err != nil {
-			model.AppEnvironment.ConnOrderUpdate.Delete(connKey)
-		}
+		subscribePrivateBybit(value.(*model.WSConn), connKey)
 	}
 	if responseJson.Get(`topic`).MustString() == `order` {
 		orderResp := &dtos.BybitOrderUpdateResp{}
@@ -56,6 +52,7 @@ var wsOrdUdtHandlerBybit = func(market, key string, msg []byte) {
 		}
 	}
 	if responseJson.Get(`topic`).MustString() == `wallet` {
+		//https://bybit-exchange.github.io/docs/zh-TW/v5/websocket/private/wallet
 		walletResp := &dtos.BybitWalletUpdateResp{}
 		jsonErr := json.Unmarshal(msg, walletResp)
 		if jsonErr == nil {
@@ -66,6 +63,10 @@ var wsOrdUdtHandlerBybit = func(market, key string, msg []byte) {
 			//util.Log(util.LogLevelInfo, fmt.Sprintf("bybit unified %s %f", collateral.AccountKey, collateral.Available))
 			model.CollateralHandler(key, ``, false, collateral)
 		}
+	}
+	if responseJson.Get(`topic`).MustString() == `position` {
+		//https://bybit-exchange.github.io/docs/zh-TW/v5/websocket/private/position
+		util.Log(util.LogLevelInfo, "bybit position : "+string(msg))
 	}
 }
 
@@ -168,7 +169,14 @@ func WsLogInBybit(account *model.Account, conn *model.WSConn) (success bool) {
 	}
 	return success
 }
-
+func subscribePrivateBybit(conn *model.WSConn, connKey string) {
+	//新增wallet通道
+	err := conn.WriteMsg([]byte(`{"op":"subscribe","args": ["order","wallet","position"]}`))
+	if err != nil {
+		model.AppEnvironment.ConnOrderUpdate.Delete(connKey)
+		return
+	}
+}
 func WsOrderServeBybit(account *model.Account) {
 	if account == nil {
 		return

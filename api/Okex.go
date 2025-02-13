@@ -208,23 +208,8 @@ var wsAccountHandlerOKEX = func(market, key string, event []byte) {
 		if !success || value == nil {
 			return
 		}
-		err = value.(*model.WSConn).WriteJson(map[string]interface{}{"op": "subscribe", "args": []interface{}{map[string]string{"channel": "orders", "instType": "SPOT"}}})
-		if err != nil {
-			util.Log(util.LogLevelError, fmt.Sprintf(`fail to sub %s spot order update`, market))
-			model.AppEnvironment.ConnOrder.Delete(connKey)
-			return
-		}
-		err = value.(*model.WSConn).WriteJson(map[string]interface{}{"op": "subscribe", "args": []interface{}{map[string]string{"channel": "orders", "instType": "SWAP"}}})
-		if err != nil {
-			util.Log(util.LogLevelError, fmt.Sprintf(`fail to sub %s swap order update`, market))
-			model.AppEnvironment.ConnOrder.Delete(connKey)
-			return
-		}
-		err = value.(*model.WSConn).WriteJson(map[string]interface{}{"op": "subscribe", "args": []interface{}{map[string]string{"channel": "account", "ccy": "USDT"}}})
-		if err != nil {
-			model.AppEnvironment.ConnOrder.Delete(connKey)
-			util.Log(util.LogLevelError, fmt.Sprintf(`fail to sub %s  account channel ccy USDT update`, market))
-		}
+		// 订阅私有频道
+		subscribePrivateOKEX(value.(*model.WSConn), connKey)
 	}
 	if responseJson.GetPath(`arg`, `channel`).MustString() == `orders` {
 		data := responseJson.Get(`data`).MustArray()
@@ -301,6 +286,11 @@ var wsAccountHandlerOKEX = func(market, key string, event []byte) {
 		//} else {
 		//	fmt.Println(time.Now().String() + ` other msg ` + string(event))
 	}
+	//https://www.okx.com/docs-v5/zh/#trading-account-websocket-balance-and-position-channel
+	if responseJson.GetPath(`arg`, `channel`).MustString() == `balance_and_position` {
+		util.Log(util.LogLevelInfo, "okex balance_and_position : "+string(event))
+	}
+
 }
 
 var loginTimeOk sync.Map // accountKey - time in seconds
@@ -331,7 +321,38 @@ func wsLogInOKEX(account *model.Account, conn *model.WSConn, loginDelay bool) (s
 	}
 	return
 }
-
+func subscribePrivateOKEX(conn *model.WSConn, connKey string) {
+	// 订阅私有频道
+	subscribeMsg := map[string]interface{}{
+		"op": "subscribe",
+		"args": []map[string]string{
+			{"channel": "balance_and_position"},
+		},
+	}
+	err := conn.WriteJson(subscribeMsg)
+	if err != nil {
+		util.Log(util.LogLevelError, fmt.Sprintf("%s subscribe private web socket error:%s", model.OKEX, err.Error()))
+		model.AppEnvironment.ConnOrder.Delete(connKey)
+		return
+	}
+	err = conn.WriteJson(map[string]interface{}{"op": "subscribe", "args": []interface{}{map[string]string{"channel": "orders", "instType": "SPOT"}}})
+	if err != nil {
+		util.Log(util.LogLevelError, fmt.Sprintf(`fail to sub %s spot order update`, model.OKEX))
+		model.AppEnvironment.ConnOrder.Delete(connKey)
+		return
+	}
+	err = conn.WriteJson(map[string]interface{}{"op": "subscribe", "args": []interface{}{map[string]string{"channel": "orders", "instType": "SWAP"}}})
+	if err != nil {
+		util.Log(util.LogLevelError, fmt.Sprintf(`fail to sub %s swap order update`, model.OKEX))
+		model.AppEnvironment.ConnOrder.Delete(connKey)
+		return
+	}
+	err = conn.WriteJson(map[string]interface{}{"op": "subscribe", "args": []interface{}{map[string]string{"channel": "account", "ccy": "USDT"}}})
+	if err != nil {
+		model.AppEnvironment.ConnOrder.Delete(connKey)
+		util.Log(util.LogLevelError, fmt.Sprintf(`fail to sub %s  account channel ccy USDT update`, model.OKEX))
+	}
+}
 func WsOrderServeOKEX(account *model.Account) {
 	if account == nil {
 		return
