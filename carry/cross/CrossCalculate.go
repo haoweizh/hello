@@ -2,6 +2,7 @@ package cross
 
 import (
 	"fmt"
+	"hello/api"
 	"hello/model"
 	"hello/util"
 	"math"
@@ -19,6 +20,60 @@ var stepScores = []float64{0, 0.0014, 0.002900, 0.004500, 0.006200, 0.008000, 0.
 
 const swapScore = 0.002 // 换仓要求的利润金额
 const crossGrid = `grid`
+
+var ProcessCrossBalances = func(market, accountKey string, balances []*model.Balance) {
+	value := api.GetCoinSettings(model.FunctionCross)
+	if value == nil {
+		return
+	}
+	triggerAccount := model.AppConfig.GetAccountFromKeyIndex(market, accountKey, -1)
+	accounts := model.GetAccounts(triggerAccount.Index)
+	for _, balance := range balances {
+		symbol := balance.Coin + model.UniStandardTail[model.MarketTypeSpot]
+		balSetting := api.GetSetting(model.FunctionCross, market, symbol)
+		if balSetting == nil {
+			continue
+		}
+		// 针对1000倍币等种进行coin转换
+		settings, _ := value.Load(balSetting.Coin)
+		if settings == nil {
+			continue
+		}
+		holding := 0.0
+		price := 0.0
+		for _, setting := range settings.([]*model.Setting) {
+			account := accounts[setting.Market]
+			if account == nil {
+				continue
+			}
+			item, _ := util.LoadSyncMap(carryStatusMap, setting.Coin, setting.Market, setting.Symbol, account.Key)
+			if item == nil {
+				continue
+			}
+			status := item.(*model.CarryStatus)
+			if status.Market == balance.Market && status.Symbol == balance.Coin+model.UniStandardTail[model.MarketTypeSpot] {
+				status.Holding = balance.Amount
+			}
+			holding += status.Holding * setting.GridAmount
+			if price == 0 {
+				_, price = api.GetPriceForce(setting.Symbol, setting.Market)
+				price = price / setting.PriceX
+			}
+		}
+		if math.Abs(price*holding) >= openValueLimit*5 {
+			for _, setting := range settings.([]*model.Setting) {
+				account := accounts[setting.Market]
+				if account == nil {
+					continue
+				}
+				util.StoreSyncMap(&model.AppEnvironment.PauseTrade, true, setting.Coin, setting.Market, setting.Symbol, account.Key, model.OrderSideSell)
+				util.StoreSyncMap(&model.AppEnvironment.PauseTrade, true, setting.Coin, setting.Market, setting.Symbol, account.Key, model.OrderSideBuy)
+				util.Log(util.LogLevelError, fmt.Sprintf(`pause trade when update balance %s %s %s %f setting %s %s holding %e value %e`,
+					market, accountKey, balance.Coin, balance.Amount, setting.Market, setting.Symbol, holding, math.Abs(holding*price)))
+			}
+		}
+	}
+}
 
 // ProcessCollateral accountType 为”代表统一账户，为marketTypePerp or marketTypeSpot代表只是期货或现货
 var ProcessCollateral = func(accountKey, accountType string, reduceOnly bool, collateral *model.Collateral) {

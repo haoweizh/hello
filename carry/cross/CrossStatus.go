@@ -45,8 +45,8 @@ type TradeLineExtra struct {
 var lastOrderIndex = &sync.Map{}  // market - symbol - index int
 var lastOrders = &sync.Map{}      // market - symbol - []*Order
 var compOrders = &sync.Map{}      // orderId - comp order
-var spotMarkets = &sync.Map{}     // key - spotMarket
-var contractMarkets = &sync.Map{} // key - contractMarket
+var spotMarkets = &sync.Map{}     // key - *spotMarket
+var contractMarkets = &sync.Map{} // key - *contractMarket
 var carryStatusMap = &sync.Map{}  // coin*market*symbol*key / CarryStatus
 var carryCoinMap = &sync.Map{}    // coin*accountIndex - *carryCoin
 var coinCrossing = &sync.Map{}
