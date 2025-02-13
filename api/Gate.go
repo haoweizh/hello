@@ -442,7 +442,7 @@ var wsPriHandlerGateSpot = func(market, key string, msg []byte) {
 		}
 	} else if channel == `spot.balances` {
 		//https://www.gate.io/docs/developers/apiv4/ws/zh_CN/#%E5%AE%A2%E6%88%B7%E7%AB%AF%E8%AE%A2%E9%98%85-12
-		util.Log(util.LogLevelInfo, "gate spot balances : "+string(msg))
+		util.LogLess(util.LogLevelInfo, "risk check ws update balances gate "+string(msg))
 	} else {
 		channel = responseJson.GetPath(`header`, `channel`).MustString()
 		if channel == `spot.order_place` {
@@ -493,6 +493,7 @@ func subscribePrivateGateSpot(conn *model.WSConn, connKey string) {
 		return
 	}
 }
+
 func maintainConnsGate(accounts []*model.Account) {
 	for _, account := range accounts {
 		model.AppEnvironment.PriConnecting.Store(model.Gate+model.MarketTypeSpot+account.Key, false)

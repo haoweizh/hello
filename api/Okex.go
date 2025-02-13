@@ -288,9 +288,8 @@ var wsAccountHandlerOKEX = func(market, key string, event []byte) {
 	}
 	//https://www.okx.com/docs-v5/zh/#trading-account-websocket-balance-and-position-channel
 	if responseJson.GetPath(`arg`, `channel`).MustString() == `balance_and_position` {
-		util.Log(util.LogLevelInfo, "okex balance_and_position : "+string(event))
+		util.LogLess(util.LogLevelInfo, "risk check ws update balances and positions okx "+string(event))
 	}
-
 }
 
 var loginTimeOk sync.Map // accountKey - time in seconds
@@ -321,6 +320,7 @@ func wsLogInOKEX(account *model.Account, conn *model.WSConn, loginDelay bool) (s
 	}
 	return
 }
+
 func subscribePrivateOKEX(conn *model.WSConn, connKey string) {
 	// 订阅私有频道
 	subscribeMsg := map[string]interface{}{
@@ -353,6 +353,7 @@ func subscribePrivateOKEX(conn *model.WSConn, connKey string) {
 		util.Log(util.LogLevelError, fmt.Sprintf(`fail to sub %s  account channel ccy USDT update`, model.OKEX))
 	}
 }
+
 func WsOrderServeOKEX(account *model.Account) {
 	if account == nil {
 		return

@@ -391,10 +391,10 @@ var wsOrderUpdateBinance = func(market, key string, msg []byte) {
 		UpdateOrderDeal(market, orderId, status, string(msg), dealAmount)
 	case `outboundAccountPosition`:
 		//https://developers.binance.com/docs/zh-CN/binance-spot-api-docs/user-data-stream#%E8%B4%A6%E6%88%B7%E6%9B%B4%E6%96%B0
-		util.Log(util.LogLevelInfo, "binance spot outboundAccountPosition : "+string(msg))
+		util.LogLess(util.LogLevelInfo, "risk check ws update balances binance "+string(msg))
 	case `ACCOUNT_UPDATE`:
 		//https://developers.binance.com/docs/zh-CN/derivatives/usds-margined-futures/user-data-streams/Event-Balance-and-Position-Update
-		util.Log(util.LogLevelInfo, "binance perp ACCOUNT_UPDATE : "+string(msg))
+		util.LogLess(util.LogLevelInfo, "risk check ws update positions binance "+string(msg))
 		//	collateral := &model.Collateral{AccountKey: key}
 		//	dataarray := resJson.GetPath(`a`, `B`).MustArray()
 		//	for _, v := range dataarray {

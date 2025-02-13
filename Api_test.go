@@ -721,14 +721,16 @@ func remove(value *sync.Map) {
 	fmt.Println(`remove 2`)
 }
 
+// step(n) = step(n-1) + base + 0.0001*(n-1)
 func Test_CalcGridLine(t *testing.T) {
+	base := 0.0014
 	p := make([]float64, 5555555)
 	for n := 1; n <= 250000; n++ {
 		if n == 1 {
-			p[n] = 0.0012
+			p[n] = base
 		} else {
-			p[n] = p[n-1] + 0.0012 + 0.0001*float64(n-1)
-			fmt.Println(fmt.Sprintf(`%f`, p[n]))
+			p[n] = p[n-1] + base + 0.0001*float64(n-1)
+			fmt.Print(fmt.Sprintf(`%f,`, p[n]))
 		}
 		if p[n] > 0.3 {
 			break

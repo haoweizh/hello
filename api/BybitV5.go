@@ -66,7 +66,7 @@ var wsOrdUdtHandlerBybit = func(market, key string, msg []byte) {
 	}
 	if responseJson.Get(`topic`).MustString() == `position` {
 		//https://bybit-exchange.github.io/docs/zh-TW/v5/websocket/private/position
-		util.Log(util.LogLevelInfo, "bybit position : "+string(msg))
+		util.LogLess(util.LogLevelInfo, "risk check ws update positions bybit "+string(msg))
 	}
 }
 
@@ -169,6 +169,7 @@ func WsLogInBybit(account *model.Account, conn *model.WSConn) (success bool) {
 	}
 	return success
 }
+
 func subscribePrivateBybit(conn *model.WSConn, connKey string) {
 	//新增wallet通道
 	err := conn.WriteMsg([]byte(`{"op":"subscribe","args": ["order","wallet","position"]}`))
@@ -177,6 +178,7 @@ func subscribePrivateBybit(conn *model.WSConn, connKey string) {
 		return
 	}
 }
+
 func WsOrderServeBybit(account *model.Account) {
 	if account == nil {
 		return

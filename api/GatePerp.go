@@ -124,7 +124,7 @@ var wsPriHandlerGatePerp = func(market, key string, msg []byte) {
 		}
 	} else if channel == `futures.positions` {
 		//https: //www.gate.io/docs/developers/futures/ws/zh_CN/#%E4%BB%93%E4%BD%8D%E8%AE%A2%E9%98%85
-		util.Log(util.LogLevelInfo, "gate perp position : "+string(msg))
+		util.LogLess(util.LogLevelInfo, "risk check ws update positions gate "+string(msg))
 	} else {
 		channel = responseJson.GetPath(`header`, `channel`).MustString()
 		if channel == `futures.order_place` {
@@ -184,6 +184,7 @@ func subscribePrivateGatePerp(conn *model.WSConn, connKey, key string) {
 		return
 	}
 }
+
 func getSignMsgSend(secret, channel, key string) string {
 	ts := time.Now().Unix()
 	hashFuture := hmac.New(sha512.New, []byte(secret))
