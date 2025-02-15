@@ -236,7 +236,7 @@ func SendToConnections(market string, connections map[*model.WSConn]bool, msg []
 	return err
 }
 
-func UpdateOrderDeal(market, orderId, status, msg string, dealAmount float64) (find bool) {
+func UpdateOrderDeal(market, orderId, clientOId, status, msg string, dealAmount float64) (find bool) {
 	var order *model.Order
 	i := 0
 	for ; i < 10; i++ {
@@ -245,6 +245,14 @@ func UpdateOrderDeal(market, orderId, status, msg string, dealAmount float64) (f
 			order = data.(*model.Order)
 			break
 		} else {
+			if clientOId != `` {
+				wsResp := model.WSResp{RequestId: clientOId, OrderId: orderId, DealAmount: dealAmount}
+				if status != model.CarryStatusFail {
+					wsResp.Success = true
+				}
+				model.AppEnvironment.WSRespChan <- wsResp
+				util.Log(util.LogLevelInfo, fmt.Sprintf(`get order id from update order deal %s %#v`, market, wsResp))
+			}
 			time.Sleep(3 * time.Second)
 		}
 	}

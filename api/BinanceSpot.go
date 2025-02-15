@@ -381,14 +381,16 @@ var wsOrderUpdateBinance = func(market, key string, msg []byte) {
 	switch resJson.Get(`e`).MustString() {
 	case `ORDER_TRADE_UPDATE`:
 		orderId := strconv.Itoa(resJson.GetPath(`o`, `i`).MustInt())
+		clientOid := resJson.GetPath(`o`, `c`).MustString()
 		dealAmount, _ := strconv.ParseFloat(resJson.GetPath(`o`, `z`).MustString(), 64)
 		status := model.GetOrderStatus(market, resJson.Get(`X`).MustString())
-		UpdateOrderDeal(market, orderId, status, string(msg), dealAmount)
+		UpdateOrderDeal(market, orderId, clientOid, status, string(msg), dealAmount)
 	case `executionReport`:
 		orderId := strconv.Itoa(resJson.Get(`i`).MustInt())
 		dealAmount, _ := strconv.ParseFloat(resJson.Get(`z`).MustString(), 64)
 		status := model.GetOrderStatus(market, resJson.Get(`X`).MustString())
-		UpdateOrderDeal(market, orderId, status, string(msg), dealAmount)
+		clientOId := resJson.GetPath(`c`).MustString()
+		UpdateOrderDeal(market, orderId, clientOId, status, string(msg), dealAmount)
 	case `outboundAccountPosition`:
 		//https://developers.binance.com/docs/zh-CN/binance-spot-api-docs/user-data-stream#%E8%B4%A6%E6%88%B7%E6%9B%B4%E6%96%B0
 		util.LogLess(util.LogLevelInfo, "risk check ws update balances binance "+string(msg))

@@ -47,7 +47,7 @@ var wsOrdUdtHandlerBybit = func(market, key string, msg []byte) {
 					status = model.CarryStatusSuccess
 				}
 				dealAmount, _ := strconv.ParseFloat(data.CumExecQty, 64)
-				UpdateOrderDeal(market, data.OrderId, status, string(msg), dealAmount)
+				UpdateOrderDeal(market, data.OrderId, data.OrderLinkId, status, string(msg), dealAmount)
 			}
 		}
 	}

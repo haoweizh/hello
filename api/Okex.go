@@ -215,10 +215,10 @@ var wsAccountHandlerOKEX = func(market, key string, event []byte) {
 		data := responseJson.Get(`data`).MustArray()
 		for _, value := range data {
 			order := parseOrderOKEX(value.(map[string]interface{}))
-			wsResp := model.WSResp{RequestId: order.ClientOrdId, OrderId: order.OrderId, Success: true}
-			model.AppEnvironment.WSRespChan <- wsResp
+			//wsResp := model.WSResp{RequestId: order.ClientOrdId, OrderId: order.OrderId, Success: true}
+			//model.AppEnvironment.WSRespChan <- wsResp
 			//fmt.Println(fmt.Sprintf(`get orders value %s %s`, order.OrderId, order.Status))
-			UpdateOrderDeal(market, order.OrderId, order.Status, ``, order.DealAmount)
+			UpdateOrderDeal(market, order.OrderId, order.ClientOrdId, order.Status, ``, order.DealAmount)
 		}
 	}
 	if responseJson.Get(`op`).MustString() == `order` {
