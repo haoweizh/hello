@@ -914,7 +914,7 @@ func Test_C(t *testing.T) {
 }
 
 func Test_Funding(t *testing.T) {
-	market := model.OKEX
+	market := model.BinancePerp
 	model.NewConfig()
 	model.AppDB, _ = gorm.Open(postgres.Open(model.AppConfig.DBConnection), &gorm.Config{})
 	//_ = model.AppDB.AutoMigrate(&model.FundingFee{})
@@ -925,4 +925,10 @@ func Test_Funding(t *testing.T) {
 		fmt.Println(fee)
 		model.AppDB.Save(&fee)
 	}
+}
+
+func Test_TradingStatus(t *testing.T) {
+	model.NewConfig()
+	account := model.GetAccounts(0)[model.BinancePerp]
+	api.GetTradingStatusBinancePerp(account)
 }
