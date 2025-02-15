@@ -436,7 +436,7 @@ var wsPriHandlerGateSpot = func(market, key string, msg []byte) {
 			}
 			if value[`filled_amount`] != nil {
 				deal, _ := strconv.ParseFloat(value[`filled_amount`].(string), 64)
-				UpdateOrderDeal(market, orderId, status, string(msg), deal)
+				UpdateOrderDeal(market, orderId, ``, status, string(msg), deal)
 			}
 			//dealPrice, _ := strconv.ParseFloat(value[`avg_deal_price`].(string), 64)
 		}
