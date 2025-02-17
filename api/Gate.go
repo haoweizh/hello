@@ -1165,7 +1165,7 @@ func placeOrderGate(account *model.Account, isWs bool, order *model.Order, order
 			futuresOrder.Size = 0
 			futuresOrder.Close = true
 		}
-		if orderParam == model.ReduceOnly || symbol == `MUBI_PERP` || symbol == `DOP_PERP` || symbol == `BBL_PERP` || symbol == `NRN_PERP` {
+		if orderParam == model.ReduceOnly {
 			futuresOrder.ReduceOnly = true
 		}
 		util.Log(util.LogLevelInfo, fmt.Sprintf(`create future order request: %#v`, futuresOrder))

@@ -276,7 +276,7 @@ func initStatus(account *model.Account, setting *model.Setting) (status *model.C
 	} else if marketType == model.MarketTypePerp {
 		status, doRevert = createFromPosition(account, setting)
 	}
-	if setting.Chance < 0 {
+	if setting.Chance < 0 || !setting.Liquidated {
 		doRevert = true
 	}
 	if status == nil {
@@ -1084,10 +1084,18 @@ func placeCross(carryCoin *model.CarryCoin, statusBuy, statusSell *model.CarrySt
 		(lastOrderSell != nil && time.Now().UnixMilli()-lastOrderSell.(int64) < AccountOrderGap) {
 		return
 	}
+	orderParamBuy := ``
+	orderParamSell := ``
+	if statusBuy.Setting.Chance < 0 || !statusBuy.Setting.Liquidated {
+		orderParamBuy = model.ReduceOnly
+	}
+	if statusSell.Setting.Chance < 0 || !statusSell.Setting.Liquidated {
+		orderParamSell = model.ReduceOnly
+	}
 	go api.PlaceOrder(statusBuy.Account, model.OrderSideBuy, model.OrderTypeLimit, statusBuy.Market,
-		statusBuy.Symbol, ``, model.FunctionCross, priceBuy, priceBuy, amountBuy, true, PostOrderCross)
+		statusBuy.Symbol, orderParamBuy, model.FunctionCross, priceBuy, priceBuy, amountBuy, true, PostOrderCross)
 	go api.PlaceOrder(statusSell.Account, model.OrderSideSell, model.OrderTypeLimit, statusSell.Market,
-		statusSell.Symbol, ``, model.FunctionCross, priceSell, priceSell, amountSell, true, PostOrderCross)
+		statusSell.Symbol, orderParamSell, model.FunctionCross, priceSell, priceSell, amountSell, true, PostOrderCross)
 	util.Log(util.LogLevelInfo, fmt.Sprintf(
 		`place cross %s %s -> %s %s at %f %f amount %f %f %f score %f hold %f buy %f hold %f sell %f`,
 		statusSell.Market, statusSell.Symbol, statusBuy.Market, statusBuy.Symbol, priceSell, priceBuy, amount, amountBuy,
@@ -1328,7 +1336,7 @@ func compOrder(account *model.Account, order *model.Order, leftAmt float64) {
 		price := order.Price
 		_, bidAsk := model.AppEnvironment.GetBidAsk(order.Market, order.Symbol)
 		if bidAsk == nil {
-			util.Log(util.LogLevelError, fmt.Sprintf(`can not get bidask for comp %s %s`, order.Market, order.Symbol))
+			util.Log(util.LogLevelError, fmt.Sprintf(`can not get bidAsk for comp %s %s`, order.Market, order.Symbol))
 		} else {
 			if order.OrderSide == model.OrderSideSell {
 				price = bidAsk.Bids[0].Price * (1 - compSlide)
