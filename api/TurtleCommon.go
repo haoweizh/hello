@@ -379,7 +379,7 @@ func GetRankTurtleData(account *model.Account, symbol string, setting *model.Set
 		if v != nil {
 			marketInfo = v.(*model.MarketInfo)
 		}
-		if marketInfo == nil {
+		if marketInfo == nil || marketInfo.DeListing {
 			util.Log(util.LogLevelError, fmt.Sprintf(`fail to get marketInfo %s %s`, setting.Market, symbol))
 			return nil, false
 		}
@@ -487,7 +487,7 @@ func GetTurtleData(account *model.Account, setting *model.Setting, removed bool)
 		if v != nil {
 			marketInfo = v.(*model.MarketInfo)
 		}
-		if marketInfo == nil {
+		if marketInfo == nil || marketInfo.DeListing {
 			util.Log(util.LogLevelError, fmt.Sprintf(`fail to get marketInfo %s %s`, setting.Market, setting.Symbol))
 			return nil, false
 		}

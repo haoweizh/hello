@@ -51,13 +51,14 @@ func appendFutureMarketGate(key, secret string, marketInfos map[string]*model.Ma
 		return
 	}
 	for _, contract := range contracts {
-		if contract.InDelisting {
-			continue
-		}
 		if !contract.EnableCredit {
 			continue
 		}
-		marketInfo := &model.MarketInfo{Market: model.Gate, FundingRateInterval: 8 * 3600000}
+		deListing := false
+		if contract.InDelisting {
+			deListing = true
+		}
+		marketInfo := &model.MarketInfo{Market: model.Gate, FundingRateInterval: 8 * 3600000, DeListing: deListing}
 		success, coin, symbol := model.GetFromDialect(model.Gate, model.MarketTypePerp, contract.Name)
 		if !success {
 			continue

@@ -324,7 +324,7 @@ func getSortedInfos(market string, num int) (marketInfoArray model.MarketInfoArr
 		if value == nil {
 			return true
 		}
-		if value.(*model.MarketInfo).Market == market {
+		if value.(*model.MarketInfo).Market == market && !value.(*model.MarketInfo).DeListing {
 			marketInfoArray = append(marketInfoArray, value.(*model.MarketInfo))
 		}
 		return true

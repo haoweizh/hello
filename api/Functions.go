@@ -919,7 +919,7 @@ func InitCrossMarketInfos(markets []string) {
 	model.AppDB.Model(&settingsDb).Where(`function=?`, model.FunctionCross).Updates(map[string]interface{}{`liquidated`: true})
 	for _, setting := range settingsDb {
 		info, _ := util.LoadSyncMap(model.MarketInfos, setting.Market, setting.Symbol)
-		if info == nil {
+		if info == nil || info.(*model.MarketInfo).DeListing {
 			util.Log(util.LogLevelInfo, fmt.Sprintf(`update to not liquidated %s %s`, setting.Market, setting.Symbol))
 			setting.Chance = -1
 			model.AppDB.Model(&settingsDb).Where(`function=? and market=? and symbol=?`, model.FunctionCross, setting.Market, setting.Symbol).
@@ -944,6 +944,9 @@ func InitCrossMarketInfos(markets []string) {
 				continue
 			}
 			for _, info := range infos {
+				if info.DeListing {
+					continue
+				}
 				if settingsDbMap[fmt.Sprintf(`%s_%s_%s`, model.FunctionCross, info.Market, info.Symbol)] == nil {
 					setting := &model.Setting{
 						Valid:              true,
@@ -968,7 +971,7 @@ func InitCrossMarketInfos(markets []string) {
 					}
 				}
 			}
-		} else if len(infos) == 1 && infos[0].Symbol[0:2] == `10` {
+		} else if len(infos) == 1 && infos[0].Symbol[0:2] == `10` && !infos[0].DeListing {
 			if settingsDbMap[fmt.Sprintf(`%s_%s_%s`, model.FunctionCross, infos[0].Market, infos[0].Symbol)] == nil {
 				setting := &model.Setting{
 					Valid:              true,
