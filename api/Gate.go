@@ -443,7 +443,7 @@ var wsPriHandlerGateSpot = func(market, key string, msg []byte) {
 		}
 	} else if channel == `spot.balances` {
 		//https://www.gate.io/docs/developers/apiv4/ws/zh_CN/#%E5%AE%A2%E6%88%B7%E7%AB%AF%E8%AE%A2%E9%98%85-12
-		util.LogLess(util.LogLevelInfo, "risk check ws update balances gate "+string(msg))
+		//util.LogLess(util.LogLevelInfo, "risk check ws update balances gate "+string(msg))
 		dataArray := responseJson.Get(`result`).MustArray()
 		var balances []*model.Balance
 		if dataArray != nil {

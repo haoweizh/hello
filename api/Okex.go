@@ -288,7 +288,7 @@ var wsAccountHandlerOKEX = func(market, key string, event []byte) {
 	}
 	//https://www.okx.com/docs-v5/zh/#trading-account-websocket-balance-and-position-channel
 	if responseJson.GetPath(`arg`, `channel`).MustString() == `balance_and_position` {
-		util.Log(util.LogLevelInfo, "risk check ws update balances and positions okx "+string(event))
+		//util.Log(util.LogLevelInfo, "risk check ws update balances and positions okx "+string(event))
 		dataArray := responseJson.Get(`data`).MustArray()
 		if dataArray != nil {
 			var balances []*model.Balance
