@@ -2,6 +2,8 @@ package model
 
 import "time"
 
+type ProcessBalancesHandler func(market, accountKey string, balances []*Balance)
+
 type Balance struct {
 	AccountId string
 	Action    float64 // 1: deposit, -1: withdraw, 0: snapshot

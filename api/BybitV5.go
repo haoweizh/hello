@@ -62,6 +62,25 @@ var wsOrdUdtHandlerBybit = func(market, key string, msg []byte) {
 			collateral.AccountValueInU, _ = strconv.ParseFloat(walletResp.Data[0].TotalEquity, 64)
 			//util.Log(util.LogLevelInfo, fmt.Sprintf("bybit unified %s %f", collateral.AccountKey, collateral.Available))
 			model.CollateralHandler(key, ``, false, collateral)
+			var balances []*model.Balance
+			coins := walletResp.Data[0].Coin
+			if coins != nil && len(coins) > 0 {
+				for _, value := range coins {
+					var balance *model.Balance
+					balance.Coin = value.Coin
+					balance.AvailableWithBorrow, _ = strconv.ParseFloat(value.WalletBalance, 64)
+					msTimestamp := int64(walletResp.CreationTime)
+					// 将毫秒时间戳转换为秒和纳秒
+					sec := msTimestamp / 1000
+					nsec := (msTimestamp % 1000) * 1000000
+					t := time.Unix(sec, nsec)
+					balance.BalanceTime = t
+					balances = append(balances, balance)
+				}
+			}
+			if balances != nil && len(balances) > 0 {
+				model.CrossBalancesHandler(market, key, balances)
+			}
 		}
 	}
 	if responseJson.Get(`topic`).MustString() == `position` {
