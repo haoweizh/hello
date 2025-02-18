@@ -820,6 +820,12 @@ func getMarketsOKEX(account *model.Account) (marketInfos map[string]*model.Marke
 					if value[`state`] == nil || value[`state`].(string) != `live` {
 						continue
 					}
+					if value[`expTime`] != nil && value[`expTime`].(string) != `` {
+						expTime, _ := strconv.ParseInt(value[`expTime`].(string), 10, 64)
+						if expTime > 0 && expTime-time.Now().UnixMilli() < 604800000 {
+							marketInfo.DeListing = true
+						}
+					}
 					marketInfo.Symbol = symbol
 					if value[`lotSz`] != nil {
 						marketInfo.SizeIncrement, _ = strconv.ParseFloat(value[`lotSz`].(string), 64)

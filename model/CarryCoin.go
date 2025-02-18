@@ -9,7 +9,7 @@ import (
 const SmallHolding = 50 // 设定以money计20位较少持仓，可以归入下一等级
 
 type CarryStatus struct {
-	IsSpot                        bool
+	IsSpot, DoRevert              bool
 	Market, Symbol                string
 	ReduceOnlyBuy, ReduceOnlySell bool
 	Setting                       *Setting
