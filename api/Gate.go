@@ -453,13 +453,9 @@ var wsPriHandlerGateSpot = func(market, key string, msg []byte) {
 				balance.Coin = value[`currency`].(string)
 				balance.AvailableWithBorrow, _ = strconv.ParseFloat(value[`available`].(string), 64)
 				ts, _ := strconv.ParseInt(value[`timestamp_ms`].(string), 10, 64)
-				msTimestamp := int64(ts)
-				// 将毫秒时间戳转换为秒和纳秒
-				sec := msTimestamp / 1000
-				nsec := (msTimestamp % 1000) * 1000000
-				t := time.Unix(sec, nsec)
-				balance.BalanceTime = t
+				balance.BalanceTime = time.UnixMilli(ts)
 				balance.FrozenAmount, _ = strconv.ParseFloat(value[`freeze`].(string), 64)
+				balance.Amount, _ = strconv.ParseFloat(value[`total`].(string), 64)
 				balances = append(balances, balance)
 			}
 		}

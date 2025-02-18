@@ -298,14 +298,9 @@ var wsAccountHandlerOKEX = func(market, key string, event []byte) {
 					var balance *model.Balance
 					value := item.(map[string]interface{})
 					balance.Coin = value[`ccy`].(string)
-					balance.AvailableWithBorrow, _ = strconv.ParseFloat(value[`cashBal`].(string), 64)
+					balance.Amount, _ = strconv.ParseFloat(value[`cashBal`].(string), 64)
 					ts, _ := strconv.ParseInt(value[`uTime`].(string), 10, 64)
-					msTimestamp := int64(ts)
-					// 将毫秒时间戳转换为秒和纳秒
-					sec := msTimestamp / 1000
-					nsec := (msTimestamp % 1000) * 1000000
-					t := time.Unix(sec, nsec)
-					balance.BalanceTime = t
+					balance.BalanceTime = time.UnixMilli(ts)
 					balances = append(balances, balance)
 				}
 			}

@@ -60,7 +60,7 @@ var wsOrdUdtHandlerBybit = func(market, key string, msg []byte) {
 			collateral.Available, _ = strconv.ParseFloat(walletResp.Data[0].TotalAvailableBalance, 64)
 			collateral.Rate, _ = strconv.ParseFloat(walletResp.Data[0].AccountMMRate, 64)
 			collateral.AccountValueInU, _ = strconv.ParseFloat(walletResp.Data[0].TotalEquity, 64)
-			//util.Log(util.LogLevelInfo, fmt.Sprintf("bybit unified %s %f", collateral.AccountKey, collateral.Available))
+			util.Log(util.LogLevelInfo, fmt.Sprintf("risk check ws update balances %s %f", collateral.AccountKey, collateral.Available))
 			model.CollateralHandler(key, ``, false, collateral)
 			var balances []*model.Balance
 			coins := walletResp.Data[0].Coin
@@ -68,13 +68,8 @@ var wsOrdUdtHandlerBybit = func(market, key string, msg []byte) {
 				for _, value := range coins {
 					var balance *model.Balance
 					balance.Coin = value.Coin
-					balance.AvailableWithBorrow, _ = strconv.ParseFloat(value.WalletBalance, 64)
-					msTimestamp := int64(walletResp.CreationTime)
-					// 将毫秒时间戳转换为秒和纳秒
-					sec := msTimestamp / 1000
-					nsec := (msTimestamp % 1000) * 1000000
-					t := time.Unix(sec, nsec)
-					balance.BalanceTime = t
+					balance.Amount, _ = strconv.ParseFloat(value.WalletBalance, 64)
+					balance.BalanceTime = time.UnixMilli(walletResp.CreationTime)
 					balances = append(balances, balance)
 				}
 			}

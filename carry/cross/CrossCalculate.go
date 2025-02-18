@@ -34,6 +34,8 @@ var ProcessCrossBalances = func(market, accountKey string, balances []*model.Bal
 		if balSetting == nil {
 			continue
 		}
+		util.Log(util.LogLevelInfo, fmt.Sprintf(`update balance from ws %s %s %s %f`,
+			market, triggerAccount.Index, balance.Coin, balance.Amount))
 		// 针对1000倍币等种进行coin转换
 		settings, _ := value.Load(balSetting.Coin)
 		if settings == nil {
