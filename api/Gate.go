@@ -56,6 +56,7 @@ func appendFutureMarketGate(key, secret string, marketInfos map[string]*model.Ma
 		}
 		marketInfo := &model.MarketInfo{Market: model.Gate, FundingRateInterval: 8 * 3600000}
 		if contract.InDelisting {
+			util.Log(util.LogLevelInfo, fmt.Sprintf("delisting %s %#v %#v", marketInfo.Symbol, contract, marketInfo))
 			marketInfo.DeListing = true
 		}
 		success, coin, symbol := model.GetFromDialect(model.Gate, model.MarketTypePerp, contract.Name)

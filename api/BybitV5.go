@@ -280,6 +280,7 @@ func getMarketsBybitPerp(marketInfos map[string]*model.MarketInfo) {
 			symbol := perpInfo.BaseCoin + model.UniStandardTail[model.MarketTypePerp]
 			marketInfo := &model.MarketInfo{Symbol: symbol, Market: model.Bybit, FundingRateInterval: 8 * 3600000}
 			if perpInfo.Status == `Delivering` {
+				util.Log(util.LogLevelInfo, fmt.Sprintf("delisting %s %s %#v", marketInfo.Symbol, perpInfo.Status, marketInfo))
 				marketInfo.DeListing = true
 			}
 			marketInfo.FundingRateInterval = perpInfo.FundingInterval * 60000

@@ -123,6 +123,7 @@ func getMarketsBinancePerp(key, secret string) (marketInfos map[string]*model.Ma
 			marketInfo := &model.MarketInfo{Market: model.BinancePerp, Symbol: symbol, MoneyMin: 5, FundingRateInterval: 8 * 3600000}
 			if item.DeliveryDate-time.Now().UnixMilli() < 604800000 {
 				marketInfo.DeListing = true
+				util.Log(util.LogLevelInfo, fmt.Sprintf("delisting %s %s %d %#v", marketInfo.Symbol, item.Status, item.DeliveryDate, marketInfo))
 			}
 			marketInfos[marketInfo.Symbol] = marketInfo
 			for _, data := range item.Filters {
