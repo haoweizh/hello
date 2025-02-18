@@ -293,11 +293,14 @@ func getMarketsBybitPerp(marketInfos map[string]*model.MarketInfo) {
 			return
 		}
 		for _, perpInfo := range perpResp.Result.List {
-			if perpInfo.Status != "Trading" || perpInfo.QuoteCoin != "USDT" || perpInfo.ContractType != "LinearPerpetual" {
+			if (perpInfo.Status != "Trading" && perpInfo.Status != `Delivering`) || perpInfo.QuoteCoin != "USDT" || perpInfo.ContractType != "LinearPerpetual" {
 				continue
 			}
 			symbol := perpInfo.BaseCoin + model.UniStandardTail[model.MarketTypePerp]
 			marketInfo := &model.MarketInfo{Symbol: symbol, Market: model.Bybit, FundingRateInterval: 8 * 3600000}
+			if perpInfo.Status == `Delivering` {
+				marketInfo.DeListing = true
+			}
 			marketInfo.FundingRateInterval = perpInfo.FundingInterval * 60000
 			marketInfo.PriceIncrement, _ = strconv.ParseFloat(perpInfo.PriceFilter.TickSize, 64)
 			marketInfo.PriceDecimal, _ = strconv.Atoi(perpInfo.PriceScale)

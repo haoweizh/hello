@@ -87,7 +87,7 @@ func createSpotMarket(account *model.Account, market string) (sm *spotMarket) {
 }
 
 // absentRevert: 当cm或sm中没有这个symbol时，是否设置成revert模式
-func createFromPosition(account *model.Account, setting *model.Setting) (carryStatus *model.CarryStatus, doRevert bool) {
+func createFromPosition(account *model.Account, setting *model.Setting) (carryStatus *model.CarryStatus) {
 	key := account.Key
 	value, ok := contractMarkets.Load(key)
 	if value == nil || !ok {
@@ -101,7 +101,7 @@ func createFromPosition(account *model.Account, setting *model.Setting) (carrySt
 	}
 	if value == nil {
 		util.Log(util.LogLevelError, fmt.Sprintf(`nil contract market %s %s`, setting.Market, setting.Symbol))
-		return nil, false
+		return nil
 	}
 	cm := value.(*contractMarket)
 	handledActValueInU := cm.accountValueInU
@@ -111,6 +111,7 @@ func createFromPosition(account *model.Account, setting *model.Setting) (carrySt
 	_, price := api.GetPriceForce(setting.Symbol, setting.Market)
 	limitAmount := 0.0
 	availableAmount := 0.0
+	carryStatus = &model.CarryStatus{IsSpot: false, Market: setting.Market, Symbol: setting.Symbol, Account: account, Setting: setting}
 	if price > 0 {
 		limitAmount = math.Min(handledActValueInU/5, cm.collateralsAvailable) / price
 		if setting.Market == model.Gate {
@@ -128,16 +129,12 @@ func createFromPosition(account *model.Account, setting *model.Setting) (carrySt
 			}
 		}
 		availableAmount = cm.collateralsAvailable / price
+		carryStatus.LimitSell, carryStatus.LimitBuy = limitAmount, limitAmount
+		carryStatus.AvailableSell, carryStatus.AvailableBuy = availableAmount, availableAmount
 	} else {
 		util.Log(util.LogLevelError, fmt.Sprintf(`do revert true %s %s price 0`, setting.Market, setting.Symbol))
-		doRevert = true
+		carryStatus.DoRevert = true
 	}
-	carryStatus = &model.CarryStatus{IsSpot: false, Market: setting.Market, Symbol: setting.Symbol, Account: account,
-		Setting:       setting,
-		LimitSell:     limitAmount,
-		LimitBuy:      limitAmount,
-		AvailableSell: availableAmount,
-		AvailableBuy:  availableAmount}
 	valueInUsd := 0.0
 	if cm.positions[setting.Symbol] != nil {
 		carryStatus.Holding = cm.positions[setting.Symbol].Holding
@@ -151,7 +148,7 @@ func createFromPosition(account *model.Account, setting *model.Setting) (carrySt
 		}
 	}
 	if setting.Market == model.Gate && valueInUsd > 100000 {
-		doRevert = true
+		carryStatus.DoRevert = true
 		util.Log(util.LogLevelInfo, fmt.Sprintf(`do revert true gate > 100000 %s`, setting.Symbol))
 	}
 	// bitgetperp可以开仓或减仓，不越过0反向开仓
@@ -172,27 +169,28 @@ func createFromPosition(account *model.Account, setting *model.Setting) (carrySt
 		if cm.mmr < 1.5 {
 			util.Log(util.LogLevelError, fmt.Sprintf(`do revert true %d %s %s mmr %f`,
 				account.Index, setting.Market, setting.Symbol, cm.mmr))
-			doRevert = true
+			carryStatus.DoRevert = true
 		}
 	case model.Bybit, model.BitgetPerp, model.BinancePerp:
 		if cm.mmr > 0.66 {
 			util.Log(util.LogLevelError, fmt.Sprintf(`do revert true %s %s %s mmr %f`,
 				account.Key, setting.Market, setting.Symbol, cm.mmr))
-			doRevert = true
+			carryStatus.DoRevert = true
 		}
 	}
 	if cm.contractValueInU/handledActValueInU > rateLimitPosition || valueInUsd/handledActValueInU > rateLimitHolding ||
 		(cm.collateralsAvailable < MarginULowLimit && cm.collateralsAvailable/handledActValueInU < 0.05) ||
 		(setting.Market == model.BitgetPerp && (len(cm.positions) > model.BitgetPosLimit && carryStatus.Holding == 0)) {
-		util.Log(util.LogLevelError, fmt.Sprintf(`do revert true %d %s %s value big %f %f %f %f %f margin u %f pos len %d`,
-			account.Index, setting.Market, setting.Symbol, cm.contractValueInU, handledActValueInU, rateLimitPosition, valueInUsd, rateLimitHolding, cm.contractValueInU, len(cm.positions)))
-		doRevert = true
+		util.Log(util.LogLevelError, fmt.Sprintf(`do revert true %d %s %s value big %f %f %f %f %f margin u %f pos len %d status %#v`,
+			account.Index, setting.Market, setting.Symbol, cm.contractValueInU, handledActValueInU, rateLimitPosition,
+			valueInUsd, rateLimitHolding, cm.contractValueInU, len(cm.positions), carryStatus))
+		carryStatus.DoRevert = true
 	}
-	return carryStatus, doRevert
+	return carryStatus
 }
 
 // absentRevert: 当cm或sm中没有这个symbol时，是否设置成revert模式
-func createFromBalance(account *model.Account, setting *model.Setting) (carryStatus *model.CarryStatus, doRevert bool) {
+func createFromBalance(account *model.Account, setting *model.Setting) (carryStatus *model.CarryStatus) {
 	key := account.Key
 	value, ok := spotMarkets.Load(key)
 	if value == nil || !ok {
@@ -203,31 +201,25 @@ func createFromBalance(account *model.Account, setting *model.Setting) (carrySta
 	success, price := api.GetPriceForce(setting.Symbol, setting.Market)
 	if value == nil {
 		util.Log(util.LogLevelError, fmt.Sprintf(`nil spot market %s %s getPrice %#v %f`, setting.Market, setting.Symbol, success, price))
-		return nil, true
+		return nil
 	}
 	sm := value.(*spotMarket)
 	handledActValueInU := sm.accountValueInU
 	if setting.Market == model.Gate {
 		handledActValueInU *= 0.6
 	}
-	limitBuy, limitSell, availableBuy := 0.0, 0.0, 0.0
+	carryStatus = &model.CarryStatus{IsSpot: true, Market: setting.Market, Symbol: setting.Symbol, Account: account, Setting: setting}
 	if price > 0 {
-		limitBuy = math.Min(sm.availableU/5, handledActValueInU/15) / price
-		availableBuy = sm.availableU / price
+		carryStatus.LimitBuy = math.Min(sm.availableU/5, handledActValueInU/15) / price
+		carryStatus.AvailableBuy = sm.availableU / price
 	} else {
 		util.Log(util.LogLevelError, fmt.Sprintf(`do revert true %s %s price 0`, setting.Market, setting.Symbol))
-		doRevert = true
+		carryStatus.DoRevert = true
 	}
-	carryStatus = &model.CarryStatus{IsSpot: true, Market: setting.Market, Symbol: setting.Symbol, Account: account,
-		Setting:       setting,
-		LimitSell:     0,
-		LimitBuy:      limitBuy,
-		AvailableSell: 0,
-		AvailableBuy:  availableBuy}
 	if sm.balances[setting.Symbol] != nil {
 		var balance *model.Balance
 		balance = sm.balances[setting.Symbol]
-		limitSell = math.Min(math.Max(balance.Amount, 0), balance.AvailableWithBorrow)
+		limitSell := math.Min(math.Max(balance.Amount, 0), balance.AvailableWithBorrow)
 		carryStatus.Holding = balance.Amount
 		// 暂不支持借币
 		carryStatus.LimitSell, carryStatus.AvailableSell = limitSell, limitSell
@@ -235,32 +227,32 @@ func createFromBalance(account *model.Account, setting *model.Setting) (carrySta
 	}
 	usdLowLine := math.Min(100000, 0.1*handledActValueInU)
 	if sm.availableU < usdLowLine || carryStatus.RateInAll > 0.2 {
-		doRevert = true
+		carryStatus.DoRevert = true
 	}
 	rateLimitHolding := 0.1
 	rateLimitHolding = 0.3
 	if sm.balances[setting.Symbol] != nil {
 		if math.Abs(sm.balances[setting.Symbol].UsdValue)/handledActValueInU > rateLimitHolding {
-			doRevert = true
+			carryStatus.DoRevert = true
 		}
 		if setting.Market == model.Gate && sm.balances[setting.Symbol].UsdValue > 100000 {
-			doRevert = true
+			carryStatus.DoRevert = true
 			util.Log(util.LogLevelInfo, fmt.Sprintf(`do revert true gate > 100000 %s`, setting.Symbol))
 		}
 	}
 	if setting.Market == model.Bybit && sm.collateral != nil && sm.collateral.Rate > 0.7 {
-		doRevert = true
+		carryStatus.DoRevert = true
 	} else if setting.Market == model.OKEX && sm.collateral != nil && sm.collateral.Rate < 1.5 {
 		//(sm.collateral.Available-sm.collateral.Occupied)/sm.collateral.Available < 0.1) {
-		doRevert = true
+		carryStatus.DoRevert = true
 	} else if setting.Market == model.Gate && sm.collateral != nil && sm.collateral.Rate < 1.5 {
-		doRevert = true
+		carryStatus.DoRevert = true
 	}
-	if doRevert {
+	if carryStatus.DoRevert {
 		util.Log(util.LogLevelError, fmt.Sprintf(`do revert true %d %s %s value big balance u %f<%f || %f>0.2`,
 			account.Index, setting.Market, setting.Symbol, sm.availableU, usdLowLine, carryStatus.RateInAll))
 	}
-	return carryStatus, doRevert
+	return carryStatus
 }
 
 // absentRevert: 当cm或sm中没有这个symbol时，是否设置成revert模式
@@ -270,18 +262,17 @@ func initStatus(account *model.Account, setting *model.Setting) (status *model.C
 	}
 	//util.Log(util.LogLevelInfo, fmt.Sprintf(`start to init status %s %s %s`, setting.Coin, setting.Market, setting.Symbol))
 	_, marketType, _, _ := model.GetFromStandard(setting.Market, setting.Symbol)
-	doRevert := false
 	if marketType == model.MarketTypeSpot {
-		status, doRevert = createFromBalance(account, setting)
+		status = createFromBalance(account, setting)
 	} else if marketType == model.MarketTypePerp {
-		status, doRevert = createFromPosition(account, setting)
-	}
-	if setting.Chance < 0 || !setting.Liquidated {
-		doRevert = true
+		status = createFromPosition(account, setting)
 	}
 	if status == nil {
 		util.Log(util.LogLevelError, fmt.Sprintf(`fail to create status %s %s`, setting.Market, setting.Symbol))
 		return nil
+	}
+	if setting.Chance < 0 || !setting.Liquidated {
+		status.DoRevert = true
 	}
 	v, _ := util.LoadSyncMap(model.MarketInfos, setting.Market, setting.Symbol)
 	var marketInfo *model.MarketInfo
@@ -309,12 +300,12 @@ func initStatus(account *model.Account, setting *model.Setting) (status *model.C
 	}
 	status.LimitBuy = math.Min(status.LimitBuy, status.AvailableBuy)
 	status.LimitSell = math.Min(status.LimitSell, status.AvailableSell)
-	initTradeLine(account, setting, status, doRevert)
+	initTradeLine(account, setting, status)
 	util.StoreSyncMap(carryStatusMap, status, setting.Coin, setting.Market, setting.Symbol, account.Key)
 	return
 }
 
-func initTradeLine(account *model.Account, setting *model.Setting, status *model.CarryStatus, doRevert bool) {
+func initTradeLine(account *model.Account, setting *model.Setting, status *model.CarryStatus) {
 	standardScoreBuy := math.Max(standardScoreOpen, setting.OpenShortMargin)
 	standardScoreSell := math.Max(standardScoreOpen, setting.OpenShortMargin)
 	getTick, ticks := model.AppEnvironment.GetBidAsk(setting.Market, setting.Symbol)
@@ -348,7 +339,7 @@ func initTradeLine(account *model.Account, setting *model.Setting, status *model
 	//} else {
 	//	util.Notice(fmt.Sprintf(`fatal error fail to get trade line extra %s`, setting.Coin))
 	//}
-	if doRevert || account.CarryClose {
+	if status.DoRevert || account.CarryClose {
 		if status.Holding > 0 {
 			status.TradeLineBuy = 1
 			status.LimitBuy = 0
@@ -689,7 +680,7 @@ func getHolding(statuses []*model.CarryStatus) (bids, asks model.Ticks, statusMa
 	statusMap = make(map[string]*model.CarryStatus)
 	for _, status := range statuses {
 		if status == nil {
-			util.Log(util.LogLevelError, `warning: fail to get one status`)
+			util.Log(util.LogLevelError, `warning: fail to get one status `+bids[0].Market+bids[0].Symbol)
 			return
 		}
 		if status.Holding > 0 {
