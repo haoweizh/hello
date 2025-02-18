@@ -444,6 +444,28 @@ var wsPriHandlerGateSpot = func(market, key string, msg []byte) {
 	} else if channel == `spot.balances` {
 		//https://www.gate.io/docs/developers/apiv4/ws/zh_CN/#%E5%AE%A2%E6%88%B7%E7%AB%AF%E8%AE%A2%E9%98%85-12
 		util.LogLess(util.LogLevelInfo, "risk check ws update balances gate "+string(msg))
+		dataArray := responseJson.Get(`result`).MustArray()
+		var balances []*model.Balance
+		if dataArray != nil {
+			for _, item := range dataArray {
+				var balance *model.Balance
+				value := item.(map[string]interface{})
+				balance.Coin = value[`currency`].(string)
+				balance.AvailableWithBorrow, _ = strconv.ParseFloat(value[`available`].(string), 64)
+				ts, _ := strconv.ParseInt(value[`timestamp_ms`].(string), 10, 64)
+				msTimestamp := int64(ts)
+				// 将毫秒时间戳转换为秒和纳秒
+				sec := msTimestamp / 1000
+				nsec := (msTimestamp % 1000) * 1000000
+				t := time.Unix(sec, nsec)
+				balance.BalanceTime = t
+				balance.FrozenAmount, _ = strconv.ParseFloat(value[`freeze`].(string), 64)
+				balances = append(balances, balance)
+			}
+		}
+		if balances != nil && len(balances) > 0 {
+			model.CrossBalancesHandler(market, key, balances)
+		}
 	} else {
 		channel = responseJson.GetPath(`header`, `channel`).MustString()
 		if channel == `spot.order_place` {

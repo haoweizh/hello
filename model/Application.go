@@ -16,7 +16,7 @@ var TickHandlers = make(map[string]CarryHandler)
 var AccountHandlerMap = make(map[string]WsOrderHandler)
 var CandleHandlers = make(map[string]CandleHandler)
 var CollateralHandler WsCollateralHandler
-
+var CrossBalancesHandler ProcessBalancesHandler
 var CarryInfo sync.Map        // userKey - function - msg
 var monitorInfo = &sync.Map{} // userIndex - table - syncMap[string -array[]string]
 var AppMetric = &MetricManager{}

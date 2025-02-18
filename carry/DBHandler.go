@@ -158,6 +158,7 @@ func Maintain() {
 	model.AccountHandlerMap[model.FunctionCross] = cross.PostOrderCross
 	model.CandleHandlers[model.FunctionMonitorKLine] = monitor.ProcessMonitor
 	model.CollateralHandler = cross.ProcessCollateral
+	model.CrossBalancesHandler = cross.ProcessCrossBalances
 	_ = model.AppDB.AutoMigrate(&model.Setting{})
 	_ = model.AppDB.AutoMigrate(&model.Order{})
 	_ = model.AppDB.AutoMigrate(&model.Balance{})

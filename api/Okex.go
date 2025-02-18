@@ -288,7 +288,31 @@ var wsAccountHandlerOKEX = func(market, key string, event []byte) {
 	}
 	//https://www.okx.com/docs-v5/zh/#trading-account-websocket-balance-and-position-channel
 	if responseJson.GetPath(`arg`, `channel`).MustString() == `balance_and_position` {
-		util.LogLess(util.LogLevelInfo, "risk check ws update balances and positions okx "+string(event))
+		util.Log(util.LogLevelInfo, "risk check ws update balances and positions okx "+string(event))
+		dataArray := responseJson.Get(`data`).MustArray()
+		if dataArray != nil {
+			var balances []*model.Balance
+			data := dataArray[0].(map[string]interface{})
+			if data[`balData`] != nil {
+				for _, item := range data[`balData`].([]interface{}) {
+					var balance *model.Balance
+					value := item.(map[string]interface{})
+					balance.Coin = value[`ccy`].(string)
+					balance.AvailableWithBorrow, _ = strconv.ParseFloat(value[`cashBal`].(string), 64)
+					ts, _ := strconv.ParseInt(value[`uTime`].(string), 10, 64)
+					msTimestamp := int64(ts)
+					// 将毫秒时间戳转换为秒和纳秒
+					sec := msTimestamp / 1000
+					nsec := (msTimestamp % 1000) * 1000000
+					t := time.Unix(sec, nsec)
+					balance.BalanceTime = t
+					balances = append(balances, balance)
+				}
+			}
+			if balances != nil && len(balances) > 0 {
+				model.CrossBalancesHandler(market, key, balances)
+			}
+		}
 	}
 }
 

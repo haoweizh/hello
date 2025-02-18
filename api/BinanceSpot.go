@@ -394,6 +394,27 @@ var wsOrderUpdateBinance = func(market, key string, msg []byte) {
 	case `outboundAccountPosition`:
 		//https://developers.binance.com/docs/zh-CN/binance-spot-api-docs/user-data-stream#%E8%B4%A6%E6%88%B7%E6%9B%B4%E6%96%B0
 		util.LogLess(util.LogLevelInfo, "risk check ws update balances binance "+string(msg))
+		dataArray := resJson.Get(`B`).MustArray()
+		var balances []*model.Balance
+		if dataArray != nil {
+			for _, item := range dataArray {
+				var balance *model.Balance
+				value := item.(map[string]interface{})
+				balance.Coin = value[`a`].(string)
+				balance.AvailableWithBorrow, _ = strconv.ParseFloat(value[`f`].(string), 64)
+				msTimestamp := resJson.Get(`u`).MustInt64()
+				// 将毫秒时间戳转换为秒和纳秒
+				sec := msTimestamp / 1000
+				nsec := (msTimestamp % 1000) * 1000000
+				t := time.Unix(sec, nsec)
+				balance.BalanceTime = t
+				balance.FrozenAmount, _ = strconv.ParseFloat(value[`l`].(string), 64)
+				balances = append(balances, balance)
+			}
+		}
+		if balances != nil && len(balances) > 0 {
+			model.CrossBalancesHandler(market, key, balances)
+		}
 	case `ACCOUNT_UPDATE`:
 		//https://developers.binance.com/docs/zh-CN/derivatives/usds-margined-futures/user-data-streams/Event-Balance-and-Position-Update
 		util.LogLess(util.LogLevelInfo, "risk check ws update positions binance "+string(msg))
