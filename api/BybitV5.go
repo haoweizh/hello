@@ -66,8 +66,7 @@ var wsOrdUdtHandlerBybit = func(market, key string, msg []byte) {
 			coins := walletResp.Data[0].Coin
 			if coins != nil && len(coins) > 0 {
 				for _, value := range coins {
-					var balance *model.Balance
-					balance.Coin = value.Coin
+					balance := &model.Balance{Coin: value.Coin}
 					balance.Amount, _ = strconv.ParseFloat(value.WalletBalance, 64)
 					balance.BalanceTime = time.UnixMilli(walletResp.CreationTime)
 					balances = append(balances, balance)

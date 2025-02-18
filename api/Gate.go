@@ -448,9 +448,8 @@ var wsPriHandlerGateSpot = func(market, key string, msg []byte) {
 		var balances []*model.Balance
 		if dataArray != nil {
 			for _, item := range dataArray {
-				var balance *model.Balance
 				value := item.(map[string]interface{})
-				balance.Coin = value[`currency`].(string)
+				balance := &model.Balance{Coin: value[`currency`].(string)}
 				balance.AvailableWithBorrow, _ = strconv.ParseFloat(value[`available`].(string), 64)
 				ts, _ := strconv.ParseInt(value[`timestamp_ms`].(string), 10, 64)
 				balance.BalanceTime = time.UnixMilli(ts)

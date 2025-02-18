@@ -295,13 +295,11 @@ var wsAccountHandlerOKEX = func(market, key string, event []byte) {
 			data := dataArray[0].(map[string]interface{})
 			if data[`balData`] != nil {
 				for _, item := range data[`balData`].([]interface{}) {
-					var balance *model.Balance
 					value := item.(map[string]interface{})
 					if value[`ccy`] == nil || value[`uTime`] == nil || value[`cashBal`] == nil {
 						continue
 					}
-					fmt.Println(value[`ccy`])
-					balance.Coin = value[`ccy`].(string)
+					balance := &model.Balance{Coin: value[`ccy`].(string)}
 					balance.Amount, _ = strconv.ParseFloat(value[`cashBal`].(string), 64)
 					ts, _ := strconv.ParseInt(value[`uTime`].(string), 10, 64)
 					balance.BalanceTime = time.UnixMilli(ts)

@@ -398,9 +398,8 @@ var wsOrderUpdateBinance = func(market, key string, msg []byte) {
 		var balances []*model.Balance
 		if dataArray != nil {
 			for _, item := range dataArray {
-				var balance *model.Balance
 				value := item.(map[string]interface{})
-				balance.Coin = value[`a`].(string)
+				balance := &model.Balance{Coin: value[`a`].(string)}
 				balance.AvailableWithBorrow, _ = strconv.ParseFloat(value[`f`].(string), 64)
 				balance.BalanceTime = time.UnixMilli(resJson.Get(`u`).MustInt64())
 				balance.FrozenAmount, _ = strconv.ParseFloat(value[`l`].(string), 64)
