@@ -898,8 +898,8 @@ func placeEqual(status *model.CarryStatus, price, amount float64, orderSide stri
 // setting.GridAmount 用作不同名称的搬砖时，symbol的交易量对应的coin的交易量
 // setting.PriceX 用作不同名称的搬砖时，symbol的交易价格对应的coin的交易价格
 // Order.Fee 记录了原始下单的价格，用以判断最终comp成功时损失了多少
-// ChanceLimit开仓、换仓资金费率倍数
-// ChanceLimitCombine平仓资金费率倍数
+// AmountRate 开仓、换仓资金费率倍数
+// AmountRateCombine平仓资金费率倍数
 var ProcessCross = func(setting *model.Setting, tick *model.BidAsk) {
 	coinSettings := api.GetCoinSettings(setting.Function)
 	var settings []*model.Setting
