@@ -44,7 +44,7 @@ func GetMarketsBinance(account *model.Account, market string) (marketInfos map[s
 		return GetMarketsBinance(account, market)
 	}
 	for _, item := range exchangeInfo.Symbols {
-		if item.Status != "TRADING" || item.QuoteAsset != model.DialectTail[model.MarketTypeSpot][market] || !item.IsMarginTradingAllowed {
+		if (item.Status != "TRADING" && item.Status != `BREAK`) || item.QuoteAsset != model.DialectTail[model.MarketTypeSpot][market] || !item.IsMarginTradingAllowed {
 			continue
 		}
 		tail := model.UniStandardTail[model.MarketTypeSpot]
