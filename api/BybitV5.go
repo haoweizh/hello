@@ -300,7 +300,7 @@ func getMarketsBybitPerp(marketInfos map[string]*model.MarketInfo) {
 			}
 			if len(perpInfo.DeliveryTime) > 0 {
 				ts, err := strconv.ParseInt(perpInfo.DeliveryTime, 10, 64)
-				if err == nil && ts > time.Now().UnixMilli() && ts-time.Now().UnixMilli() < 259200000 {
+				if err == nil && ts > time.Now().UnixMilli() && ts-time.Now().UnixMilli() < 432000000 {
 					marketInfo.DeListing = true
 				}
 			}
