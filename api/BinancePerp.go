@@ -118,9 +118,12 @@ func getMarketsBinancePerp(key, secret string) (marketInfos map[string]*model.Ma
 		if item.QuoteAsset == "" || item.BaseAsset == "" {
 			continue
 		}
-		if item.ContractType == `PERPETUAL` && item.Status == "TRADING" && item.QuoteAsset == model.DialectTail[model.MarketTypePerp][model.BinancePerp] {
+		if item.ContractType == `PERPETUAL` && item.QuoteAsset == model.DialectTail[model.MarketTypePerp][model.BinancePerp] {
 			symbol := item.BaseAsset + model.UniStandardTail[model.MarketTypePerp]
 			marketInfo := &model.MarketInfo{Market: model.BinancePerp, Symbol: symbol, MoneyMin: 5, FundingRateInterval: 8 * 3600000}
+			if item.Status != "TRADING" {
+				marketInfo.DeListing = true
+			}
 			if item.DeliveryDate-time.Now().UnixMilli() < 604800000 {
 				marketInfo.DeListing = true
 				util.Log(util.LogLevelInfo, fmt.Sprintf("delisting %s %s %d %#v", marketInfo.Symbol, item.Status, item.DeliveryDate, marketInfo))

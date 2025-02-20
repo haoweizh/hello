@@ -96,10 +96,13 @@ func appendSpotMarketsGate(key, secret string, marketInfos map[string]*model.Mar
 	}
 	for _, spot := range spotCurrencyPairs {
 		success, _, symbol := model.GetFromDialect(model.Gate, model.MarketTypeSpot, spot.Id)
-		if spot.TradeStatus != "tradable" || !success {
+		if !success {
 			continue
 		}
 		marketInfo := &model.MarketInfo{Market: model.Gate, FundingRateInterval: 8 * 3600000}
+		if spot.TradeStatus != "tradable" {
+			marketInfo.DeListing = true
+		}
 		marketInfo.Symbol = symbol
 		marketInfo.PriceDecimal = int(spot.Precision)
 		marketInfo.PriceIncrement = 1 / math.Pow10(int(spot.Precision))

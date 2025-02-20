@@ -247,7 +247,7 @@ func getMarketsBybitSpot(marketInfos map[string]*model.MarketInfo) {
 		return
 	}
 	for _, symbolInfo := range spotResp.Result.List {
-		if symbolInfo.Status != "Trading" || symbolInfo.QuoteCoin != "USDT" {
+		if symbolInfo.QuoteCoin != "USDT" {
 			continue
 		}
 		symbol := symbolInfo.BaseCoin + model.UniStandardTail[model.MarketTypeSpot]
@@ -255,6 +255,9 @@ func getMarketsBybitSpot(marketInfos map[string]*model.MarketInfo) {
 		if symbolInfo.PriceFilter.TickSize == "" {
 			util.Log(util.LogLevelError, fmt.Sprintf("币种：%s 价格步长为空 resp：%#v", symbol, symbolInfo))
 			continue
+		}
+		if symbolInfo.Status != "Trading" {
+			marketInfo.DeListing = true
 		}
 		priceIncrement, _ := strconv.ParseFloat(symbolInfo.PriceFilter.TickSize, 64)
 		marketInfo.PriceIncrement = priceIncrement
@@ -287,13 +290,12 @@ func getMarketsBybitPerp(marketInfos map[string]*model.MarketInfo) {
 			return
 		}
 		for _, perpInfo := range perpResp.Result.List {
-			if (perpInfo.Status != "Trading" && perpInfo.Status != `Delivering`) || perpInfo.QuoteCoin != "USDT" || perpInfo.ContractType != "LinearPerpetual" {
+			if perpInfo.QuoteCoin != "USDT" || perpInfo.ContractType != "LinearPerpetual" {
 				continue
 			}
 			symbol := perpInfo.BaseCoin + model.UniStandardTail[model.MarketTypePerp]
 			marketInfo := &model.MarketInfo{Symbol: symbol, Market: model.Bybit, FundingRateInterval: 8 * 3600000}
-			if perpInfo.Status == `Delivering` {
-				util.Log(util.LogLevelInfo, fmt.Sprintf("delisting %s %s %#v", marketInfo.Symbol, perpInfo.Status, marketInfo))
+			if perpInfo.Status != `Trading` {
 				marketInfo.DeListing = true
 			}
 			marketInfo.FundingRateInterval = perpInfo.FundingInterval * 60000

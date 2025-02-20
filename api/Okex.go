@@ -838,8 +838,11 @@ func getMarketsOKEX(account *model.Account) (marketInfos map[string]*model.Marke
 					if !success {
 						continue
 					}
-					if value[`state`] == nil || value[`state`].(string) != `live` {
+					if value[`state`] == nil {
 						continue
+					}
+					if value[`state`].(string) != `live` {
+						marketInfo.DeListing = true
 					}
 					if value[`expTime`] != nil && value[`expTime`].(string) != `` {
 						expTime, _ := strconv.ParseInt(value[`expTime`].(string), 10, 64)
