@@ -274,6 +274,16 @@ func initStatus(account *model.Account, setting *model.Setting) (status *model.C
 	if setting.Chance < 0 || !setting.Liquidated {
 		status.DoRevert = true
 	}
+	if status.DoRevert {
+		if status.Holding <= 0 {
+			status.LimitSell = 0
+			status.AvailableSell = 0
+		}
+		if status.Holding >= 0 {
+			status.LimitBuy = 0
+			status.AvailableBuy = 0
+		}
+	}
 	v, _ := util.LoadSyncMap(model.MarketInfos, setting.Market, setting.Symbol)
 	var marketInfo *model.MarketInfo
 	if v != nil {
