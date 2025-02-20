@@ -359,6 +359,14 @@ func initTradeLine(account *model.Account, setting *model.Setting, status *model
 			status.AvailableSell = 0
 		}
 	}
+	if setting.Chance == -2 {
+		status.TradeLineBuy = 1
+		status.TradeLineSell = 1
+		status.LimitBuy = 0
+		status.LimitSell = 0
+		status.AvailableBuy = 0
+		status.AvailableSell = 0
+	}
 }
 
 // FailOrdersReconnect 用于处理ws下单，但没有返回orderId的情况，此时有可能有成交

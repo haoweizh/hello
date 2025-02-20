@@ -626,7 +626,7 @@ func Test_WSOKPair(t *testing.T) {
 
 func Test_transferInner(t *testing.T) {
 	model.NewConfig()
-	market := model.Bybit
+	market := model.OKEX
 	account := model.AppConfig.GetAccounts(market)[0]
 	suc, bals, total, _ := api.GetBalances(account, market)
 	fmt.Println(fmt.Sprintf(`%#v total %f`, suc, total))
