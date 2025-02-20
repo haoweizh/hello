@@ -846,8 +846,8 @@ func getMarketsOKEX(account *model.Account) (marketInfos map[string]*model.Marke
 					}
 					if value[`expTime`] != nil && value[`expTime`].(string) != `` {
 						expTime, _ := strconv.ParseInt(value[`expTime`].(string), 10, 64)
-						if expTime > 0 && expTime-time.Now().UnixMilli() < 604800000 {
-							util.Log(util.LogLevelInfo, fmt.Sprintf("delisting %s %v %#v %#v", marketInfo.Symbol, value[`expTime`], value, marketInfo))
+						if expTime > 0 && expTime-time.Now().UnixMilli() < 259200000 {
+							//util.Log(util.LogLevelInfo, fmt.Sprintf("delisting %s %v %#v %#v", marketInfo.Symbol, value[`expTime`], value, marketInfo))
 							marketInfo.DeListing = true
 						}
 					}

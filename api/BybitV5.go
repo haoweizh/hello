@@ -298,6 +298,12 @@ func getMarketsBybitPerp(marketInfos map[string]*model.MarketInfo) {
 			if perpInfo.Status != `Trading` {
 				marketInfo.DeListing = true
 			}
+			if len(perpInfo.DeliveryTime) > 0 {
+				ts, err := strconv.ParseInt(perpInfo.DeliveryTime, 10, 64)
+				if err == nil && ts > time.Now().UnixMilli() && ts-time.Now().UnixMilli() < 259200000 {
+					marketInfo.DeListing = true
+				}
+			}
 			marketInfo.FundingRateInterval = perpInfo.FundingInterval * 60000
 			marketInfo.PriceIncrement, _ = strconv.ParseFloat(perpInfo.PriceFilter.TickSize, 64)
 			marketInfo.PriceDecimal, _ = strconv.Atoi(perpInfo.PriceScale)

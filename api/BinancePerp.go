@@ -124,7 +124,7 @@ func getMarketsBinancePerp(key, secret string) (marketInfos map[string]*model.Ma
 			if item.Status != "TRADING" {
 				marketInfo.DeListing = true
 			}
-			if item.DeliveryDate-time.Now().UnixMilli() < 604800000 {
+			if item.DeliveryDate-time.Now().UnixMilli() < 259200000 {
 				marketInfo.DeListing = true
 				util.Log(util.LogLevelInfo, fmt.Sprintf("delisting %s %s %d %#v", marketInfo.Symbol, item.Status, item.DeliveryDate, marketInfo))
 			}
