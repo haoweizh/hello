@@ -12,14 +12,35 @@ import (
 )
 
 // step(n) = step(n-1) + 0.0012 + 0.0001*(n-1)
-var stepScores = []float64{0, 0.0014, 0.002900, 0.004500, 0.006200, 0.008000, 0.009900, 0.011900, 0.014000, 0.016200, 0.018500, 0.020900,
-	0.023400, 0.026000, 0.028700, 0.031500, 0.034400, 0.037400, 0.040500, 0.043700, 0.047000, 0.050400, 0.053900, 0.057500, 0.061200, 0.065000,
-	0.068900, 0.072900, 0.077000, 0.081200, 0.085500, 0.089900, 0.094400, 0.099000, 0.103700, 0.108500, 0.113400, 0.118400, 0.123500, 0.128700,
-	0.134000, 0.139400, 0.144900, 0.150500, 0.156200, 0.162000, 0.167900, 0.173900, 0.180000, 0.186200, 0.192500, 0.198900, 0.205400, 0.212000,
-	0.218700, 0.225500, 0.232400, 0.239400, 0.246500, 0.253700, 0.261000, 0.268400, 0.275900, 0.283500, 0.291200, 0.299000, 0.306900}
+var stepScores = []float64{-0.0011, 0, 0.0012, 0.0025, 0.0039, 0.0054, 0.0070, 0.0087, 0.0105, 0.0124, 0.0144, 0.0165, 0.0187,
+	0.0210, 0.0234, 0.0259, 0.0285, 0.0312, 0.0340, 0.0369, 0.0399, 0.0430, 0.0462, 0.0495, 0.0529, 0.0564, 0.0600, 0.0637,
+	0.0675, 0.0714, 0.0754, 0.0795, 0.0837, 0.0880, 0.0924, 0.0969, 0.1015, 0.1062, 0.1110, 0.1159, 0.1209, 0.1260, 0.1312,
+	0.1365, 0.1419, 0.1474, 0.1530, 0.1587, 0.1645, 0.1704, 0.1764, 0.1825, 0.1887, 0.1950, 0.2014, 0.2079, 0.2145, 0.2212,
+	0.2280, 0.2349, 0.2419, 0.2490, 0.2562, 0.2635, 0.2709, 0.2784, 0.286, 0.2937, 0.3015}
+
+const GridGap = 3
 
 const swapScore = 0.002 // 换仓要求的利润金额
 const crossGrid = `grid`
+
+// CalcGridLine
+// step(n) = step(n-1) + base + 0.0001*(n-1)
+// base: 0.0012
+// before -0.0011，0，0.0012
+func CalcGridLine(base float64) {
+	p := make([]float64, 5555555)
+	for n := 1; n <= 250000; n++ {
+		if n == 1 {
+			p[n] = base
+		} else {
+			p[n] = p[n-1] + base + 0.0001*float64(n-1)
+			fmt.Print(fmt.Sprintf(`%.4f,`, p[n]))
+		}
+		if p[n] > 0.3 {
+			break
+		}
+	}
+}
 
 var ProcessCrossBalances = func(market, accountKey string, balances []*model.Balance) {
 	value := api.GetCoinSettings(model.FunctionCross)
@@ -206,19 +227,19 @@ func checkTradeLine(statusBuy, statusSell *model.CarryStatus, carryCoin *model.C
 	crossLimit := openValueLimit / priceBuy * statusBuy.Setting.GridAmount
 	if statusBuy.Holding*priceBuy >= -1*model.SmallHolding && statusSell.Holding*priceSell <= model.SmallHolding { // 开仓
 		if buyCrossStyle == crossGrid {
-			if carryCoin.CurrentStep < 0 || carryCoin.CurrentStep >= len(stepScores)-2 {
+			if carryCoin.CurrentStep < 0 || carryCoin.CurrentStep >= len(stepScores)-GridGap {
 				return false, 0, scoreOpen, `开`
 			}
 			currentStep := carryCoin.CurrentStep
 			leftCurStep := carryCoin.MoneyPerStep - carryCoin.MoneyCurStep
-			if leftCurStep < model.SmallHolding && carryCoin.CurrentStep < len(stepScores)-2 {
+			if leftCurStep < model.SmallHolding && carryCoin.CurrentStep < len(stepScores)-GridGap {
 				leftCurStep += carryCoin.MoneyPerStep
 				currentStep++
 			}
 			coinLimit := math.Min(leftCurStep, openValueLimit) / priceBuy * statusBuy.Setting.GridAmount
-			statusBuy.TradeLineBuy = stepScores[currentStep+2]
-			statusSell.TradeLineSell = stepScores[currentStep+2]
-			return scoreOpen > stepScores[currentStep+2], coinLimit, scoreOpen, `开`
+			statusBuy.TradeLineBuy = stepScores[currentStep+GridGap]
+			statusSell.TradeLineSell = stepScores[currentStep+GridGap]
+			return scoreOpen > stepScores[currentStep+GridGap], coinLimit, scoreOpen, `开`
 		} else {
 			return scoreOpen > statusBuy.TradeLineBuy && scoreOpen > statusSell.TradeLineSell, crossLimit, scoreOpen, `开`
 		}
@@ -237,7 +258,7 @@ func checkTradeLine(statusBuy, statusSell *model.CarryStatus, carryCoin *model.C
 				statusSell.TradeLineSell = 0.0
 				return scoreClose >= 0.0, limit, scoreClose, `平`
 			}
-			if currentStep < 0 || currentStep > len(stepScores)-2 {
+			if currentStep < 0 || currentStep > len(stepScores)-GridGap {
 				return false, 0, scoreClose, `平`
 			}
 			statusBuy.TradeLineBuy = -1 * stepScores[currentStep]

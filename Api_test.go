@@ -11,6 +11,7 @@ import (
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
 	"hello/api"
+	"hello/carry/cross"
 	"hello/model"
 	"hello/regret"
 	"hello/util"
@@ -723,19 +724,7 @@ func remove(value *sync.Map) {
 
 // step(n) = step(n-1) + base + 0.0001*(n-1)
 func Test_CalcGridLine(t *testing.T) {
-	base := 0.0014
-	p := make([]float64, 5555555)
-	for n := 1; n <= 250000; n++ {
-		if n == 1 {
-			p[n] = base
-		} else {
-			p[n] = p[n-1] + base + 0.0001*float64(n-1)
-			fmt.Print(fmt.Sprintf(`%f,`, p[n]))
-		}
-		if p[n] > 0.3 {
-			break
-		}
-	}
+	cross.CalcGridLine(0.0012)
 }
 
 func Test_map(t *testing.T) {
