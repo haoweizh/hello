@@ -49,6 +49,9 @@ func GetMarketsBinance(account *model.Account, market string) (marketInfos map[s
 		}
 		tail := model.UniStandardTail[model.MarketTypeSpot]
 		marketInfo := &model.MarketInfo{Market: market, Symbol: item.BaseAsset + tail, FundingRateInterval: 8 * 3600000}
+		if item.Status != "TRADING" {
+			marketInfo.DeListing = true
+		}
 		for _, data := range item.Filters {
 			filterType := data[`filterType`].(string)
 			if filterType == `PRICE_FILTER` {
