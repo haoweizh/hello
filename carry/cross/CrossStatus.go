@@ -486,6 +486,9 @@ func liquidateSmallContracts(account *model.Account, market string) {
 	if success {
 		for _, position := range positions {
 			holding := math.Abs(position.Holding)
+			if holding <= 0 {
+				continue
+			}
 			if position.EntryPrice*holding < SmallInU {
 				orderSide := model.OrderSideBuy
 				if position.Holding > 0 {

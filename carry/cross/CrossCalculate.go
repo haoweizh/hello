@@ -148,11 +148,11 @@ func generateMonitorMsg(index int, coin, scoreType, scoreTypeR string, score, sc
 	markRelate := fmt.Sprintf(`%s-%s`, carryStatusRelate.Market, carryStatusRelate.Symbol)
 	coinValue := coin
 	if !carryStatus.IsSpot {
-		coinValue += `永`
+		coinValue = `永` + coinValue
 	}
 	coinValueRelate := coin
 	if !carryStatusRelate.IsSpot {
-		coinValueRelate += `永`
+		coinValueRelate = `永` + coinValueRelate
 	}
 	//green := false
 	//if math.Abs(fundingRateRelate.Rate) > 0.001 || math.Abs(fundingRate.Rate) > 0.001 {
