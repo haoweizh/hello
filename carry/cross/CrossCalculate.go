@@ -110,7 +110,8 @@ var ProcessCollateral = func(accountKey, accountType string, reduceOnly bool, co
 		if collateral.AccountValueInU > 0 {
 			cm.accountValueInU = collateral.AccountValueInU
 		}
-		if (reduceOnly || cm.collateralsAvailable < MarginULowLimit && cm.collateralsAvailable/cm.accountValueInU < 0.05) && cm.reduceOnly == false {
+		if (reduceOnly || cm.collateralsAvailable < math.Min(MarginULowLimit, 0.1*collateral.AccountValueInU) &&
+			cm.collateralsAvailable/cm.accountValueInU < 0.05) && cm.reduceOnly == false {
 			cm.reduceOnly = true
 			carryStatusMap.Range(func(k, v interface{}) bool {
 				if v == nil {

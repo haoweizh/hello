@@ -178,8 +178,9 @@ func createFromPosition(account *model.Account, setting *model.Setting) (carrySt
 			carryStatus.DoRevert = true
 		}
 	}
+	usdLowLine := math.Min(MarginULowLimit, 0.1*cm.accountValueInU)
 	if cm.contractValueInU/handledActValueInU > rateLimitPosition || valueInUsd/handledActValueInU > rateLimitHolding ||
-		(cm.collateralsAvailable < MarginULowLimit && cm.collateralsAvailable/handledActValueInU < 0.05) ||
+		(cm.collateralsAvailable < usdLowLine && cm.collateralsAvailable/handledActValueInU < 0.05) ||
 		(setting.Market == model.BitgetPerp && (len(cm.positions) > model.BitgetPosLimit && carryStatus.Holding == 0)) {
 		util.Log(util.LogLevelError, fmt.Sprintf(`do revert true %d %s %s value big %f %f %f %f %f margin u %f pos len %d status %#v`,
 			account.Index, setting.Market, setting.Symbol, cm.contractValueInU, handledActValueInU, rateLimitPosition,
@@ -224,7 +225,7 @@ func createFromBalance(account *model.Account, setting *model.Setting) (carrySta
 		carryStatus.LimitSell, carryStatus.AvailableSell = limitSell, limitSell
 		carryStatus.RateInAll = math.Abs(carryStatus.Holding * price / handledActValueInU)
 	}
-	usdLowLine := math.Min(100000, 0.1*handledActValueInU)
+	usdLowLine := math.Min(MarginULowLimit, 0.1*handledActValueInU)
 	if sm.availableU < usdLowLine || carryStatus.RateInAll > 0.2 {
 		carryStatus.DoRevert = true
 	}

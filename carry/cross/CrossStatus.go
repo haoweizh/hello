@@ -14,7 +14,7 @@ import (
 // const FundingRateBase = 12.0
 const openValueLimit = 2000.0
 const compLimitInU = 3000.0
-const MarginULowLimit = 10000
+const MarginULowLimit = 50000
 const AccountOrderGap = 100 // account order no deal time in million-second
 // const holdingLimitInU = 500000.0
 // const openValueLimit = 2000
