@@ -228,6 +228,9 @@ func createFromBalance(account *model.Account, setting *model.Setting) (carrySta
 	if sm.availableU < usdLowLine || carryStatus.RateInAll > 0.2 {
 		carryStatus.DoRevert = true
 	}
+	if sm.collateral != nil && sm.collateral.Available < usdLowLine {
+		carryStatus.DoRevert = true
+	}
 	rateLimitHolding := 0.1
 	rateLimitHolding = 0.3
 	if sm.balances[setting.Symbol] != nil {

@@ -93,9 +93,9 @@ func Test_ws(t *testing.T) {
 
 func Test_getCommonMarketInfos(t *testing.T) {
 	model.NewConfig()
-	market := model.Gate
+	market := model.Bybit
 	account := model.AppConfig.GetAccounts(market)[0]
-	api.GetPositions(account, market)
+	//api.GetPositions(account, market)
 	//api.GetInterest(account)
 	api.GetBalances(account, market)
 	//_, _, total, _ := api.GetBalances(account, market)
