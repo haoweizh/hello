@@ -1177,3 +1177,8 @@ func getBillsBybit(account *model.Account, begin, end int64) (bool, []*model.Fun
 	}
 	return true, fundingFees
 }
+
+func getInterestBybit(account *model.Account) {
+	response, _ := SignedRequestBybit(account.Key, account.Secret, http.MethodGet, bybitRestUrl, "/v5/spot-margin-trade/data", nil)
+	fmt.Println(string(response))
+}

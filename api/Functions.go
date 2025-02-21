@@ -1117,36 +1117,14 @@ func GetBills(account *model.Account, begin, end int64) (success bool, fundingFe
 	return false, nil
 }
 
-//func InitCoinBalance(key, secret, function, market string) {
-//	InitMarketInfos()
-//	settings := model.GetSettings(function, market)
-//	_, balances, _ := GetBalances(key, secret, market, 0)
-//	balanceMap := make(map[string]*model.Balance)
-//	for _, balance := range balances {
-//		balanceMap[balance.Coin] = balance
-//	}
-//	i := 0
-//	for _, items := range settings {
-//		coin := model.GetCoin(items[0].Market, items[0].Symbol)
-//		balance := balanceMap[coin]
-//		if balance == nil {
-//			if model.MarketInfos[market] == nil {
-//				continue
-//			}
-//			related := items[0].GetRelatedSymbol()
-//			marketInfo := model.MarketInfos[market][related]
-//			if marketInfo == nil {
-//				continue
-//			}
-//			price := GetLastPrice(key, secret, market, related)
-//			order := PlaceOrder(key, secret, model.OrderSideBuy, model.OrderTypeMarket, market, related, related,
-//				``, ``, ``, price, price, marketInfo.SizeMin, false, nil)
-//			if order.OrderId == `` {
-//				i++
-//				fmt.Println(fmt.Sprintf(`%d order return :%s %s`, i, order.ErrCode, related))
-//			} else {
-//				fmt.Println(fmt.Sprintf(`%s success order`, related))
-//			}
-//		}
-//	}
-//}
+func GetInterest(account *model.Account) (success bool) {
+	switch account.Market {
+	case model.OKEX:
+		getInterestOkx(account)
+	case model.Bybit:
+		getInterestBybit(account)
+	case model.Gate:
+		getInterestGate(account)
+	}
+	return false
+}

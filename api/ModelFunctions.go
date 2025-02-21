@@ -464,6 +464,7 @@ func initMarketMode(account *model.Account, market string) {
 		if accountMode != `net_mode` {
 			setAccountModeOKEX(account)
 		}
+		setAutoBorrowRepayOkx(account)
 		setLeverageOkx(account)
 	case model.BinancePerp:
 		setPosSideBinancePerp(account.Key, account.Secret)

@@ -30,6 +30,8 @@ type MarketInfo struct {
 	QuoteMax                                float64 //最大下单金额的计费货币数值
 	BorrowSizeMin                           float64 //最小借款数量
 	BorrowUsdtMax                           float64 //最大借款usdt数额
+	BorrowAvailable                         float64
+	InterestRate                            float64 // 日利息率
 	SizeMax, SizeMin, SizeMaxMarket         float64 //最大最小下单数量，当CTValue=0（现货）时为交易币种数量，CTValue>0(永续)为张数，在使用时乘以CTValue转换成币数
 	BuyLimitPriceRatio, SellLimitPriceRatio float64 //买卖价限价比例
 }

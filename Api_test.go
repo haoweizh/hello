@@ -93,10 +93,13 @@ func Test_ws(t *testing.T) {
 
 func Test_getCommonMarketInfos(t *testing.T) {
 	model.NewConfig()
-	market := model.OKEX
+	market := model.Gate
 	account := model.AppConfig.GetAccounts(market)[0]
-	_, _, total, _ := api.GetBalances(account, market)
-	fmt.Println(total)
+	api.GetPositions(account, market)
+	//api.GetInterest(account)
+	api.GetBalances(account, market)
+	//_, _, total, _ := api.GetBalances(account, market)
+	//fmt.Println(total)
 	//api.InitMarketInfos(market)
 	//model.MarketInfos.Range(func(key, value any) bool {
 	//	if value != nil && value.(*model.MarketInfo).PriceIncrement < 0.0000001 {

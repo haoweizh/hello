@@ -815,6 +815,7 @@ func placeOrderOKEX(account *model.Account, isWs bool, order *model.Order, order
 func getMarketsOKEX(account *model.Account) (marketInfos map[string]*model.MarketInfo) {
 	marketInfos = make(map[string]*model.MarketInfo)
 	instTypes := []string{`SPOT`, `SWAP`}
+	interestDay, amountLimits := getInterestOkx(account)
 	for _, instType := range instTypes {
 		param := map[string]interface{}{`instType`: instType}
 		basicBody, _ := sendSignRequestOKEX(account, http.MethodGet, `/api/v5/public/instruments`, param, nil)
@@ -834,7 +835,7 @@ func getMarketsOKEX(account *model.Account) (marketInfos map[string]*model.Marke
 					if strings.Contains(value[`instId`].(string), `-USDT-SWAP`) {
 						marketType = model.MarketTypePerp
 					}
-					success, _, symbol := model.GetFromDialect(model.OKEX, marketType, value[`instId`].(string))
+					success, coin, symbol := model.GetFromDialect(model.OKEX, marketType, value[`instId`].(string))
 					if !success {
 						continue
 					}
@@ -878,6 +879,10 @@ func getMarketsOKEX(account *model.Account) (marketInfos map[string]*model.Marke
 					if marketInfo.CTValue > 0 {
 						marketInfo.SizeMaxMarket *= marketInfo.CTValue
 						marketInfo.SizeMin *= marketInfo.CTValue
+					}
+					if marketType == model.MarketTypeSpot && amountLimits != nil && interestDay != nil {
+						marketInfo.InterestRate = interestDay[coin]
+						marketInfo.BorrowAvailable = amountLimits[coin]
 					}
 					marketInfos[marketInfo.Symbol] = marketInfo
 				}
@@ -1391,9 +1396,9 @@ func parseBalanceOKEX(value map[string]interface{}) (balance *model.Balance) {
 	if value[`crossLiab`] != nil && value[`crossLiab`] != `` {
 		balance.Borrow, _ = strconv.ParseFloat(value[`crossLiab`].(string), 64)
 	}
+	// 如果去借币，一共可用的币数
 	if value[`maxLoan`] != nil && len(strings.TrimSpace(value[`maxLoan`].(string))) > 0 {
 		balance.AvailableWithBorrow, _ = strconv.ParseFloat(value[`maxLoan`].(string), 64)
-		balance.AvailableWithBorrow += balance.Amount
 	}
 	return
 }
@@ -1464,6 +1469,12 @@ func setAccountModeOKEX(account *model.Account) (success bool) {
 	if err != nil || responseJson.Get(`code`).MustString() != `0` {
 		return false
 	}
+	return true
+}
+
+func setAutoBorrowRepayOkx(account *model.Account) (success bool) {
+	response, _ := sendSignRequestOKEX(account, http.MethodPost, `/api/v5/account/set-auto-loan`, nil, map[string]interface{}{})
+	util.Log(util.LogLevelInfo, `auto repay return `+string(response))
 	return true
 }
 
@@ -1748,4 +1759,36 @@ func getBillsOkx(account *model.Account, begin, end int64) (bool, []*model.Fundi
 		time.Sleep(time.Second)
 	}
 	return true, fundingFees
+}
+
+func getInterestOkx(account *model.Account) (interestDay, amountLimit map[string]float64) {
+	response, _ := sendSignRequestOKEX(account, http.MethodGet, `/api/v5/account/interest-limits`, nil, nil)
+	loanJson, err := util.NewJSON(response)
+	if err != nil || loanJson == nil {
+		return
+	}
+	if loanJson.Get(`code`).MustString() != `0` {
+		return
+	}
+	interestDay = map[string]float64{}
+	amountLimit = map[string]float64{}
+	data := loanJson.Get(`data`).MustArray()
+	if len(data) == 0 {
+		return
+	}
+	records := data[0].(map[string]interface{})[`records`]
+	for _, item := range records.([]interface{}) {
+		value := item.(map[string]interface{})
+		if value[`ccy`] == nil {
+			continue
+		}
+		coin := value[`ccy`].(string)
+		if value[`surplusLmt`] != nil {
+			amountLimit[coin], _ = strconv.ParseFloat(value[`surplusLmt`].(string), 64)
+		}
+		if value[`rate`] != nil {
+			interestDay[coin], _ = strconv.ParseFloat(value[`rate`].(string), 64)
+		}
+	}
+	return
 }
