@@ -910,7 +910,7 @@ func cancelAllGate(key, secret string) {
 		cancelOrders, _, errSpot := client.SpotApi.CancelOrders(ctx, order.CurrencyPair,
 			&gateApi.CancelOrdersOpts{Account: optional.NewString("spot")})
 		if errSpot != nil {
-			panicGateError(key, fmt.Sprintf("cancelAllGate %#v", cancelOrders), err)
+			panicGateError(key, fmt.Sprintf("cancelAllGate %#v", cancelOrders), errSpot)
 		} else {
 			util.Log(util.LogLevelInfo, fmt.Sprintf(
 				"cancelAll orders success gate spot cancel %s %d", order.CurrencyPair, len(cancelOrders)))
@@ -1304,4 +1304,15 @@ func queryOrderGate(key, secret, symbol, orderId string) (order *model.Order) {
 			order, orderSpot))
 	}
 	return order
+}
+
+func getInterestGate(account *model.Account) (order *model.Order) {
+	client, ctx := getClientGate(account.Key, account.Secret)
+	rate, _, err := client.UnifiedApi.GetUnifiedEstimateRate(ctx, []string{`BTC`, `ETH`})
+	//rate, _, err := client.UnifiedApi.GetUnifiedBorrowable(ctx, ``)
+	if err != nil {
+		return nil
+	}
+	fmt.Println(rate)
+	return
 }
