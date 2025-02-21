@@ -308,9 +308,21 @@ func calcAmount(index int, coin string, carryStatus, carryStatusRelate *model.Ca
 		return useRest || useRestRelate, nil, nil, 0, 0, 0
 	}
 	priceAskRelate := tickRelate.Asks[0].Price * (1 + handledRateRelate)
+	if carryStatusRelate.IsSpot && carryStatusRelate.Holding < 0 {
+		priceAskRelate = tickRelate.Asks[0].Price * (1 - marketInfo.InterestRate/6)
+	}
 	priceBidRelate := tickRelate.Bids[0].Price * (1 + handledRateRelate)
+	if carryStatusRelate.IsSpot && carryStatusRelate.Holding <= 0 {
+		priceBidRelate = tickRelate.Bids[0].Price * (1 - marketInfo.InterestRate/6)
+	}
 	priceAsk := tick.Asks[0].Price * (1 + handledRate)
+	if carryStatus.IsSpot && carryStatus.Holding < 0 {
+		priceAsk = tick.Asks[0].Price * (1 - marketInfo.InterestRate/6)
+	}
 	priceBid := tick.Bids[0].Price * (1 + handledRate)
+	if carryStatus.IsSpot && carryStatus.Holding <= 0 {
+		priceBid = tick.Bids[0].Price * (1 - marketInfo.InterestRate/6)
+	}
 	priceX := carryStatus.Setting.PriceX
 	priceXRelate := carryStatusRelate.Setting.PriceX
 	// 如果（卖方加权资金费率-买方加权资金费率）小于0，则开仓和换仓交易用4倍加权资金费率,平仓交易用2倍
@@ -341,12 +353,6 @@ func calcAmount(index int, coin string, carryStatus, carryStatusRelate *model.Ca
 		priceAsk = tick.Asks[0].Price * (1 + carryStatus.Setting.AmountRateCombine*handledRate)
 		scoreCloseR = (priceBidRelate/priceXRelate - priceAsk/priceX) / math.Max(priceAsk/priceX, priceBidRelate/priceXRelate)
 	}
-	//if coin == `BERA` {
-	//	util.LogLess(util.LogLevelInfo, fmt.Sprintf(`BERA score %s %s %f %s %s %f %d %d %d %d %f-%f %f-%f`,
-	//		carryStatus.Market, carryStatus.Symbol, handledRate, carryStatusRelate.Market, carryStatusRelate.Symbol, handledRateRelate,
-	//		carryStatus.Setting.ChanceLimit, carryStatusRelate.Setting.ChanceLimit, carryStatus.Setting.ChanceLimitCombine, carryStatusRelate.Setting.ChanceLimitCombine,
-	//		tick.Bids[0].Price, tick.Asks[0].Price, tickRelate.Bids[0].Price, tickRelate.Asks[0].Price))
-	//}
 	var valid bool
 	var amountLimit, scoreUse, scoreUseR float64
 	var scoreType, scoreTypeR string
