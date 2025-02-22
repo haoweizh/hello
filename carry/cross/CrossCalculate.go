@@ -368,7 +368,6 @@ func calcAmount(index int, coin string, carryStatus, carryStatusRelate *model.Ca
 			priceAskRelate = tickRelate.Asks[0].Price * (1 + carryStatus.Setting.AmountRate*rateR)
 			scoreOpen = (priceBid/priceX - priceAskRelate/priceXRelate) / math.Max(priceBid/priceX, priceAskRelate/priceXRelate)
 			scoreSwitch = scoreOpen
-			priceBid = tick.Bids[0].Price * (1 + rate)
 			priceAskRelate = tickRelate.Asks[0].Price * (1 + carryStatusRelate.Setting.AmountRateCombine*rateR)
 			scoreClose = (priceBid/priceX - priceAskRelate/priceXRelate) / math.Max(priceBid/priceX, priceAskRelate/priceXRelate)
 		}
@@ -381,7 +380,6 @@ func calcAmount(index int, coin string, carryStatus, carryStatusRelate *model.Ca
 			scoreOpenR = (priceBidRelate/priceXRelate - priceAsk/priceX) / math.Max(priceAsk/priceX, priceBidRelate/priceXRelate)
 			scoreSwitchR = scoreOpenR
 			priceBidRelate = tickRelate.Bids[0].Price * (1 + carryStatusRelate.Setting.AmountRateCombine*rateR)
-			priceAsk = tick.Asks[0].Price * (1 + rate)
 			scoreCloseR = (priceBidRelate/priceXRelate - priceAsk/priceX) / math.Max(priceAsk/priceX, priceBidRelate/priceXRelate)
 		}
 	} else if carryStatusRelate.IsSpot && !carryStatus.IsSpot {
@@ -396,7 +394,6 @@ func calcAmount(index int, coin string, carryStatus, carryStatusRelate *model.Ca
 			scoreOpen = (priceBid/priceX - priceAskRelate/priceXRelate) / math.Max(priceBid/priceX, priceAskRelate/priceXRelate)
 			scoreSwitch = scoreOpen
 			priceBid = tick.Bids[0].Price * (1 + carryStatus.Setting.AmountRateCombine*rate)
-			priceAskRelate = tickRelate.Asks[0].Price * (1 + rateR)
 			scoreClose = (priceBid/priceX - priceAskRelate/priceXRelate) / math.Max(priceBid/priceX, priceAskRelate/priceXRelate)
 		}
 		if (rateR < rate && carryStatusRelate.Holding <= 0) || (0 < rate && carryStatusRelate.Holding*tickRelate.Bids[0].Price > model.SmallHolding) { // R为卖方<对手
@@ -407,7 +404,6 @@ func calcAmount(index int, coin string, carryStatus, carryStatusRelate *model.Ca
 			priceAsk = tick.Asks[0].Price * (1 + carryStatusRelate.Setting.AmountRate*rate)
 			scoreOpenR = (priceBidRelate/priceXRelate - priceAsk/priceX) / math.Max(priceAsk/priceX, priceBidRelate/priceXRelate)
 			scoreSwitchR = scoreOpenR
-			priceBidRelate = tickRelate.Bids[0].Price * (1 + rateR)
 			priceAsk = tick.Asks[0].Price * (1 + carryStatus.Setting.AmountRateCombine*rate)
 			scoreCloseR = (priceBidRelate/priceXRelate - priceAsk/priceX) / math.Max(priceAsk/priceX, priceBidRelate/priceXRelate)
 		}
