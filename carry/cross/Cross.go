@@ -706,7 +706,7 @@ func getHolding(statuses []*model.CarryStatus) (bids, asks model.Ticks, statusMa
 		if !getTick || marketInfo == nil {
 			continue
 		}
-		getFunding, _, _, handledRate := handledFRate(status.Account, status.Market, status.Symbol, marketInfo.FundingRateInterval)
+		getFunding, _, _, handledRate := handledFRate(status, marketInfo)
 		if !getFunding {
 			continue
 		}
