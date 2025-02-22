@@ -1105,11 +1105,11 @@ func SetFundingRate(market, symbol string, fundingRate *model.FundingRate) {
 func GetBills(account *model.Account, begin, end int64) (success bool, fundingFees []*model.FundingFee) {
 	switch account.Market {
 	case model.OKEX:
-		_, fundingFees = getBillsOkx(account, begin, end, `8`)
+		_, fundingFees = getBillsOkx(account, begin, end, billTypeFundingRate)
 		if fundingFees == nil {
 			fundingFees = []*model.FundingFee{}
 		}
-		_, interestFees := getBillsOkx(account, begin, end, `7`)
+		_, interestFees := getBillsOkx(account, begin, end, billTypeInterest)
 		for _, fee := range interestFees {
 			fundingFees = append(fundingFees, fee)
 		}

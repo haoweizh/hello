@@ -554,12 +554,21 @@ func holdPage(c *gin.Context) {
 		}
 	}
 	fundingFee := 0.0
-	carryRows, _ = model.AppDB.Model(model.FundingFee{}).Select(`sum(bal_chg)`).
-		Where(`ccy=? and ts>=? and index=?`, `USDT`, util.GetToday().UnixMilli(), index).Rows()
+	carryRows, _ = model.AppDB.Model(model.FundingFee{}).Select(`market,ccy,symbol,bal_chg`).Where(
+		`ts>=? and index=?`, util.GetToday().UnixMilli(), index).Rows()
 	if carryRows != nil {
+		var fee float64
+		var market, coin, symbol string
 		for carryRows.Next() {
-			_ = carryRows.Scan(&fundingFee)
-			util.Log(util.LogLevelInfo, fmt.Sprintf(`funding fee in all %d %f`, index, fundingFee))
+			_ = carryRows.Scan(&market, &coin, &symbol, &fee)
+			price := 0.0
+			if coin == `USDT` {
+				price = 1
+			} else {
+				_, price = api.GetPriceForce(symbol, market)
+			}
+			fundingFee += price * fee
+			util.Log(util.LogLevelInfo, fmt.Sprintf(`add in all fee %s %s %f %f=%f`, market, coin, fee, price, fundingFee))
 		}
 		if carryRows.Close() != nil {
 			util.Log(util.LogLevelInfo, fmt.Sprintf(`fail to close DB for funding rows`))

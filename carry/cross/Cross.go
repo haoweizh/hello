@@ -478,7 +478,7 @@ func equalAccounts(doEqual bool, traceId int64) {
 			if doEqual {
 				go liquidateSmallContracts(indexAccounts[market], market)
 			} else {
-				go syncFundingFees(indexAccounts[market])
+				go syncFees(indexAccounts[market])
 				account := indexAccounts[market]
 				if market == model.Gate && account != nil && model.AppConfig.GetCrossStyles()[i] == crossGrid {
 					gateCm, _ := contractMarkets.Load(account.Key)

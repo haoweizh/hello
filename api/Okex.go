@@ -1708,18 +1708,19 @@ func getCandlesOKEX(account *model.Account, symbol string, before, after time.Ti
 // 参数:
 //
 //	account: 账户模型的指针，包含发送请求所需的账户信息
-//	instType: 产品类型，用于筛选账单
-//	instId: 产品ID，用于筛选账单
-//	typeAccount: 账户类型，用于筛选账单
 //	begin: 账单开始时间
 //	end: 账单结束时间
+//	billType: 产品类型，用于筛选账单
 //
 // 返回值:
 //
 //	请求是否成功
 //	响应的原始数据，仅在请求成功时返回
+const billTypeFundingRate = `8`
+const billTypeInterest = `7`
+
 func getBillsOkx(account *model.Account, begin, end int64, billType string) (bool, []*model.FundingFee) {
-	param := map[string]interface{}{`instType`: `SWAP`, `type`: billType, `begin`: begin, `end`: end, `limit`: 100}
+	param := map[string]interface{}{`type`: billType, `begin`: begin, `end`: end, `limit`: 100}
 	response, _ := sendSignRequestOKEX(account, http.MethodGet, `/api/v5/account/bills`, param, nil)
 	var fundingFees = make([]*model.FundingFee, 0)
 	for {
@@ -1739,9 +1740,13 @@ func getBillsOkx(account *model.Account, begin, end int64, billType string) (boo
 			}
 			ts, _ := strconv.ParseInt(data[`ts`].(string), 10, 64)
 			balChg, _ := strconv.ParseFloat(data[`balChg`].(string), 64)
-			success, _, symbol := model.GetFromDialect(model.OKEX, model.MarketTypePerp, data[`instId`].(string))
-			if !success {
-				util.Log(util.LogLevelError, fmt.Sprintf(`market %s to getbills instId %s can not get standardSymbol`, model.OKEX, data[`instId`].(string)))
+			symbol := ``
+			if billType == billTypeFundingRate {
+				_, _, symbol = model.GetFromDialect(model.OKEX, model.MarketTypePerp, data[`instId`].(string))
+			} else if billType == billTypeInterest && data[`ccy`] != nil {
+				symbol = data[`ccy`].(string) + model.UniStandardTail[model.MarketTypeSpot]
+			}
+			if symbol == `` {
 				continue
 			}
 			fundingFee := &model.FundingFee{

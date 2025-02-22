@@ -333,12 +333,12 @@ func GetHoldings(accounts map[string]*model.Account) (holding [][]interface{}) {
 				updateTime := fr.UpdateTime.In(loc)
 				fundingStr = fmt.Sprintf(`%e %dH %d:%d`,
 					100*fr.Rate, marketInfo.FundingRateInterval/3600000, updateTime.Hour(), updateTime.Minute())
-				fundingFeeValue, _ := util.LoadSyncMap(&model.AppEnvironment.FundingFeeToday, strconv.Itoa(accounts[market].Index), market, symbol)
-				if fundingFeeValue != nil {
-					fundingStr = fundingStr + fmt.Sprintf(` %.2fU`, fundingFeeValue.(float64))
-				}
 			} else {
 				fundingStr = fmt.Sprintf(`%e`, 100*marketInfo.InterestRate/-6)
+			}
+			fundingFeeValue, _ := util.LoadSyncMap(&model.AppEnvironment.FundingFeeToday, strconv.Itoa(accounts[market].Index), market, symbol)
+			if fundingFeeValue != nil {
+				fundingStr = fundingStr + fmt.Sprintf(` %.2fU`, fundingFeeValue.(float64))
 			}
 			holding[i] = append(holding[i], fundingStr)
 		} else {
@@ -466,7 +466,9 @@ func _(order *model.Order, setting *model.Setting) {
 	//util.Notice(`---- add done %s`, setting.Symbol)
 }
 
-func syncFundingFees(account *model.Account) {
+// syncFees
+// 包括funding fee和interest
+func syncFees(account *model.Account) {
 	success, fundingFees := api.GetBills(account, time.Now().UnixMilli()-3600000, time.Now().UnixMilli())
 	if success {
 		for _, fee := range fundingFees {
@@ -475,15 +477,22 @@ func syncFundingFees(account *model.Account) {
 	}
 	fundingFeeMap := make(map[string]float64)
 	idxStr := strconv.Itoa(account.Index)
-	fundingRows, _ := model.AppDB.Model(model.FundingFee{}).Select(`symbol,bal_chg`).
-		Where(`ccy=? and ts>=? and market=? and index=?`, `USDT`, util.GetToday().UnixMilli(), account.Market, account.Index).Rows()
+	fundingRows, _ := model.AppDB.Model(model.FundingFee{}).Select(`ccy,symbol,bal_chg`).
+		Where(`ts>=? and market=? and index=?`, util.GetToday().UnixMilli(), account.Market, account.Index).Rows()
 	if fundingRows != nil {
 		for fundingRows.Next() {
-			var symbol string
+			var coin, symbol string
 			balChg := 0.0
-			_ = fundingRows.Scan(&symbol, &balChg)
-			fundingFeeMap[symbol] += balChg
-			//util.Log(util.LogLevelInfo, fmt.Sprintf(`set funding fee %s %s %s %f`, idxStr, account.Market, symbol, balChg))
+			_ = fundingRows.Scan(&coin, &symbol, &balChg)
+			price := 0.0
+			if coin == `USDT` {
+				price = 1.0
+			} else {
+				_, price = api.GetPriceForce(symbol, account.Market)
+			}
+			fundingFeeMap[symbol] += balChg * price
+			util.Log(util.LogLevelInfo, fmt.Sprintf(`set market symbol fee %s %s %s %f*%f=%f`,
+				idxStr, account.Market, symbol, balChg, price, fundingFeeMap[symbol]))
 		}
 		for symbol, value := range fundingFeeMap {
 			util.StoreSyncMap(&model.AppEnvironment.FundingFeeToday, value, idxStr, account.Market, symbol)
