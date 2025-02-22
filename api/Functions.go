@@ -895,6 +895,7 @@ func FilterCross(market, symbol string) bool {
 func InitCrossMarketInfos(markets []string) {
 	infoPool := make(map[string][]*model.MarketInfo) // coin - []marketInfos
 	util.Log(util.LogLevelInfo, fmt.Sprintf(`begin to init cross market infos %#v`, markets))
+	model.MarketInfos.Clear()
 	for _, market := range markets {
 		InitMarketInfos(market)
 	}
