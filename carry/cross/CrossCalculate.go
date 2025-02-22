@@ -370,8 +370,7 @@ func calcAmount(index int, coin string, carryStatus, carryStatusRelate *model.Ca
 			scoreSwitch = scoreOpen
 			priceAskRelate = tickRelate.Asks[0].Price * (1 + carryStatusRelate.Setting.AmountRateCombine*rateR)
 			scoreClose = (priceBid/priceX - priceAskRelate/priceXRelate) / math.Max(priceBid/priceX, priceAskRelate/priceXRelate)
-		}
-		if (rateR < rate && carryStatus.Holding*tick.Bids[0].Price < -model.SmallHolding) || (rateR < 0 && carryStatus.Holding >= 0) { // R为卖方<对手
+		} else if (rateR < rate && carryStatus.Holding*tick.Bids[0].Price < -model.SmallHolding) || (rateR < 0 && carryStatus.Holding >= 0) { // R为卖方<对手
 			if rateR < 0 && carryStatus.Holding >= 0 {
 				rate = 0
 			}
@@ -395,8 +394,7 @@ func calcAmount(index int, coin string, carryStatus, carryStatusRelate *model.Ca
 			scoreSwitch = scoreOpen
 			priceBid = tick.Bids[0].Price * (1 + carryStatus.Setting.AmountRateCombine*rate)
 			scoreClose = (priceBid/priceX - priceAskRelate/priceXRelate) / math.Max(priceBid/priceX, priceAskRelate/priceXRelate)
-		}
-		if (rateR < rate && carryStatusRelate.Holding <= 0) || (0 < rate && carryStatusRelate.Holding*tickRelate.Bids[0].Price > model.SmallHolding) { // R为卖方<对手
+		} else if (rateR < rate && carryStatusRelate.Holding <= 0) || (0 < rate && carryStatusRelate.Holding*tickRelate.Bids[0].Price > model.SmallHolding) { // R为卖方<对手
 			if 0 < rate && carryStatusRelate.Holding*tickRelate.Bids[0].Price > model.SmallHolding {
 				rateR = 0
 			}
@@ -407,6 +405,14 @@ func calcAmount(index int, coin string, carryStatus, carryStatusRelate *model.Ca
 			priceAsk = tick.Asks[0].Price * (1 + carryStatus.Setting.AmountRateCombine*rate)
 			scoreCloseR = (priceBidRelate/priceXRelate - priceAsk/priceX) / math.Max(priceAsk/priceX, priceBidRelate/priceXRelate)
 		}
+	}
+	if scoreOpen < scoreClose || scoreOpenR < scoreCloseR {
+		if scoreOpen < scoreClose {
+			util.LogLess(util.LogLevelError, fmt.Sprintf(`wrong score %d %s %s holding %f fr %f interest %f price %f vs %s %s holding %f rf %f interest %f price %f`,
+				index, carryStatus.Market, carryStatus.Symbol, carryStatus.Holding, fundingRate.Rate, marketInfo.InterestRate, tick.Bids[0].Price,
+				carryStatusRelate.Market, carryStatusRelate.Symbol, carryStatusRelate.Holding, fundingRateRelate.Rate, marketInfoRelate.InterestRate, tickRelate.Bids[0].Price))
+		}
+		return false, nil, nil, 0, 0, 0
 	}
 	var valid bool
 	var amountLimit, scoreUse, scoreUseR float64
@@ -431,8 +437,13 @@ func calcAmount(index int, coin string, carryStatus, carryStatusRelate *model.Ca
 			bidAmount = tick.Asks[0].Amount
 		}
 	}
+	if carryStatus.IsSpot {
+		fundingRate = &model.FundingRate{Rate: interest, UpdateTime: time.Now()}
+	}
+	if carryStatusRelate.IsSpot {
+		fundingRateRelate = &model.FundingRate{Rate: interestR, UpdateTime: time.Now()}
+	}
 	generateMonitorMsg(index, coin, scoreType, scoreTypeR, scoreUse, scoreUseR, carryStatus, carryStatusRelate, marketInfo, marketInfoRelate, fundingRate, fundingRateRelate, valid)
-	//valid = false
 	if !valid {
 		return false, nil, nil, 0, 0, 0
 	}

@@ -849,50 +849,49 @@ func equalCoin(index int, coin string, statuses []*model.CarryStatus) (isEqual b
 }
 
 func placeEqual(status *model.CarryStatus, price, amount float64, orderSide string) (dealAmount float64) {
-	return 0
-	//if status == nil {
-	//	// 可能由于头寸太小，不满足所有市场的下单要求，而holdingU刚好大于10u，此时认为已平
-	//	util.Log(util.LogLevelError, fmt.Sprintf(`can not get status to equal`))
-	//	return 0
-	//}
-	//if status.Market == model.Ftx {
-	//	amount = math.Min(90000000, amount)
-	//}
-	//amount = math.Min(amount, compLimitInU/price)
-	//reduceOnly := status.ReduceOnlySell
-	//if orderSide == model.OrderSideBuy {
-	//	reduceOnly = status.ReduceOnlyBuy
-	//}
-	//checkAmount, _ := model.GetAmountInMarket(status.Market, status.Symbol, amount, price, reduceOnly)
-	//if checkAmount > 0 {
-	//	util.Log(util.LogLevelInfo, fmt.Sprintf(`do equal %f %f %#v`, price, amount, status))
-	//	order := api.PlaceOrder(status.Account, orderSide, model.OrderTypeLimit,
-	//		status.Market, status.Symbol, ``, model.FunctionCompAll, price, price, amount, false, nil)
-	//	if order != nil && order.Status != model.CarryStatusFail {
-	//		compOrders.Store(order.OrderId, order)
-	//		if orderSide == model.OrderSideBuy {
-	//			dealAmount += amount
-	//		} else {
-	//			dealAmount -= amount
-	//		}
-	//		saveCross(order, status.TradeLineBuy, status.TradeLineSell, status.Holding)
-	//		//if status.market == model.Gate {
-	//		//	api.SetGateBidAsk(status.account.Key, status.account.Secret, status.symbol)
-	//		//}
-	//		if orderSide == model.OrderSideSell {
-	//			placeStatus(status, price, -1*amount)
-	//		} else if orderSide == model.OrderSideBuy {
-	//			placeStatus(status, price, amount)
-	//		}
-	//	} else {
-	//		if orderSide == model.OrderSideBuy {
-	//			status.AvailableBuy = 0
-	//		} else if orderSide == model.OrderSideSell {
-	//			status.AvailableSell = 0
-	//		}
-	//	}
-	//}
-	//return dealAmount
+	if status == nil {
+		// 可能由于头寸太小，不满足所有市场的下单要求，而holdingU刚好大于10u，此时认为已平
+		util.Log(util.LogLevelError, fmt.Sprintf(`can not get status to equal`))
+		return 0
+	}
+	if status.Market == model.Ftx {
+		amount = math.Min(90000000, amount)
+	}
+	amount = math.Min(amount, compLimitInU/price)
+	reduceOnly := status.ReduceOnlySell
+	if orderSide == model.OrderSideBuy {
+		reduceOnly = status.ReduceOnlyBuy
+	}
+	checkAmount, _ := model.GetAmountInMarket(status.Market, status.Symbol, amount, price, reduceOnly)
+	if checkAmount > 0 {
+		util.Log(util.LogLevelInfo, fmt.Sprintf(`do equal %f %f %#v`, price, amount, status))
+		order := api.PlaceOrder(status.Account, orderSide, model.OrderTypeLimit,
+			status.Market, status.Symbol, ``, model.FunctionCompAll, price, price, amount, false, nil)
+		if order != nil && order.Status != model.CarryStatusFail {
+			compOrders.Store(order.OrderId, order)
+			if orderSide == model.OrderSideBuy {
+				dealAmount += amount
+			} else {
+				dealAmount -= amount
+			}
+			saveCross(order, status.TradeLineBuy, status.TradeLineSell, status.Holding)
+			//if status.market == model.Gate {
+			//	api.SetGateBidAsk(status.account.Key, status.account.Secret, status.symbol)
+			//}
+			if orderSide == model.OrderSideSell {
+				placeStatus(status, price, -1*amount)
+			} else if orderSide == model.OrderSideBuy {
+				placeStatus(status, price, amount)
+			}
+		} else {
+			if orderSide == model.OrderSideBuy {
+				status.AvailableBuy = 0
+			} else if orderSide == model.OrderSideSell {
+				status.AvailableSell = 0
+			}
+		}
+	}
+	return dealAmount
 }
 
 // ProcessCross setting.Chance<0时该币种只关仓

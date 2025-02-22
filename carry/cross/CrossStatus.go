@@ -176,7 +176,7 @@ func GetHoldings(accounts map[string]*model.Account) (holding [][]interface{}) {
 			if marketType == model.MarketTypeSpot {
 				smValue, _ := spotMarkets.Load(account.Key)
 				balance := smValue.(*spotMarket).balances[setting.Symbol]
-				if (balance != nil && balance.Amount > 0) || !setting.Valid || setting.MarketRelated != `` {
+				if (balance != nil && balance.Amount != 0) || !setting.Valid || setting.MarketRelated != `` {
 					if setting.Valid && setting.MarketRelated == `` {
 						valid = `true`
 						if !setting.Liquidated {
