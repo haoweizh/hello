@@ -349,8 +349,8 @@ func GetHoldings(accounts map[string]*model.Account) (holding [][]interface{}) {
 }
 
 // GetCrossMarketValue keepInU: 不计入总价值的保留不交易币种
-func GetCrossMarketValue(account *model.Account, market string, force bool) (inAllSpot, contractAccountValue, holdingSpot,
-	holdingFuture, marginAvailable float64) {
+func GetCrossMarketValue(account *model.Account, market string, force bool) (inAllSpot, contractAccountValue,
+	holdingSpot, borrowSpot, holdingFuture, marginAvailable float64) {
 	value, ok := spotMarkets.Load(account.Key)
 	if (!ok || value == nil) && force {
 		switch market {
@@ -370,7 +370,11 @@ func GetCrossMarketValue(account *model.Account, market string, force bool) (inA
 			if settings != nil {
 				settings.Range(func(symbol, value interface{}) bool {
 					if sm.balances != nil && sm.balances[symbol.(string)] != nil {
-						holdingSpot += sm.balances[symbol.(string)].UsdValue
+						if sm.balances[symbol.(string)].UsdValue > 0 {
+							holdingSpot += sm.balances[symbol.(string)].UsdValue
+						} else if sm.balances[symbol.(string)].UsdValue < 0 {
+							borrowSpot += sm.balances[symbol.(string)].UsdValue
+						}
 					}
 					return true
 				})

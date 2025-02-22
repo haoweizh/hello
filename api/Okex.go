@@ -264,54 +264,57 @@ var wsAccountHandlerOKEX = func(market, key string, event []byte) {
 	}
 	if responseJson.GetPath(`arg`, `channel`).MustString() == `account` {
 		dataArray := responseJson.Get(`data`).MustArray()
-		if dataArray != nil {
-			collateral := &model.Collateral{AccountKey: key}
-			collateral.Occupied, _ = strconv.ParseFloat(dataArray[0].(map[string]interface{})[`imr`].(string), 64) // 被占用保证金
-			collateral.Rate, _ = strconv.ParseFloat(dataArray[0].(map[string]interface{})[`mgnRatio`].(string), 64)
-			//collateral.Available, _ = strconv.ParseFloat(dataArray[0].(map[string]interface{})[`adjEq`].(string), 64)
-			data := dataArray[0].(map[string]interface{})
-			if data[`details`] != nil {
-				for _, item := range data[`details`].([]interface{}) {
-					value := item.(map[string]interface{})
-					if value[`ccy`] != nil && value[`ccy`].(string) == `USDT` {
-						//fmt.Println(value[`availEq`].(string))
-						collateral.Available, _ = strconv.ParseFloat(value[`availEq`].(string), 64) // 可用保证金
-					}
+		if dataArray == nil {
+			return
+		}
+		util.LogLess(util.LogLevelInfo, fmt.Sprintf(`record okx account balances %s`, string(event)))
+		collateral := &model.Collateral{AccountKey: key}
+		collateral.Occupied, _ = strconv.ParseFloat(dataArray[0].(map[string]interface{})[`imr`].(string), 64) // 被占用保证金
+		collateral.Rate, _ = strconv.ParseFloat(dataArray[0].(map[string]interface{})[`mgnRatio`].(string), 64)
+		//collateral.Available, _ = strconv.ParseFloat(dataArray[0].(map[string]interface{})[`adjEq`].(string), 64)
+		data := dataArray[0].(map[string]interface{})
+		if data[`details`] != nil {
+			balances := make([]*model.Balance, 0)
+			for _, item := range data[`details`].([]interface{}) {
+				value := item.(map[string]interface{})
+				if value[`ccy`] != nil && value[`ccy`].(string) == `USDT` {
+					collateral.Available, _ = strconv.ParseFloat(value[`availEq`].(string), 64) // 可用保证金
+					collateral.Available = collateral.Available - collateral.Occupied
+					collateral.AccountValueInU, _ = strconv.ParseFloat(dataArray[0].(map[string]interface{})[`totalEq`].(string), 64)
+					//util.Log(util.LogLevelInfo, fmt.Sprintf("okex unified %s %f", collateral.AccountKey, collateral.Available))
+					model.CollateralHandler(key, ``, false, collateral)
+				} else if value[`ccy`] != nil {
+					balances = append(balances, parseBalanceOKEX(value))
 				}
 			}
-			collateral.Available = collateral.Available - collateral.Occupied
-			collateral.AccountValueInU, _ = strconv.ParseFloat(dataArray[0].(map[string]interface{})[`totalEq`].(string), 64)
-			//util.Log(util.LogLevelInfo, fmt.Sprintf("okex unified %s %f", collateral.AccountKey, collateral.Available))
-			model.CollateralHandler(key, ``, false, collateral)
+			model.CrossBalancesHandler(market, key, balances)
 		}
-		//} else {
-		//	fmt.Println(time.Now().String() + ` other msg ` + string(event))
 	}
 	//https://www.okx.com/docs-v5/zh/#trading-account-websocket-balance-and-position-channel
-	if responseJson.GetPath(`arg`, `channel`).MustString() == `balance_and_position` {
-		//util.Log(util.LogLevelInfo, "risk check ws update balances and positions okx "+string(event))
-		dataArray := responseJson.Get(`data`).MustArray()
-		if dataArray != nil {
-			var balances []*model.Balance
-			data := dataArray[0].(map[string]interface{})
-			if data[`balData`] != nil {
-				for _, item := range data[`balData`].([]interface{}) {
-					value := item.(map[string]interface{})
-					if value[`ccy`] == nil || value[`uTime`] == nil || value[`cashBal`] == nil {
-						continue
-					}
-					balance := &model.Balance{Coin: value[`ccy`].(string)}
-					balance.Amount, _ = strconv.ParseFloat(value[`cashBal`].(string), 64)
-					ts, _ := strconv.ParseInt(value[`uTime`].(string), 10, 64)
-					balance.BalanceTime = time.UnixMilli(ts)
-					balances = append(balances, balance)
-				}
-			}
-			if balances != nil && len(balances) > 0 {
-				model.CrossBalancesHandler(market, key, balances)
-			}
-		}
-	}
+	//if responseJson.GetPath(`arg`, `channel`).MustString() == `balance_and_position` {
+	//	//util.Log(util.LogLevelInfo, "risk check ws update balances and positions okx "+string(event))
+	//	dataArray := responseJson.Get(`data`).MustArray()
+	//	if dataArray != nil {
+	//		var balances []*model.Balance
+	//		data := dataArray[0].(map[string]interface{})
+	//		if data[`balData`] != nil {
+	//			for _, item := range data[`balData`].([]interface{}) {
+	//				value := item.(map[string]interface{})
+	//				if value[`ccy`] == nil || value[`uTime`] == nil || value[`cashBal`] == nil {
+	//					continue
+	//				}
+	//				balance := &model.Balance{Coin: value[`ccy`].(string)}
+	//				balance.Amount, _ = strconv.ParseFloat(value[`cashBal`].(string), 64)
+	//				ts, _ := strconv.ParseInt(value[`uTime`].(string), 10, 64)
+	//				balance.BalanceTime = time.UnixMilli(ts)
+	//				balances = append(balances, balance)
+	//			}
+	//		}
+	//		if balances != nil && len(balances) > 0 {
+	//			model.CrossBalancesHandler(market, key, balances)
+	//		}
+	//	}
+	//}
 }
 
 var loginTimeOk sync.Map // accountKey - time in seconds
@@ -345,19 +348,14 @@ func wsLogInOKEX(account *model.Account, conn *model.WSConn, loginDelay bool) (s
 
 func subscribePrivateOKEX(conn *model.WSConn, connKey string) {
 	// 订阅私有频道
-	subscribeMsg := map[string]interface{}{
-		"op": "subscribe",
-		"args": []map[string]string{
-			{"channel": "balance_and_position"},
-		},
-	}
-	err := conn.WriteJson(subscribeMsg)
-	if err != nil {
-		util.Log(util.LogLevelError, fmt.Sprintf("%s subscribe private web socket error:%s", model.OKEX, err.Error()))
-		model.AppEnvironment.ConnOrder.Delete(connKey)
-		return
-	}
-	err = conn.WriteJson(map[string]interface{}{"op": "subscribe", "args": []interface{}{map[string]string{"channel": "orders", "instType": "SPOT"}}})
+	//subscribeMsg := map[string]interface{}{"op": "subscribe", "args": []map[string]string{{"channel": "balance_and_position"}}}
+	//err := conn.WriteJson(subscribeMsg)
+	//if err != nil {
+	//	util.Log(util.LogLevelError, fmt.Sprintf("%s subscribe private web socket error:%s", model.OKEX, err.Error()))
+	//	model.AppEnvironment.ConnOrder.Delete(connKey)
+	//	return
+	//}
+	err := conn.WriteJson(map[string]interface{}{"op": "subscribe", "args": []interface{}{map[string]string{"channel": "orders", "instType": "SPOT"}}})
 	if err != nil {
 		util.Log(util.LogLevelError, fmt.Sprintf(`fail to sub %s spot order update`, model.OKEX))
 		model.AppEnvironment.ConnOrder.Delete(connKey)
@@ -369,7 +367,7 @@ func subscribePrivateOKEX(conn *model.WSConn, connKey string) {
 		model.AppEnvironment.ConnOrder.Delete(connKey)
 		return
 	}
-	err = conn.WriteJson(map[string]interface{}{"op": "subscribe", "args": []interface{}{map[string]string{"channel": "account", "ccy": "USDT"}}})
+	err = conn.WriteJson(map[string]interface{}{"op": "subscribe", "args": []interface{}{map[string]string{"channel": "account"}}})
 	if err != nil {
 		model.AppEnvironment.ConnOrder.Delete(connKey)
 		util.Log(util.LogLevelError, fmt.Sprintf(`fail to sub %s  account channel ccy USDT update`, model.OKEX))

@@ -422,12 +422,13 @@ func holdPage(c *gin.Context) {
 	inAll := []float64{0, 0, 0, 0, 0, 0}
 	for _, account := range queryAccounts {
 		if account != nil {
-			inAllSpot, contractAccountValue, holdingSpot, holdingFuture, marginAvailable :=
+			inAllSpot, contractAccountValue, holdingSpot, borrowSpot, holdingFuture, marginAvailable :=
 				cross.GetCrossMarketValue(account, account.Market, force == `true`)
 			marketValues = append(marketValues, []string{account.Market,
 				strconv.FormatFloat(inAllSpot, 'f', 0, 64),
 				strconv.FormatFloat(contractAccountValue, 'f', 0, 64),
 				strconv.FormatFloat(holdingSpot, 'f', 0, 64),
+				strconv.FormatFloat(borrowSpot, 'f', 0, 64),
 				strconv.FormatFloat(holdingFuture, 'f', 0, 64),
 				strconv.FormatFloat(marginAvailable, 'f', 0, 64)})
 			if account.Market != model.BinanceSpot && account.Market != model.BitgetSpot {
@@ -440,14 +441,15 @@ func holdPage(c *gin.Context) {
 			inAll[1] += inAllSpot
 			inAll[2] += contractAccountValue
 			inAll[3] += holdingSpot
-			inAll[4] += holdingFuture
-			inAll[5] += marginAvailable
+			inAll[4] += borrowSpot
+			inAll[5] += holdingFuture
+			inAll[6] += marginAvailable
 		}
 	}
 	marketValues = append(marketValues, []string{strconv.FormatFloat(inAll[0], 'f', 0, 64),
 		strconv.FormatFloat(inAll[1], 'f', 0, 64), strconv.FormatFloat(inAll[2], 'f', 0, 64),
 		strconv.FormatFloat(inAll[3], 'f', 0, 64), strconv.FormatFloat(inAll[4], 'f', 0, 64),
-		strconv.FormatFloat(inAll[5], 'f', 0, 64)})
+		strconv.FormatFloat(inAll[5], 'f', 0, 64), strconv.FormatFloat(inAll[6], 'f', 0, 64)})
 	tradeInfo := make([][]string, 0)
 	duration, _ := time.ParseDuration(`-96h`)
 	timeBegin := time.Now().Add(duration)
