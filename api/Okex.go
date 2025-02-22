@@ -279,6 +279,7 @@ var wsAccountHandlerOKEX = func(market, key string, event []byte) {
 					}
 				}
 			}
+			collateral.Available = collateral.Available - collateral.Occupied
 			collateral.AccountValueInU, _ = strconv.ParseFloat(dataArray[0].(map[string]interface{})[`totalEq`].(string), 64)
 			//util.Log(util.LogLevelInfo, fmt.Sprintf("okex unified %s %f", collateral.AccountKey, collateral.Available))
 			model.CollateralHandler(key, ``, false, collateral)
@@ -1439,6 +1440,7 @@ func getBalanceOKEX(account *model.Account) (success bool, balances []*model.Bal
 	if data[`mgnRatio`] != nil {
 		collateral.Rate, _ = strconv.ParseFloat(data[`mgnRatio`].(string), 64)
 	}
+	collateral.Available = collateral.Available - collateral.Occupied
 	for _, item := range data[`details`].([]interface{}) {
 		balance := parseBalanceOKEX(item.(map[string]interface{}))
 		if balance != nil {
