@@ -305,6 +305,9 @@ func calcAmount(index int, coin string, carryStatus, carryStatusRelate *model.Ca
 	}
 	interest := -marketInfo.InterestRate / 6
 	interestR := -marketInfoRelate.InterestRate / 6
+	if marketInfo.InterestRate != 0 || marketInfoRelate.InterestRate != 0 {
+		util.LogLess(util.LogLevelError, fmt.Sprintf(`%s %s %f %s %s %f`, marketInfo.Market, marketInfo.Symbol, marketInfo.InterestRate, marketInfoRelate.Market, marketInfoRelate.Symbol, marketInfoRelate.InterestRate))
+	}
 	gotFr, useRest, fundingRate, handledRate := handledFRate(carryStatus.Account, carryStatus.Market, carryStatus.Symbol, marketInfo.FundingRateInterval)
 	gotFrRelate, useRestRelate, fundingRateRelate, handledRateRelate := handledFRate(carryStatusRelate.Account, carryStatusRelate.Market, carryStatusRelate.Symbol, marketInfoRelate.FundingRateInterval)
 	if !gotFr || !gotFrRelate || useRest || useRestRelate {
@@ -408,8 +411,8 @@ func calcAmount(index int, coin string, carryStatus, carryStatusRelate *model.Ca
 	}
 	if scoreOpen < scoreClose || scoreOpenR < scoreCloseR {
 		if scoreOpen < scoreClose {
-			util.LogLess(util.LogLevelError, fmt.Sprintf(`wrong score %d %s %s holding %f fr %f interest %f price %f vs %s %s holding %f rf %f interest %f price %f`,
-				index, carryStatus.Market, carryStatus.Symbol, carryStatus.Holding, fundingRate.Rate, marketInfo.InterestRate, tick.Bids[0].Price,
+			util.LogLess(util.LogLevelError, fmt.Sprintf(`wrong score %d %s %s %f < %f holding %f fr %f interest %f price %f vs %s %s holding %f rf %f interest %f price %f`,
+				index, carryStatus.Market, carryStatus.Symbol, scoreOpen, scoreClose, carryStatus.Holding, fundingRate.Rate, marketInfo.InterestRate, tick.Bids[0].Price,
 				carryStatusRelate.Market, carryStatusRelate.Symbol, carryStatusRelate.Holding, fundingRateRelate.Rate, marketInfoRelate.InterestRate, tickRelate.Bids[0].Price))
 		}
 		return false, nil, nil, 0, 0, 0
