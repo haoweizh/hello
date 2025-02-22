@@ -906,7 +906,7 @@ func Test_C(t *testing.T) {
 }
 
 func Test_Funding(t *testing.T) {
-	market := model.BinancePerp
+	market := model.OKEX
 	model.NewConfig()
 	model.AppDB, _ = gorm.Open(postgres.Open(model.AppConfig.DBConnection), &gorm.Config{})
 	//_ = model.AppDB.AutoMigrate(&model.FundingFee{})

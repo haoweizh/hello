@@ -1105,7 +1105,14 @@ func SetFundingRate(market, symbol string, fundingRate *model.FundingRate) {
 func GetBills(account *model.Account, begin, end int64) (success bool, fundingFees []*model.FundingFee) {
 	switch account.Market {
 	case model.OKEX:
-		return getBillsOkx(account, begin, end)
+		_, fundingFees = getBillsOkx(account, begin, end, `8`)
+		if fundingFees == nil {
+			fundingFees = []*model.FundingFee{}
+		}
+		_, interestFees := getBillsOkx(account, begin, end, `7`)
+		for _, fee := range interestFees {
+			fundingFees = append(fundingFees, fee)
+		}
 	case model.Gate:
 		return getBillsGate(account, begin, end)
 	case model.Bybit:
@@ -1115,7 +1122,7 @@ func GetBills(account *model.Account, begin, end int64) (success bool, fundingFe
 	default:
 		util.Log(util.LogLevelInfo, fmt.Sprintf(`un-support market %s`, account.Market))
 	}
-	return false, nil
+	return false, fundingFees
 }
 
 func GetInterest(account *model.Account) (success bool) {
