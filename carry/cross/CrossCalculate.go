@@ -340,6 +340,11 @@ func calcAmount(index int, coin string, carryStatus, carryStatusRelate *model.Ca
 			priceBid = tick.Bids[0].Price * (1 + carryStatus.Setting.AmountRateCombine*handledRate)
 			priceAskRelate = tickRelate.Asks[0].Price * (1 + carryStatusRelate.Setting.AmountRateCombine*handledRateRelate)
 			scoreClose = (priceBid/priceX - priceAskRelate/priceXRelate) / math.Max(priceBid/priceX, priceAskRelate/priceXRelate)
+			if scoreOpen < scoreClose {
+				util.LogLess(util.LogLevelError, fmt.Sprintf(`wrong score inside %d %s %s %f < %f holding %f fr %f interest %f price %f vs %s %s holding %f rf %f interest %f price %f`,
+					index, carryStatus.Market, carryStatus.Symbol, scoreOpen, scoreClose, carryStatus.Holding, handledRate, marketInfo.InterestRate, tick.Bids[0].Price,
+					carryStatusRelate.Market, carryStatusRelate.Symbol, carryStatusRelate.Holding, handledRateRelate, marketInfoRelate.InterestRate, tickRelate.Bids[0].Price))
+			}
 		} else if handledRateRelate < handledRate { // R为卖方<0
 			priceBidRelate = tickRelate.Bids[0].Price * (1 + carryStatusRelate.Setting.AmountRate*handledRateRelate)
 			priceAsk = tick.Asks[0].Price * (1 + carryStatusRelate.Setting.AmountRate*handledRate)
@@ -399,11 +404,6 @@ func calcAmount(index int, coin string, carryStatus, carryStatusRelate *model.Ca
 		}
 	}
 	if scoreOpen < scoreClose || scoreOpenR < scoreCloseR {
-		if scoreOpen < scoreClose {
-			util.LogLess(util.LogLevelError, fmt.Sprintf(`wrong score %d %s %s %f < %f holding %f fr %f interest %f price %f vs %s %s holding %f rf %f interest %f price %f`,
-				index, carryStatus.Market, carryStatus.Symbol, scoreOpen, scoreClose, carryStatus.Holding, fundingRate.Rate, marketInfo.InterestRate, tick.Bids[0].Price,
-				carryStatusRelate.Market, carryStatusRelate.Symbol, carryStatusRelate.Holding, fundingRateRelate.Rate, marketInfoRelate.InterestRate, tickRelate.Bids[0].Price))
-		}
 		return false, nil, nil, 0, 0, 0
 	}
 	var valid bool

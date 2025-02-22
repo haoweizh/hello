@@ -328,6 +328,8 @@ func GetHoldings(accounts map[string]*model.Account) (holding [][]interface{}) {
 				if fundingFeeValue != nil {
 					fundingStr = fundingStr + fmt.Sprintf(` %.2fU`, fundingFeeValue.(float64))
 				}
+			} else {
+				fundingStr = fmt.Sprintf(`%e`, marketInfo.InterestRate/-6)
 			}
 			holding[i] = append(holding[i], fundingStr)
 		} else {
