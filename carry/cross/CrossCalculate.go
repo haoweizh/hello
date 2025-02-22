@@ -161,20 +161,12 @@ func generateMonitorMsg(index int, coin, scoreType, scoreTypeR string, score, sc
 	//}
 	loc, _ := time.LoadLocation("Asia/Shanghai")
 	fundingStr, fundingStrRelate := ``, ``
-	if !carryStatus.IsSpot {
-		updateTime := fundingRate.UpdateTime.In(loc)
-		fundingStr = fmt.Sprintf(`%d:%d %e %dH %d:%d`,
-			util.GetNow().Hour(), util.GetNow().Minute(), 100*fundingRate.Rate, marketInfo.FundingRateInterval/3600000, updateTime.Hour(), updateTime.Minute())
-	} else {
-		fundingStr = fmt.Sprintf(`%d:%d`, util.GetNow().Hour(), util.GetNow().Minute())
-	}
-	if !carryStatusRelate.IsSpot {
-		updateTime := fundingRateRelate.UpdateTime.In(loc)
-		fundingStrRelate = fmt.Sprintf(`%d:%d %e %dH %d:%d`,
-			util.GetNow().Hour(), util.GetNow().Minute(), 100*fundingRateRelate.Rate, marketInfoRelate.FundingRateInterval/3600000, updateTime.Hour(), updateTime.Minute())
-	} else {
-		fundingStrRelate = fmt.Sprintf(`%d:%d`, util.GetNow().Hour(), util.GetNow().Minute())
-	}
+	updateTime := fundingRate.UpdateTime.In(loc)
+	fundingStr = fmt.Sprintf(`%d:%d %e %dH %d:%d`,
+		util.GetNow().Hour(), util.GetNow().Minute(), 100*fundingRate.Rate, marketInfo.FundingRateInterval/3600000, updateTime.Hour(), updateTime.Minute())
+	updateTime = fundingRateRelate.UpdateTime.In(loc)
+	fundingStrRelate = fmt.Sprintf(`%d:%d %e %dH %d:%d`,
+		util.GetNow().Hour(), util.GetNow().Minute(), 100*fundingRateRelate.Rate, marketInfoRelate.FundingRateInterval/3600000, updateTime.Hour(), updateTime.Minute())
 	var infoValue []string
 	if mark < markRelate {
 		mark = fmt.Sprintf(`%s|%s`, mark, markRelate)
@@ -305,10 +297,6 @@ func calcAmount(index int, coin string, carryStatus, carryStatusRelate *model.Ca
 	}
 	interest := -marketInfo.InterestRate / 6
 	interestR := -marketInfoRelate.InterestRate / 6
-	if marketInfo.InterestRate != 0 || marketInfoRelate.InterestRate != 0 {
-		util.LogLess(util.LogLevelError, fmt.Sprintf(`get interest show %s %s %f %s %s %f`,
-			marketInfo.Market, marketInfo.Symbol, marketInfo.InterestRate, marketInfoRelate.Market, marketInfoRelate.Symbol, marketInfoRelate.InterestRate))
-	}
 	gotFr, useRest, fundingRate, handledRate := handledFRate(carryStatus.Account, carryStatus.Market, carryStatus.Symbol, marketInfo.FundingRateInterval)
 	gotFrRelate, useRestRelate, fundingRateRelate, handledRateRelate := handledFRate(carryStatusRelate.Account, carryStatusRelate.Market, carryStatusRelate.Symbol, marketInfoRelate.FundingRateInterval)
 	if !gotFr || !gotFrRelate || useRest || useRestRelate {
