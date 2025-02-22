@@ -306,7 +306,8 @@ func calcAmount(index int, coin string, carryStatus, carryStatusRelate *model.Ca
 	interest := -marketInfo.InterestRate / 6
 	interestR := -marketInfoRelate.InterestRate / 6
 	if marketInfo.InterestRate != 0 || marketInfoRelate.InterestRate != 0 {
-		util.LogLess(util.LogLevelError, fmt.Sprintf(`%s %s %f %s %s %f`, marketInfo.Market, marketInfo.Symbol, marketInfo.InterestRate, marketInfoRelate.Market, marketInfoRelate.Symbol, marketInfoRelate.InterestRate))
+		util.LogLess(util.LogLevelError, fmt.Sprintf(`get interest show %s %s %f %s %s %f`,
+			marketInfo.Market, marketInfo.Symbol, marketInfo.InterestRate, marketInfoRelate.Market, marketInfoRelate.Symbol, marketInfoRelate.InterestRate))
 	}
 	gotFr, useRest, fundingRate, handledRate := handledFRate(carryStatus.Account, carryStatus.Market, carryStatus.Symbol, marketInfo.FundingRateInterval)
 	gotFrRelate, useRestRelate, fundingRateRelate, handledRateRelate := handledFRate(carryStatusRelate.Account, carryStatusRelate.Market, carryStatusRelate.Symbol, marketInfoRelate.FundingRateInterval)
