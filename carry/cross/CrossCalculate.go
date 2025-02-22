@@ -448,6 +448,7 @@ func calcAmount(index int, coin string, carryStatus, carryStatusRelate *model.Ca
 		fundingRateRelate = &model.FundingRate{Rate: interestR, UpdateTime: time.Now()}
 	}
 	generateMonitorMsg(index, coin, scoreType, scoreTypeR, scoreUse, scoreUseR, carryStatus, carryStatusRelate, marketInfo, marketInfoRelate, fundingRate, fundingRateRelate, valid)
+	valid = false
 	if !valid {
 		return false, nil, nil, 0, 0, 0
 	}
