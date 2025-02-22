@@ -295,8 +295,8 @@ func calcAmount(index int, coin string, carryStatus, carryStatusRelate *model.Ca
 	if marketInfo == nil || marketInfoRelate == nil {
 		return false, nil, nil, 0, 0, 0
 	}
-	gotFr, useRest, fundingRate, handledRate := handledFRate(carryStatus, marketInfo)
-	gotFrRelate, useRestRelate, fundingRateRelate, handledRateRelate := handledFRate(carryStatusRelate, marketInfoRelate)
+	gotFr, useRest, fundingRate, handledRate := handledFRate(carryStatus, marketInfo, tick.Bids[0].Price)
+	gotFrRelate, useRestRelate, fundingRateRelate, handledRateRelate := handledFRate(carryStatusRelate, marketInfoRelate, tickRelate.Bids[0].Price)
 	if !gotFr || !gotFrRelate || useRest || useRestRelate {
 		return useRest || useRestRelate, nil, nil, 0, 0, 0
 	}
@@ -358,7 +358,6 @@ func calcAmount(index int, coin string, carryStatus, carryStatusRelate *model.Ca
 		}
 	}
 	generateMonitorMsg(index, coin, scoreType, scoreTypeR, scoreUse, scoreUseR, carryStatus, carryStatusRelate, marketInfo, marketInfoRelate, fundingRate, fundingRateRelate, valid)
-	valid = false
 	if !valid {
 		return false, nil, nil, 0, 0, 0
 	}
