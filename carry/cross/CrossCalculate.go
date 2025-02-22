@@ -78,9 +78,10 @@ var ProcessCrossBalances = func(market, accountKey string, balances []*model.Bal
 				status.Holding = balance.Amount
 			}
 			if status.IsSpot {
-				util.Log(util.LogLevelInfo, fmt.Sprintf(`update limit sell %s %s %f to %f`,
+				util.LogLess(util.LogLevelInfo, fmt.Sprintf(`update limit sell %s %s %f to %f`,
 					status.Market, status.Symbol, status.LimitSell, balance.AvailableWithBorrow))
 				status.LimitSell = math.Min(status.LimitSell, balance.AvailableWithBorrow)
+				status.AvailableSell = math.Min(status.AvailableSell, balance.AvailableWithBorrow)
 			}
 			holding += status.Holding * setting.GridAmount
 			if price == 0 {

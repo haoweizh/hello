@@ -267,18 +267,18 @@ var wsAccountHandlerOKEX = func(market, key string, event []byte) {
 		if dataArray == nil {
 			return
 		}
-		util.LogLess(util.LogLevelInfo, fmt.Sprintf(`record okx account balances %s`, string(event)))
+		//util.LogLess(util.LogLevelInfo, fmt.Sprintf(`record okx account balances %s`, string(event)))
 		collateral := &model.Collateral{AccountKey: key}
 		collateral.Occupied, _ = strconv.ParseFloat(dataArray[0].(map[string]interface{})[`imr`].(string), 64) // 被占用保证金
 		collateral.Rate, _ = strconv.ParseFloat(dataArray[0].(map[string]interface{})[`mgnRatio`].(string), 64)
-		//collateral.Available, _ = strconv.ParseFloat(dataArray[0].(map[string]interface{})[`adjEq`].(string), 64)
+		collateral.Available, _ = strconv.ParseFloat(dataArray[0].(map[string]interface{})[`adjEq`].(string), 64)
 		data := dataArray[0].(map[string]interface{})
 		if data[`details`] != nil {
 			balances := make([]*model.Balance, 0)
 			for _, item := range data[`details`].([]interface{}) {
 				value := item.(map[string]interface{})
 				if value[`ccy`] != nil && value[`ccy`].(string) == `USDT` {
-					collateral.Available, _ = strconv.ParseFloat(value[`availEq`].(string), 64) // 可用保证金
+					//collateral.Available, _ = strconv.ParseFloat(value[`availEq`].(string), 64) // 可用保证金
 					collateral.Available = collateral.Available - collateral.Occupied
 					collateral.AccountValueInU, _ = strconv.ParseFloat(dataArray[0].(map[string]interface{})[`totalEq`].(string), 64)
 					//util.Log(util.LogLevelInfo, fmt.Sprintf("okex unified %s %f", collateral.AccountKey, collateral.Available))
@@ -1396,9 +1396,11 @@ func parseBalanceOKEX(value map[string]interface{}) (balance *model.Balance) {
 	if value[`crossLiab`] != nil && value[`crossLiab`] != `` {
 		balance.Borrow, _ = strconv.ParseFloat(value[`crossLiab`].(string), 64)
 	}
-	// 如果去借币，一共可用的币数
 	if value[`maxLoan`] != nil && len(strings.TrimSpace(value[`maxLoan`].(string))) > 0 {
 		balance.AvailableWithBorrow, _ = strconv.ParseFloat(value[`maxLoan`].(string), 64)
+	}
+	if balance.Amount > 0 {
+		balance.AvailableWithBorrow += balance.Amount
 	}
 	return
 }
@@ -1421,18 +1423,18 @@ func getBalanceOKEX(account *model.Account) (success bool, balances []*model.Bal
 		totalInUsd, _ = strconv.ParseFloat(data[`totalEq`].(string), 64)
 	}
 	collateral = &model.Collateral{}
-	if data[`details`] != nil {
-		for _, item := range data[`details`].([]interface{}) {
-			value := item.(map[string]interface{})
-			if value[`ccy`] != nil && value[`ccy`].(string) == `USDT` {
-				//fmt.Println(value[`availEq`].(string))
-				collateral.Available, _ = strconv.ParseFloat(value[`availEq`].(string), 64) // 可用保证金
-			}
-		}
-	}
-	//if data[`adjEq`] != nil {
-	//	collateral.Available, _ = strconv.ParseFloat(data[`adjEq`].(string), 64) // 可用保证金
+	//if data[`details`] != nil {
+	//for _, item := range data[`details`].([]interface{}) {
+	//value := item.(map[string]interface{})
+	//if value[`ccy`] != nil && value[`ccy`].(string) == `USDT` {
+	//fmt.Println(value[`availEq`].(string))
+	//collateral.Available, _ = strconv.ParseFloat(value[`availEq`].(string), 64) // 可用保证金
 	//}
+	//}
+	//}
+	if data[`adjEq`] != nil {
+		collateral.Available, _ = strconv.ParseFloat(data[`adjEq`].(string), 64) // 可用保证金
+	}
 	if data[`imr`] != nil {
 		collateral.Occupied, _ = strconv.ParseFloat(data[`imr`].(string), 64) // 被占用保证金
 	}

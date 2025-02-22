@@ -609,19 +609,18 @@ func Test_Order(t *testing.T) {
 func Test_WSOKPair(t *testing.T) {
 	model.NewConfig()
 	market := model.OKEX
-	go model.AppEnvironment.HandleWSResp()
+	//go model.AppEnvironment.HandleWSResp()
 	api.MaintainConns(market)
 	//symbol := `DOGE_USDT`
 	//api.GetPositions(account.Key, account.Secret, market)
 	//api.GetBalances(account.Key, account.Secret, market)
-	api.InitMarketInfos(market)
+	//api.InitMarketInfos(market)
 	//order := api.PlaceOrder(account.Key, account.Secret, model.OrderSideBuy, model.OrderTypeLimit, market, symbol, ``,
 	//	`test`, 0.29, 0.29, 24.4, true, nil, nil)
-	time.Sleep(time.Second * 11)
-	requestId := fmt.Sprintf(`%d`, time.Now().UnixMilli())
+	//requestId := fmt.Sprintf(`%d`, time.Now().UnixMilli())
 	//api.PlacePairOKEX(model.GetAccounts(0)[market], requestId, `DOGE_USDT`, `DOGE_PERP`, model.OrderTypeLimit, 0.29, 0.55, 1000)
-	model.AppEnvironment.ReqIdOrders.Store(requestId+model.OrderSideBuy, &model.Order{OrderId: requestId + model.OrderSideBuy})
-	model.AppEnvironment.ReqIdOrders.Store(requestId+model.OrderSideSell, &model.Order{OrderId: requestId + model.OrderSideSell})
+	//model.AppEnvironment.ReqIdOrders.Store(requestId+model.OrderSideBuy, &model.Order{OrderId: requestId + model.OrderSideBuy})
+	//model.AppEnvironment.ReqIdOrders.Store(requestId+model.OrderSideSell, &model.Order{OrderId: requestId + model.OrderSideSell})
 	// api.CreateWsOrderUpdate(model.AppEnvironment, market)
 	// api.CreateWSTick(model.AppEnvironment, model.Gate)
 	//fmt.Println(order)
