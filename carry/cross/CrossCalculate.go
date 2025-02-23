@@ -128,9 +128,11 @@ var ProcessCollateral = func(accountKey, accountType string, reduceOnly bool, co
 				if strings.Contains(key, fmt.Sprintf("*%s*", cm.market)) && strings.Contains(key, accountKey) {
 					if status.Holding >= 0 {
 						status.TradeLineBuy = 1
+						status.LimitBuy = 0
 					}
 					if status.Holding <= 0 {
-						status.TradeLineBuy = 1
+						status.TradeLineSell = 1
+						status.LimitSell = 0
 					}
 					util.Log(util.LogLevelInfo, fmt.Sprintf("%s set trade line 1 holding %f %f %f",
 						key, status.Holding, status.TradeLineBuy, status.TradeLineSell))
