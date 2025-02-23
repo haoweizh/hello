@@ -338,7 +338,11 @@ func GetHoldings(accounts map[string]*model.Account) (holding [][]interface{}) {
 			}
 			fundingFeeValue, _ := util.LoadSyncMap(&model.AppEnvironment.FundingFeeToday, strconv.Itoa(accounts[market].Index), market, symbol)
 			if fundingFeeValue != nil {
-				fundingStr = fundingStr + fmt.Sprintf(` %.2fU`, fundingFeeValue.(float64))
+				fundingStr = fundingStr + fmt.Sprintf("\n%.2fU", fundingFeeValue.(float64))
+				if marketType == model.MarketTypeSpot && market == model.OKEX {
+					util.Log(util.LogLevelInfo, fmt.Sprintf(`get FundingFeeToday %d %s %s %f`,
+						accounts[market].Index, market, symbol, fundingFeeValue.(float64)))
+				}
 			}
 			holding[i] = append(holding[i], fundingStr)
 		} else {
@@ -491,12 +495,15 @@ func syncFees(account *model.Account) {
 				_, price = api.GetPriceForce(symbol, account.Market)
 			}
 			fundingFeeMap[symbol] += balChg * price
-			util.Log(util.LogLevelInfo, fmt.Sprintf(`set market symbol fee %s %s %s %f*%f=%f`,
-				idxStr, account.Market, symbol, balChg, price, fundingFeeMap[symbol]))
+			//util.Log(util.LogLevelInfo, fmt.Sprintf(`set market symbol fee %s %s %s %f*%f=%f`,
+			//	idxStr, account.Market, symbol, balChg, price, fundingFeeMap[symbol]))
 		}
 		for symbol, value := range fundingFeeMap {
 			util.StoreSyncMap(&model.AppEnvironment.FundingFeeToday, value, idxStr, account.Market, symbol)
-			//util.Log(util.LogLevelInfo, fmt.Sprintf(`set funding fee in all %s %s %s %f`, idxStr, account.Market, symbol, value))
+			_, marketType, _, _ := model.GetFromStandard(account.Market, symbol)
+			if account.Market == model.OKEX && marketType == model.MarketTypeSpot {
+				util.Log(util.LogLevelInfo, fmt.Sprintf(`set FundingFeeToday %s %s %s %f`, idxStr, account.Market, symbol, value))
+			}
 		}
 		err := fundingRows.Close()
 		if err != nil {

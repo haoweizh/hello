@@ -921,6 +921,27 @@ func Test_Funding(t *testing.T) {
 
 func Test_TradingStatus(t *testing.T) {
 	model.NewConfig()
-	account := model.GetAccounts(0)[model.BinancePerp]
-	api.GetTradingStatusBinancePerp(account)
+	model.AppDB, _ = gorm.Open(postgres.Open(model.AppConfig.DBConnection), &gorm.Config{})
+	account := model.GetAccounts(0)[model.OKEX]
+	fundingRows, _ := model.AppDB.Model(model.FundingFee{}).Select(`ccy,symbol,bal_chg`).
+		Where(`ts>=? and market=? and index=?`, util.GetToday().UnixMilli(), account.Market, account.Index).Rows()
+	if fundingRows != nil {
+		for fundingRows.Next() {
+			var coin, symbol string
+			balChg := 0.0
+			_ = fundingRows.Scan(&coin, &symbol, &balChg)
+			price := 0.0
+			if coin == `USDT` {
+				price = 1.0
+			} else {
+				_, price = api.GetPriceForce(symbol, account.Market)
+			}
+			fmt.Println(price)
+		}
+		err := fundingRows.Close()
+		if err != nil {
+			return
+		}
+	}
+	//api.GetTradingStatusBinancePerp(account)
 }
