@@ -1113,6 +1113,7 @@ func GetBills(account *model.Account, begin, end int64) (success bool, fundingFe
 		for _, fee := range interestFees {
 			fundingFees = append(fundingFees, fee)
 		}
+		success = true
 	case model.Gate:
 		return getBillsGate(account, begin, end)
 	case model.Bybit:
@@ -1122,7 +1123,7 @@ func GetBills(account *model.Account, begin, end int64) (success bool, fundingFe
 	default:
 		util.Log(util.LogLevelInfo, fmt.Sprintf(`un-support market %s`, account.Market))
 	}
-	return false, fundingFees
+	return success, fundingFees
 }
 
 func GetInterest(account *model.Account) (success bool) {
