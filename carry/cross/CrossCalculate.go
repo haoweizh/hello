@@ -55,8 +55,6 @@ var ProcessCrossBalances = func(market, accountKey string, balances []*model.Bal
 		if balSetting == nil {
 			continue
 		}
-		util.Log(util.LogLevelInfo, fmt.Sprintf(`update balance from ws %s %d %s %f max loan %f`,
-			market, triggerAccount.Index, balance.Coin, balance.Amount, balance.AvailableWithBorrow))
 		// 针对1000倍币等种进行coin转换
 		settings, _ := value.Load(balSetting.Coin)
 		if settings == nil {
@@ -78,8 +76,8 @@ var ProcessCrossBalances = func(market, accountKey string, balances []*model.Bal
 				status.Holding = balance.Amount
 			}
 			if status.IsSpot {
-				util.LogLess(util.LogLevelInfo, fmt.Sprintf(`update limit sell %s %s %f to %f`,
-					status.Market, status.Symbol, status.LimitSell, balance.AvailableWithBorrow))
+				util.LogLess(util.LogLevelInfo, fmt.Sprintf(`update limit sell %d %s %s %f to %f`,
+					account.Index, status.Market, status.Symbol, status.LimitSell, balance.AvailableWithBorrow))
 				status.LimitSell = math.Max(status.LimitSell, balance.AvailableWithBorrow)
 				status.AvailableSell = math.Min(status.AvailableSell, balance.AvailableWithBorrow)
 			}

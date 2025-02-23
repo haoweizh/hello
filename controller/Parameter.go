@@ -554,6 +554,7 @@ func holdPage(c *gin.Context) {
 		}
 	}
 	fundingFee := 0.0
+	interestFee := 0.0
 	carryRows, _ = model.AppDB.Model(model.FundingFee{}).Select(`market,ccy,symbol,bal_chg`).Where(
 		`ts>=? and index=?`, util.GetToday().UnixMilli(), index).Rows()
 	if carryRows != nil {
@@ -561,21 +562,20 @@ func holdPage(c *gin.Context) {
 		var market, coin, symbol string
 		for carryRows.Next() {
 			_ = carryRows.Scan(&market, &coin, &symbol, &fee)
-			price := 0.0
 			if coin == `USDT` {
-				price = 1
+				fundingFee += fee
 			} else {
-				_, price = api.GetPriceForce(symbol, market)
+				_, price := api.GetPriceForce(symbol, market)
+				interestFee += price * fee
 			}
-			fundingFee += price * fee
-			util.Log(util.LogLevelInfo, fmt.Sprintf(`add in all fee %s %s %f %f=%f`, market, coin, fee, price, fundingFee))
 		}
 		if carryRows.Close() != nil {
 			util.Log(util.LogLevelInfo, fmt.Sprintf(`fail to close DB for funding rows`))
 		}
 	}
-	c.HTML(http.StatusOK, `hold.gohtml`, gin.H{`marketValue`: marketValues, `trade`: tradeInfo,
-		`orders`: orders, `holdings`: cross.GetHoldings(queryAccounts), `fundingFee`: fmt.Sprintf(`%.2f`, fundingFee)})
+	c.HTML(http.StatusOK, `hold.gohtml`, gin.H{`marketValue`: marketValues, `trade`: tradeInfo, `orders`: orders,
+		`holdings`: cross.GetHoldings(queryAccounts), `fundingFee`: fmt.Sprintf(`资费%.2f+利息%.2f=%.2f`,
+			fundingFee, interestFee, fundingFee+interestFee)})
 }
 
 func crossRefresh(c *gin.Context) {

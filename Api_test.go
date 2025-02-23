@@ -94,11 +94,11 @@ func Test_ws(t *testing.T) {
 func Test_getCommonMarketInfos(t *testing.T) {
 	model.NewConfig()
 	market := model.OKEX
-	//account := model.AppConfig.GetAccounts(market)[0]
+	account := model.AppConfig.GetAccounts(market)[0]
 	//api.GetPositions(account, market)
 	//api.GetInterest(account)
-	//api.GetBalances(account, market)
-	api.InitMarketInfos(market)
+	api.GetBalances(account, market)
+	//api.InitMarketInfos(market)
 	//_, _, total, _ := api.GetBalances(account, market)
 	//fmt.Println(total)
 	//api.InitMarketInfos(market)
