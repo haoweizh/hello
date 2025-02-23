@@ -567,6 +567,8 @@ func holdPage(c *gin.Context) {
 			} else {
 				_, price := api.GetPriceForce(symbol, market)
 				interestFee += price * fee
+				util.Log(util.LogLevelInfo, fmt.Sprintf(`add in all fee %s %s %f %f=%f`,
+					market, coin, fee, price, fundingFee))
 			}
 		}
 		if carryRows.Close() != nil {
