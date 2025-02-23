@@ -80,7 +80,7 @@ var ProcessCrossBalances = func(market, accountKey string, balances []*model.Bal
 			if status.IsSpot {
 				util.LogLess(util.LogLevelInfo, fmt.Sprintf(`update limit sell %s %s %f to %f`,
 					status.Market, status.Symbol, status.LimitSell, balance.AvailableWithBorrow))
-				status.LimitSell = math.Min(status.LimitSell, balance.AvailableWithBorrow)
+				status.LimitSell = math.Max(status.LimitSell, balance.AvailableWithBorrow)
 				status.AvailableSell = math.Min(status.AvailableSell, balance.AvailableWithBorrow)
 			}
 			holding += status.Holding * setting.GridAmount
@@ -153,14 +153,6 @@ func generateMonitorMsg(index int, coin, scoreType, scoreTypeR string, score, sc
 	// 为了同一对交易对冲不出现两次，对前后进行排序
 	mark := fmt.Sprintf(`%s-%s`, carryStatus.Market, carryStatus.Symbol)
 	markRelate := fmt.Sprintf(`%s-%s`, carryStatusRelate.Market, carryStatusRelate.Symbol)
-	coinValue := coin
-	if !carryStatus.IsSpot {
-		coinValue = `永` + coinValue
-	}
-	coinValueRelate := coin
-	if !carryStatusRelate.IsSpot {
-		coinValueRelate = `永` + coinValueRelate
-	}
 	//green := false
 	//if math.Abs(fundingRateRelate.Rate) > 0.001 || math.Abs(fundingRate.Rate) > 0.001 {
 	//	green = true
@@ -176,12 +168,12 @@ func generateMonitorMsg(index int, coin, scoreType, scoreTypeR string, score, sc
 	var infoValue []string
 	if mark < markRelate {
 		mark = fmt.Sprintf(`%s|%s`, mark, markRelate)
-		infoValue = []string{coin, carryStatus.Market, coinValue, fundingStr,
+		infoValue = []string{coin, carryStatus.Market, carryStatus.Symbol, fundingStr,
 			fmt.Sprintf(`%.3f`, 100*carryStatus.TradeLineBuy),
 			fmt.Sprintf(`%.3f`, 100*carryStatus.TradeLineSell),
 			fmt.Sprintf(`%.0e`, carryStatus.LimitBuy),
 			fmt.Sprintf(`%.0e`, carryStatus.LimitSell),
-			carryStatusRelate.Market, coinValueRelate, fundingStrRelate,
+			carryStatusRelate.Market, carryStatusRelate.Symbol, fundingStrRelate,
 			fmt.Sprintf(`%.3f`, 100*carryStatusRelate.TradeLineBuy),
 			fmt.Sprintf(`%.3f`, 100*carryStatusRelate.TradeLineSell),
 			fmt.Sprintf(`%.0e`, carryStatusRelate.LimitBuy),
@@ -191,12 +183,12 @@ func generateMonitorMsg(index int, coin, scoreType, scoreTypeR string, score, sc
 			fmt.Sprintf(`%v`, valid)}
 	} else {
 		mark = fmt.Sprintf(`%s|%s`, markRelate, mark)
-		infoValue = []string{coin, carryStatusRelate.Market, coinValueRelate, fundingStrRelate,
+		infoValue = []string{coin, carryStatusRelate.Market, carryStatusRelate.Symbol, fundingStrRelate,
 			fmt.Sprintf(`%.3f`, 100*carryStatusRelate.TradeLineBuy),
 			fmt.Sprintf(`%.3f`, 100*carryStatusRelate.TradeLineSell),
 			fmt.Sprintf(`%.0e`, carryStatusRelate.LimitBuy),
 			fmt.Sprintf(`%.0e`, carryStatusRelate.LimitSell),
-			carryStatus.Market, coinValue, fundingStr,
+			carryStatus.Market, carryStatus.Symbol, fundingStr,
 			fmt.Sprintf(`%.3f`, 100*carryStatus.TradeLineBuy),
 			fmt.Sprintf(`%.3f`, 100*carryStatus.TradeLineSell),
 			fmt.Sprintf(`%.0e`, carryStatus.LimitBuy),
