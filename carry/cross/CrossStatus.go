@@ -339,6 +339,9 @@ func GetHoldings(accounts map[string]*model.Account) (holding [][]interface{}) {
 			fundingFeeValue, _ := util.LoadSyncMap(&model.AppEnvironment.FundingFeeToday, strconv.Itoa(accounts[market].Index), market, symbol)
 			if fundingFeeValue != nil {
 				fundingStr = fundingStr + fmt.Sprintf("\n%.2fU", fundingFeeValue.(float64))
+				if marketType == model.MarketTypeSpot {
+					util.Log(util.LogLevelInfo, fmt.Sprintf(`add in all fee symbol %s %s %v`, market, symbol, fundingFeeValue))
+				}
 			}
 			holding[i] = append(holding[i], fundingStr)
 		} else {
