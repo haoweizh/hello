@@ -699,6 +699,16 @@ func getHolding(statuses []*model.CarryStatus) (bids, asks model.Ticks, statusMa
 		if status.Holding > 0 {
 			bidHolding += status.Holding
 		}
+		pauseBuy, _ := util.LoadSyncMap(&model.AppEnvironment.PauseTrade, status.Setting.Coin, status.Market, status.Symbol, status.Account.Key, model.OrderSideBuy)
+		pauseSell, _ := util.LoadSyncMap(&model.AppEnvironment.PauseTrade, status.Setting.Coin, status.Market, status.Symbol, status.Account.Key, model.OrderSideSell)
+		if pauseBuy != nil && pauseBuy.(bool) {
+			status.LimitBuy, status.AvailableBuy = 0.0, 0.0
+			status.TradeLineBuy = 1
+		}
+		if pauseSell != nil && pauseSell.(bool) {
+			status.LimitSell, status.AvailableSell = 0.0, 0.0
+			status.TradeLineSell = 1
+		}
 		holding += status.Holding * status.Setting.GridAmount
 		holdStr += fmt.Sprintf(`[%s %s %f]`, status.Market, status.Symbol, status.Holding)
 		marketInfo := model.GetMarketInfo(status.Market, status.Symbol)
