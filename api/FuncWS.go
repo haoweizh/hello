@@ -266,9 +266,6 @@ func UpdateOrderDeal(market, orderId, clientOId, status, msg string, dealAmount 
 			orderId, i, order.Market, order.Symbol, order.OrderSide, preDeal, order.DealAmount, order.Status))
 		return true
 	} else {
-		if market == model.Gate && strings.Contains(msg, `auto_deleveraging`) {
-			// todo update carryStatus
-		}
 		util.Log(util.LogLevelError, fmt.Sprintf(`no order stored %s %s %s`, market, orderId, msg))
 		return false
 	}

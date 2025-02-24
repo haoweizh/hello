@@ -159,6 +159,7 @@ func Maintain() {
 	model.CandleHandlers[model.FunctionMonitorKLine] = monitor.ProcessMonitor
 	model.CollateralHandler = cross.ProcessCollateral
 	model.CrossBalancesHandler = cross.ProcessCrossBalances
+	model.ADLHandler = cross.ProcessADL
 	_ = model.AppDB.AutoMigrate(&model.Setting{})
 	_ = model.AppDB.AutoMigrate(&model.Order{})
 	_ = model.AppDB.AutoMigrate(&model.Balance{})

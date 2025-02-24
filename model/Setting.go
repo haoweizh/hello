@@ -11,7 +11,7 @@ type CarryHandler func(setting *Setting, bidAsk *BidAsk)
 
 type WsOrderHandler func(order *Order)
 type WsCollateralHandler func(accountKey, accountType string, reduceOnly bool, collateral *Collateral)
-
+type ProcessADLHandler func(accountKey, market, symbol, adlSide string, amount float64)
 type Setting struct {
 	Valid, Liquidated                          bool
 	Function                                   string `gorm:"index:function_market_symbol,unique"`

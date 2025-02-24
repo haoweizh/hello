@@ -123,6 +123,7 @@ var wsPriHandlerGatePerp = func(market, key string, msg []byte) {
 				} else {
 					util.StoreSyncMap(&model.AppEnvironment.PauseTrade, true, coin, market, symbol, key, model.OrderSideSell)
 				}
+				model.ADLHandler(key, market, symbol, orderSide, dealAmount)
 			}
 			UpdateOrderDeal(market, orderId, ``, status, string(msg), dealAmount)
 		}

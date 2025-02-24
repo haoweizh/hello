@@ -42,24 +42,47 @@ func CalcGridLine(base float64) {
 	}
 }
 
-//var ProcessADL = func(accountKey, market, symbol, adlSide string, amount float64) {
-//	triggerAccount := model.AppConfig.GetAccountFromKeyIndex(market, accountKey, -1)
-//	if triggerAccount == nil {
-//		return
-//	}
-//	setting := api.GetSetting(model.FunctionCross, market, symbol)
-//	if setting == nil {
-//		util.Log(util.LogLevelError, fmt.Sprintf(`fail to process ADL nil setting %s %s`))
-//		return
-//	}
-//	// 由于symbol中取出来的coin不一定等于setting中的coin，所以先拿到setting再通过setting的coin获取setting数组
-//	coinSettings := api.GetCoinSettings(model.FunctionCross)
-//	if coinSettings == nil {
-//		return
-//	}
-//	settings, _ := coinSettings.Load(setting.Coin)
-//
-//}
+var ProcessADL = func(accountKey, market, symbol, adlSide string, amount float64) {
+	util.Log(util.LogLevelError, fmt.Sprintf(`process ADL %s %s %s %f`, market, symbol, adlSide, amount))
+	triggerAccount := model.AppConfig.GetAccountFromKeyIndex(market, accountKey, -1)
+	if triggerAccount == nil {
+		return
+	}
+	accounts := model.GetAccounts(triggerAccount.Index)
+	adlSetting := api.GetSetting(model.FunctionCross, market, symbol)
+	if adlSetting == nil {
+		util.Log(util.LogLevelError, fmt.Sprintf(`fail to process ADL nil adlSetting %s %s`))
+		return
+	}
+	// 由于symbol中取出来的coin不一定等于setting中的coin，所以先拿到setting再通过setting的coin获取setting数组
+	coinSettings := api.GetCoinSettings(model.FunctionCross)
+	if coinSettings == nil {
+		return
+	}
+	settings, _ := coinSettings.Load(adlSetting.Coin)
+	statuses := make([]*model.CarryStatus, 0)
+	for _, setting := range settings.([]*model.Setting) {
+		if setting == nil {
+			continue
+		}
+		item, _ := util.LoadSyncMap(carryStatusMap, setting.Coin, setting.Market, setting.Symbol, accounts[setting.Market].Key)
+		if item == nil {
+			continue
+		}
+		status := item.(*model.CarryStatus)
+		if status.Market == adlSetting.Market && status.Symbol == adlSetting.Symbol {
+			if adlSide == model.OrderSideBuy {
+				status.Holding += amount
+				status.LimitSell, status.AvailableSell = 0.0, 0.0
+			} else if adlSide == model.OrderSideSell {
+				status.Holding -= amount
+				status.LimitBuy, status.AvailableBuy = 0.0, 0.0
+			}
+		}
+		statuses = append(statuses, status)
+	}
+	equalCoin(triggerAccount.Index, adlSetting.Coin, statuses)
+}
 
 var ProcessCrossBalances = func(market, accountKey string, balances []*model.Balance) {
 	value := api.GetCoinSettings(model.FunctionCross)
