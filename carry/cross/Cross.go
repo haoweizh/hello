@@ -432,7 +432,7 @@ var ClearCross = func() {
 		equalAccounts(doEqual, traceId)
 	}
 	syncGridHoldings()
-	// 用于更新资金费率
+	// 用于更新资金费率 todo 增加其他可借币市场
 	api.InitMarketInfos(model.OKEX)
 	model.AppEnvironment.CrossEqualing = false
 	util.Log(util.LogLevelInfo, fmt.Sprintf("end to clearing cross get set %v %d", model.AppEnvironment.CrossEqualing, traceId))
