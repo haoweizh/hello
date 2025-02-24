@@ -755,7 +755,7 @@ func equalCoin(index int, coin string, statuses []*model.CarryStatus) (isEqual b
 			}
 		}
 		api.SendMails(`too big to equal`, fmt.Sprintf(`%s holding in money %f`, coin, holding*holdingPrice))
-		return false, holding, fmt.Sprintf(`too big comp %s %f`, coin, holding)
+		//return false, holding, fmt.Sprintf(`too big comp %s %f`, coin, holding)
 	} else if math.Abs(holding) < CompLineInMoney/holdingPrice {
 		return true, holding, ``
 	}
@@ -1322,12 +1322,7 @@ var PostOrderCross = func(order *model.Order) {
 	if !order.HaveId() || order.ErrCode != `` || order.Status == model.CarryStatusFail {
 		value, _ := util.LoadSyncMap(carryStatusMap, setting.Coin, setting.Market, setting.Symbol, account.Key)
 		if value != nil {
-			if order.OrderSide == model.OrderSideSell {
-				util.StoreSyncMap(&model.AppEnvironment.PauseTrade, true, setting.Coin, setting.Market, setting.Symbol, account.Key, model.OrderSideBuy)
-			}
-			if order.OrderSide == model.OrderSideBuy {
-				util.StoreSyncMap(&model.AppEnvironment.PauseTrade, true, setting.Coin, setting.Market, setting.Symbol, account.Key, model.OrderSideSell)
-			}
+			util.StoreSyncMap(&model.AppEnvironment.PauseTrade, true, setting.Coin, setting.Market, setting.Symbol, account.Key, order.OrderSide)
 			util.Log(util.LogLevelError, fmt.Sprintf(`stop trade %s %s %s %d %s %s %s`,
 				setting.Coin, setting.Market, setting.Symbol, account.Index, order.OrderId, order.ErrCode, order.OrderTime.Format(time.DateTime)))
 		}

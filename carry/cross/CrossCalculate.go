@@ -42,6 +42,25 @@ func CalcGridLine(base float64) {
 	}
 }
 
+//var ProcessADL = func(accountKey, market, symbol, adlSide string, amount float64) {
+//	triggerAccount := model.AppConfig.GetAccountFromKeyIndex(market, accountKey, -1)
+//	if triggerAccount == nil {
+//		return
+//	}
+//	setting := api.GetSetting(model.FunctionCross, market, symbol)
+//	if setting == nil {
+//		util.Log(util.LogLevelError, fmt.Sprintf(`fail to process ADL nil setting %s %s`))
+//		return
+//	}
+//	// 由于symbol中取出来的coin不一定等于setting中的coin，所以先拿到setting再通过setting的coin获取setting数组
+//	coinSettings := api.GetCoinSettings(model.FunctionCross)
+//	if coinSettings == nil {
+//		return
+//	}
+//	settings, _ := coinSettings.Load(setting.Coin)
+//
+//}
+
 var ProcessCrossBalances = func(market, accountKey string, balances []*model.Balance) {
 	value := api.GetCoinSettings(model.FunctionCross)
 	if value == nil {
