@@ -1323,10 +1323,10 @@ var PostOrderCross = func(order *model.Order) {
 		value, _ := util.LoadSyncMap(carryStatusMap, setting.Coin, setting.Market, setting.Symbol, account.Key)
 		if value != nil {
 			if order.OrderSide == model.OrderSideSell {
-				util.StoreSyncMap(&model.AppEnvironment.PauseTrade, true, setting.Coin, setting.Market, setting.Symbol, account.Key, model.OrderSideSell)
+				util.StoreSyncMap(&model.AppEnvironment.PauseTrade, true, setting.Coin, setting.Market, setting.Symbol, account.Key, model.OrderSideBuy)
 			}
 			if order.OrderSide == model.OrderSideBuy {
-				util.StoreSyncMap(&model.AppEnvironment.PauseTrade, true, setting.Coin, setting.Market, setting.Symbol, account.Key, model.OrderSideBuy)
+				util.StoreSyncMap(&model.AppEnvironment.PauseTrade, true, setting.Coin, setting.Market, setting.Symbol, account.Key, model.OrderSideSell)
 			}
 			util.Log(util.LogLevelError, fmt.Sprintf(`stop trade %s %s %s %d %s %s %s`,
 				setting.Coin, setting.Market, setting.Symbol, account.Index, order.OrderId, order.ErrCode, order.OrderTime.Format(time.DateTime)))
