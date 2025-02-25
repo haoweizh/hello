@@ -1114,9 +1114,9 @@ func placeCross(carryCoin *model.CarryCoin, statusBuy, statusSell *model.CarrySt
 	go api.PlaceOrder(statusSell.Account, model.OrderSideSell, model.OrderTypeLimit, statusSell.Market,
 		statusSell.Symbol, orderParamSell, model.FunctionCross, priceSell, priceSell, amountSell, true, PostOrderCross)
 	util.Log(util.LogLevelInfo, fmt.Sprintf(
-		`place cross %s %s -> %s %s at %f %f amount %f %f %f score %f hold %f buy %f hold %f sell %f`,
-		statusSell.Market, statusSell.Symbol, statusBuy.Market, statusBuy.Symbol, priceSell, priceBuy, amount, amountBuy,
-		amountSell, score, statusBuy.Holding, statusBuy.TradeLineBuy, statusSell.Holding, statusSell.TradeLineSell))
+		`place cross %s %s -> %s %s at %f %f amount %f %f %f score %f hold %f buy %f limit %f hold %f sell %f limit %f`,
+		statusSell.Market, statusSell.Symbol, statusBuy.Market, statusBuy.Symbol, priceSell, priceBuy, amount, amountBuy, amountSell,
+		score, statusBuy.Holding, statusBuy.TradeLineBuy, statusBuy.LimitBuy, statusSell.Holding, statusSell.TradeLineSell, statusSell.LimitSell))
 	// 买入现货时要交手续费，故而实际到手少于下单量，校准以免未来买单时数量不足
 	if marketTypeBuy == model.MarketTypeSpot {
 		amountBuy = amountBuy * 0.9992
