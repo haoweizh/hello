@@ -116,18 +116,15 @@ var ProcessCrossBalances = func(market, accountKey string, balances []*model.Bal
 			status := item.(*model.CarryStatus)
 			if status.Market == balance.Market && status.Symbol == balance.Coin+model.UniStandardTail[model.MarketTypeSpot] {
 				status.Holding = balance.Amount
-			}
-			if status.IsSpot {
-				if account.Index == 0 {
-					util.Log(util.LogLevelInfo, fmt.Sprintf(`update limit sell %d %s %s %f to %f-%f`,
-						account.Index, status.Market, status.Symbol, status.LimitSell, balance.AvailableWithBorrow, balance.FrozenAmount))
-				}
-				status.LimitSell = math.Max(balance.Amount-balance.FrozenAmount, balance.AvailableWithBorrow)
-				status.AvailableSell = math.Max(balance.Amount-balance.FrozenAmount, balance.AvailableWithBorrow)
-				// todo 临时处理
-				if status.Market != model.OKEX {
-					status.LimitSell = math.Min(status.LimitSell, math.Max(balance.Amount-balance.FrozenAmount, balance.AvailableWithBorrow))
-					status.AvailableSell = math.Min(status.AvailableSell, math.Max(balance.Amount-balance.FrozenAmount, balance.AvailableWithBorrow))
+				if status.IsSpot {
+					if account.Index == 0 {
+						if status.LimitSell >= balance.AvailableWithBorrow {
+							util.Log(util.LogLevelInfo, fmt.Sprintf(`update limit sell %d %s %s %f to %f %#v`,
+								account.Index, status.Market, status.Symbol, status.LimitSell, balance.AvailableWithBorrow-balance.FrozenAmount, balance))
+						}
+					}
+					status.LimitSell = math.Max(balance.Amount-balance.FrozenAmount, balance.AvailableWithBorrow)
+					status.AvailableSell = math.Max(balance.Amount-balance.FrozenAmount, balance.AvailableWithBorrow)
 				}
 			}
 			holding += status.Holding * setting.GridAmount
