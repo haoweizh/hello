@@ -457,6 +457,7 @@ func InitApp(refreshDynamic bool) bool {
 }
 
 func initMarketMode(account *model.Account, market string) {
+	util.Log(util.LogLevelInfo, fmt.Sprintf(`start init market mode %s %d`, market, account.Index))
 	switch market {
 	case model.OKEX:
 		accountMode := getAccountConfigOKEX(account)

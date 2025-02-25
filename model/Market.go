@@ -86,10 +86,10 @@ func (environment *Environment) HandleWSResp() {
 		value, _ := environment.ReqIdOrders.Load(wsResp.RequestId)
 		if value == nil {
 			value, _ = environment.ReqIdOrders.Load(wsResp.RequestId + OrderSideSell)
-			util.Log(util.LogLevelInfo, fmt.Sprintf(`get pair order sell %#v`, value))
+			//util.Log(util.LogLevelInfo, fmt.Sprintf(`get pair order sell %#v`, value))
 			if value == nil {
 				value, _ = environment.ReqIdOrders.Load(wsResp.RequestId + OrderSideBuy)
-				util.Log(util.LogLevelInfo, fmt.Sprintf(`get pair order buy %#v`, value))
+				//util.Log(util.LogLevelInfo, fmt.Sprintf(`get pair order buy %#v`, value))
 			}
 		}
 		if value != nil {
