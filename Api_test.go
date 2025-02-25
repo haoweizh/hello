@@ -875,6 +875,7 @@ func Test_SetLeverage(t *testing.T) {
 	symbol := `DUCK_PERP`
 	account := model.GetAccounts(0)[market]
 	api.SetSymbolLeverage(account, market, symbol)
+	api.GetInterest(account)
 }
 
 func Test_C(t *testing.T) {

@@ -121,7 +121,6 @@ func appendSpotMarketsGate(key, secret string, marketInfos map[string]*model.Mar
 // setLeverageGate 设置杠杆和risk limit
 func setLeverageGate(account *model.Account) (success bool) {
 	symbols := GetMarketSymbols(model.Gate)
-	util.Log(util.LogLevelInfo, fmt.Sprintf("SetLeverageGate %#v", symbols))
 	for symbol := range symbols {
 		_, marketType, _, _ := model.GetFromStandard(model.Gate, symbol)
 		if marketType == model.MarketTypePerp {
@@ -140,7 +139,6 @@ type Tier struct {
 // setSymbolLeverageGate 设置杠杆率和risk limit
 // 需要先设置risk再更新杠杆率才能成功
 func setSymbolLeverageGate(account *model.Account, symbol string) (success bool) {
-	util.Log(util.LogLevelInfo, fmt.Sprintf("setSymbolLeverageGate %#v", symbol))
 	_, _, _, dialectSymbol := model.GetFromStandard(model.Gate, symbol)
 	client, ctx := getClientGate(account.Key, account.Secret)
 	tiers, _, errTiers := client.FuturesApi.ListRiskLimitTiers(ctx, `usdt`, dialectSymbol)

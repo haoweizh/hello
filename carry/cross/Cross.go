@@ -484,10 +484,7 @@ func equalAccounts(doEqual bool, traceId int64) {
 				go syncFees(indexAccounts[market])
 				account := indexAccounts[market]
 				if market == model.Gate && account != nil && model.AppConfig.GetCrossStyles()[i] == crossGrid {
-					gateCm, _ := contractMarkets.Load(account.Key)
-					if gateCm != nil {
-						updateMoneyPerStep(account, gateCm.(*contractMarket))
-					}
+					go updateMoneyPerStep(account)
 				}
 			}
 		}
@@ -495,7 +492,7 @@ func equalAccounts(doEqual bool, traceId int64) {
 	util.Log(util.LogLevelInfo, fmt.Sprintf(`exit clearing cross all %d`, traceId))
 }
 
-func updateMoneyPerStep(account *model.Account, gateCm *contractMarket) {
+func updateMoneyPerStep(account *model.Account) {
 	value := api.GetCoinSettings(model.FunctionCross)
 	if value == nil {
 		return
@@ -507,24 +504,11 @@ func updateMoneyPerStep(account *model.Account, gateCm *contractMarket) {
 		}
 		carryCoin := item.(*model.CarryCoin)
 		symbol := coin.(string) + model.UniStandardTail[model.MarketTypePerp]
-		util.Log(util.LogLevelInfo, fmt.Sprintf("updateMoneyPerStep %s %s", account.Market, symbol))
 		api.SetSymbolLeverage(account, account.Market, symbol)
 		limit, _ := util.LoadSyncMap(&model.AppEnvironment.RiskLimitsGate, account.Key, symbol)
 		if limit == nil || limit.(float64) == 0 {
 			return true
 		}
-		//if gateCm.positions == nil || gateCm.positions[symbol] == nil {
-		//	return true
-		//}
-		//pos := gateCm.positions[symbol]
-		//price := pos.EntryPrice
-		//if price == 0 {
-		//	_, price = api.GetPriceForce(symbol, model.Gate)
-		//}
-		//if price == 0 {
-		//	util.Log(util.LogLevelInfo, fmt.Sprintf(`gate risk limit 0 price %s %s`, symbol, coin.(string)))
-		//	return true
-		//}
 		moneyRiskLimit := limit.(float64) / 20
 		//if moneyRiskLimit < carryCoin.MoneyPerStep {
 		//moneyInAll := carryCoin.MoneyPerStep*float64(carryCoin.CurrentStep) + carryCoin.MoneyCurStep
@@ -545,7 +529,7 @@ func updateMoneyPerStep(account *model.Account, gateCm *contractMarket) {
 			map[string]interface{}{`money_per_step`: carryCoin.MoneyPerStep})
 		util.Log(util.LogLevelInfo, fmt.Sprintf(`update money per step %d %v %s to %f`,
 			account.Index, limit, coin, moneyRiskLimit))
-		time.Sleep(time.Millisecond * 50)
+		time.Sleep(time.Millisecond * 200)
 		return true
 	})
 	return
