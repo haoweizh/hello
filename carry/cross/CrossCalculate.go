@@ -290,11 +290,12 @@ func checkTradeLine(statusBuy, statusSell *model.CarryStatus, carryCoin *model.C
 			} else if carryCoin.CurrentStep >= 1 {
 				currentStep--
 				closeLimit = (carryCoin.MoneyCurStep + carryCoin.MoneyPerStep) / priceBuy * statusBuy.Setting.GridAmount
-			} else { // current step = 0 and money current step < small holding
-				statusBuy.TradeLineBuy = 0.0
-				statusSell.TradeLineSell = 0.0
-				return scoreClose >= 0.0, limit, scoreClose, `平`
 			}
+			//else { // current step = 0 and money current step < small holding
+			//	statusBuy.TradeLineBuy = 0.0
+			//	statusSell.TradeLineSell = 0.0
+			//	return scoreClose >= 0.0, limit, scoreClose, `平`
+			//}
 			if currentStep < 0 || currentStep > len(stepScores)-GridGap {
 				return false, 0, scoreClose, `平`
 			}

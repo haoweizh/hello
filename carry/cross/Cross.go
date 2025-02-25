@@ -516,7 +516,7 @@ func updateMoneyPerStep(account *model.Account, gateCm *contractMarket) {
 			_, price = api.GetPriceForce(symbol, model.Gate)
 		}
 		if price == 0 {
-			util.Log(util.LogLevelInfo, fmt.Sprintf(`gate rist limit 0 price %s %s`, symbol, coin.(string)))
+			util.Log(util.LogLevelInfo, fmt.Sprintf(`gate risk limit 0 price %s %s`, symbol, coin.(string)))
 			return true
 		}
 		moneyRiskLimit := pos.RiskLimit / 20

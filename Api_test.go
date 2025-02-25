@@ -233,11 +233,14 @@ func Test_Sync(t *testing.T) {
 
 func Test_BalAndPos(t *testing.T) {
 	model.NewConfig()
+	market := model.Gate
+	account := model.AppConfig.GetAccounts(market)[0]
+	api.GetPositions(account, market)
 	markets := []string{`okex`, `binancespot`, `gate`, `binanceperp`, `bybit`}
 	api.InitCrossMarketInfos(markets)
 	model.AppDB, _ = gorm.Open(postgres.Open(model.AppConfig.DBConnection), &gorm.Config{})
 	api.InitMarketInfos(model.OKEX)
-	account := model.AppConfig.GetAccounts(model.BinancePerp)[0]
+	account = model.AppConfig.GetAccounts(model.BinancePerp)[0]
 	model.AppRedis.Set(context.Background(), `test`, `11`, 0)
 	temp, err := model.AppRedis.Get(context.Background(), `test`).Result()
 	if err == nil {
