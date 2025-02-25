@@ -1126,7 +1126,9 @@ func placeCross(carryCoin *model.CarryCoin, statusBuy, statusSell *model.CarrySt
 	if carryCoin != nil && model.AppConfig.GetCrossStyles()[statusBuy.Account.Index] == crossGrid {
 		carryCoin.AddTrade(statusBuy, statusSell, priceBuy, priceSell, amountSell)
 	}
-	placeStatus(statusBuy, priceBuy, amountBuy)
+	if !statusBuy.IsSpot {
+		placeStatus(statusBuy, priceBuy, amountBuy)
+	}
 	placeStatus(statusSell, priceSell, -1*amountSell)
 	//if marketTypeBuy == model.MarketTypeSpot {
 	//	value, _ := util.LoadSyncMap(carryStatusMap, statusBuy.Setting.Coin, statusBuy.Market, statusBuy.Symbol, statusBuy.Account.Key)
