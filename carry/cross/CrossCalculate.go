@@ -118,15 +118,10 @@ var ProcessCrossBalances = func(market, accountKey string, balances []*model.Bal
 				status.Holding = balance.Amount
 			}
 			if status.IsSpot {
-				util.Log(util.LogLevelInfo, fmt.Sprintf(`update limit sell %d %s %s %f to %f`,
-					account.Index, status.Market, status.Symbol, status.LimitSell, balance.AvailableWithBorrow))
-				if status.Market == model.OKEX {
-					status.LimitSell = math.Min(status.LimitSell, balance.AvailableWithBorrow)
-					status.AvailableSell = math.Min(status.AvailableSell, balance.AvailableWithBorrow)
-				} else { // todo 增加借币后归入OKEX
-					status.LimitSell = math.Min(status.LimitSell, balance.Amount)
-					status.AvailableSell = math.Min(status.AvailableSell, balance.Amount)
-				}
+				status.LimitSell = math.Max(balance.Amount-balance.FrozenAmount, balance.AvailableWithBorrow)
+				status.AvailableSell = math.Max(balance.Amount-balance.FrozenAmount, balance.AvailableWithBorrow)
+				util.Log(util.LogLevelInfo, fmt.Sprintf(`update limit sell %d %s %s %f to %f-%f`,
+					account.Index, status.Market, status.Symbol, status.LimitSell, balance.AvailableWithBorrow, balance.FrozenAmount))
 			}
 			holding += status.Holding * setting.GridAmount
 			if price == 0 {
