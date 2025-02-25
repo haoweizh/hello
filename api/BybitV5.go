@@ -577,6 +577,8 @@ func getBalanceBybit(key string, secret string) (success bool, balances []*model
 				balance := &model.Balance{AccountId: key, BalanceTime: util.GetNow(), Market: model.Bybit, Coin: coinInfo.Coin}
 				balance.Borrow, _ = strconv.ParseFloat(coinInfo.BorrowAmount, 64)
 				canBorrow, _ := strconv.ParseFloat(coinInfo.AvailableToBorrow, 64)
+				// todo remove block borrow
+				canBorrow = 0
 				holdAmount, _ := strconv.ParseFloat(coinInfo.WalletBalance, 64)
 				if coinInfo.Coin == "USDT" {
 					holdAmount, _ = strconv.ParseFloat(coinInfo.WalletBalance, 64)

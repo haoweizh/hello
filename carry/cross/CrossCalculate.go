@@ -122,9 +122,6 @@ var ProcessCrossBalances = func(market, accountKey string, balances []*model.Bal
 					util.Log(util.LogLevelInfo, fmt.Sprintf(`update limit sell %d %s %s %f to %f-%f`,
 						account.Index, status.Market, status.Symbol, status.LimitSell, balance.AvailableWithBorrow, balance.FrozenAmount))
 				}
-				if status.Market != model.OKEX {
-					balance.AvailableWithBorrow = 0
-				}
 				status.LimitSell = math.Max(balance.Amount-balance.FrozenAmount, balance.AvailableWithBorrow)
 				status.AvailableSell = math.Max(balance.Amount-balance.FrozenAmount, balance.AvailableWithBorrow)
 			}

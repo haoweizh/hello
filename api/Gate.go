@@ -458,6 +458,8 @@ var wsPriHandlerGateSpot = func(market, key string, msg []byte) {
 				balance.BalanceTime = time.UnixMilli(ts)
 				balance.FrozenAmount, _ = strconv.ParseFloat(value[`freeze`].(string), 64)
 				balance.Amount, _ = strconv.ParseFloat(value[`total`].(string), 64)
+				// todo remove following line
+				balance.AvailableWithBorrow = math.Max(0, balance.Amount)
 				balances = append(balances, balance)
 			}
 		}
@@ -975,7 +977,7 @@ func getBalanceGate(key, secret string) (success bool, balances []*model.Balance
 		balance.Borrow, _ = strconv.ParseFloat(item.Borrowed, 64)
 		balance.AvailableWithBorrow, _ = strconv.ParseFloat(item.Available, 64)
 		balance.Amount = balance.AvailableWithBorrow + balance.FrozenAmount - balance.Borrow
-		canBorrow := 0.0 //不允许借币
+		canBorrow := 0.0 // todo remove 不允许借币
 		balance.AvailableWithBorrow = math.Max(0, balance.Amount) + canBorrow
 		_, price := GetPriceForce(balance.Coin+model.UniStandardTail[model.MarketTypeSpot], model.Gate)
 		balance.UsdValue = balance.Amount * price
