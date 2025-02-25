@@ -688,7 +688,7 @@ func getHolding(statuses []*model.CarryStatus) (bids, asks model.Ticks, statusMa
 	statusMap = make(map[string]*model.CarryStatus)
 	for _, status := range statuses {
 		if status == nil {
-			util.Log(util.LogLevelError, `warning: fail to get one status `+bids[0].Market+bids[0].Symbol)
+			util.Log(util.LogLevelError, fmt.Sprintf(`warning fail to get one status %#v`, bids))
 			return
 		}
 		if status.Holding > 0 {
