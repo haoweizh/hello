@@ -1018,10 +1018,6 @@ func getPositionsGate(key string, secret string) (success bool, positions []*mod
 		initialMargin, _ := strconv.ParseFloat(item.InitialMargin, 64) //初始保证金
 		position.Margin = math.Max(currentMargin, initialMargin)
 		position.RiskLimit, _ = strconv.ParseFloat(item.RiskLimit, 64)
-		if symbol == `COW_PERP` {
-			util.Log(util.LogLevelInfo, fmt.Sprintf(`gate COW position risk %s %f %#v`,
-				key, item.RiskLimit, position))
-		}
 		// 由于需要获取某个币种的风险限额，所以无论是否有holding都要保存position
 		positions = append(positions, position)
 	}
