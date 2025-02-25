@@ -78,6 +78,7 @@ var ProcessADL = func(accountKey, market, symbol, adlSide string, amount float64
 				status.Holding -= amount
 				status.LimitBuy, status.AvailableBuy = 0.0, 0.0
 			}
+			util.StoreSyncMap(&model.AppEnvironment.ADLSymbol, true, status.Market, status.Symbol, status.Account.Key)
 		}
 		statuses = append(statuses, status)
 	}

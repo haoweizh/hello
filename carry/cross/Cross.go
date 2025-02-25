@@ -425,6 +425,7 @@ var ClearCross = func() {
 		model.FunctionCross, model.AppEnvironment.CrossEqualing, doEqual, traceId))
 	FailOrdersReconnect()
 	model.AppEnvironment.PauseTrade.Clear()
+	model.AppEnvironment.ADLSymbol.Clear()
 	compOrders.Clear()
 	carryStatusMap.Clear()
 	spotMarkets.Clear()
@@ -479,9 +480,9 @@ func equalAccounts(doEqual bool, traceId int64) {
 		indexAccounts := model.GetAccounts(i)
 		for _, market := range model.AppEnvironment.Markets {
 			if doEqual {
+				go syncFees(indexAccounts[market])
 				go liquidateSmallContracts(indexAccounts[market], market)
 			} else {
-				go syncFees(indexAccounts[market])
 				account := indexAccounts[market]
 				if market == model.Gate && account != nil && model.AppConfig.GetCrossStyles()[i] == crossGrid {
 					go updateMoneyPerStep(account)
@@ -694,13 +695,10 @@ func getHolding(statuses []*model.CarryStatus) (bids, asks model.Ticks, statusMa
 		if status.Holding > 0 {
 			bidHolding += status.Holding
 		}
-		pauseBuy, _ := util.LoadSyncMap(&model.AppEnvironment.PauseTrade, status.Setting.Coin, status.Market, status.Symbol, status.Account.Key, model.OrderSideBuy)
-		pauseSell, _ := util.LoadSyncMap(&model.AppEnvironment.PauseTrade, status.Setting.Coin, status.Market, status.Symbol, status.Account.Key, model.OrderSideSell)
-		if pauseBuy != nil && pauseBuy.(bool) {
+		adl, _ := util.LoadSyncMap(&model.AppEnvironment.ADLSymbol, status.Market, status.Symbol, status.Account.Key)
+		if adl != nil && adl.(bool) {
 			status.LimitBuy, status.AvailableBuy = 0.0, 0.0
 			status.TradeLineBuy = 1
-		}
-		if pauseSell != nil && pauseSell.(bool) {
 			status.LimitSell, status.AvailableSell = 0.0, 0.0
 			status.TradeLineSell = 1
 		}
