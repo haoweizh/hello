@@ -507,6 +507,7 @@ func updateMoneyPerStep(account *model.Account, gateCm *contractMarket) {
 		}
 		carryCoin := item.(*model.CarryCoin)
 		symbol := coin.(string) + model.UniStandardTail[model.MarketTypePerp]
+		util.Log(util.LogLevelInfo, fmt.Sprintf("updateMoneyPerStep %s %s", account.Market, symbol))
 		api.SetSymbolLeverage(account, account.Market, symbol)
 		limit, _ := util.LoadSyncMap(&model.AppEnvironment.RiskLimitsGate, account.Key, symbol)
 		if limit == nil || limit.(float64) == 0 {
@@ -544,6 +545,7 @@ func updateMoneyPerStep(account *model.Account, gateCm *contractMarket) {
 			map[string]interface{}{`money_per_step`: carryCoin.MoneyPerStep})
 		util.Log(util.LogLevelInfo, fmt.Sprintf(`update money per step %d %v %s to %f`,
 			account.Index, limit, coin, moneyRiskLimit))
+		time.Sleep(time.Millisecond * 50)
 		return true
 	})
 	return

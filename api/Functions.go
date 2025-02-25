@@ -1072,6 +1072,7 @@ func SendMails(title, msg string) {
 }
 
 func SetSymbolLeverage(account *model.Account, market, symbol string) (success bool) {
+	util.Log(util.LogLevelInfo, fmt.Sprintf(`set symbol leverage %d %s %s`, account.Index, market, symbol))
 	switch market {
 	case model.BinancePerp:
 		return setSymbolLeverageBinancePerp(account, symbol)
@@ -1126,14 +1127,14 @@ func GetBills(account *model.Account, begin, end int64) (success bool, fundingFe
 	return success, fundingFees
 }
 
-func GetInterest(account *model.Account) (success bool) {
-	switch account.Market {
-	case model.OKEX:
-		getInterestOkx(account)
-	case model.Bybit:
-		getInterestBybit(account)
-	case model.Gate:
-		getInterestGate(account)
-	}
-	return false
-}
+//func GetInterest(account *model.Account) (success bool) {
+//	switch account.Market {
+//	case model.OKEX:
+//		getInterestOkx(account)
+//	case model.Bybit:
+//		getInterestBybit(account)
+//	case model.Gate:
+//		getInterestGate(account)
+//	}
+//	return false
+//}
