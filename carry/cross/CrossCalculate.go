@@ -124,6 +124,11 @@ var ProcessCrossBalances = func(market, accountKey string, balances []*model.Bal
 				}
 				status.LimitSell = math.Max(balance.Amount-balance.FrozenAmount, balance.AvailableWithBorrow)
 				status.AvailableSell = math.Max(balance.Amount-balance.FrozenAmount, balance.AvailableWithBorrow)
+				// todo 临时处理
+				if status.Market != model.OKEX {
+					status.LimitSell = math.Min(status.LimitSell, math.Max(balance.Amount-balance.FrozenAmount, balance.AvailableWithBorrow))
+					status.AvailableSell = math.Min(status.AvailableSell, math.Max(balance.Amount-balance.FrozenAmount, balance.AvailableWithBorrow))
+				}
 			}
 			holding += status.Holding * setting.GridAmount
 			if price == 0 {
