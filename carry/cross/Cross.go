@@ -1284,7 +1284,7 @@ func ContinueComp() {
 					price = bidAsk.Asks[0].Price * (1 + compSlide)
 				}
 			}
-			if leftAmt > marketInfo.SizeMin && leftAmt*order.Price > math.Max(10, marketInfo.MoneyMin) && queryOrder.Status != model.CarryStatusSuccess {
+			if leftAmt > marketInfo.SizeMin && leftAmt*order.Price > math.Max(10, marketInfo.MoneyMin) && queryOrder.DealAmount < queryOrder.Amount {
 				result, _, _ := api.CancelOrder(account, order.Market, order.Symbol, model.OrderTypeLimit, order.OrderId)
 				if result {
 					compOrders.Delete(order.OrderId)

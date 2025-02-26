@@ -421,7 +421,9 @@ func calcAmount(index int, coin string, carryStatus, carryStatusRelate *model.Ca
 			carryStatusRelate.Setting.MarketRelated = fmt.Sprintf(`price distance too big %s %s %d‰ %d‰ %s`,
 				carryStatus.Market, carryStatus.Symbol, int(1000*scoreR), int(1000*score), time.Now().Format("2006-01-02 15:04:05"))
 		}
-		return false, nil, nil, 0, 0, 0
+		if statusBuy.Holding*priceBuy > -model.SmallHolding && statusSell.Holding*priceSell < model.SmallHolding {
+			return false, nil, nil, 0, 0, 0
+		}
 	}
 	return false, statusBuy, statusSell, amount, priceBuy, priceSell
 }
