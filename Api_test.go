@@ -589,12 +589,13 @@ func Test_Order(t *testing.T) {
 	market := model.Bybit
 	model.NewConfig()
 	//model.AppDB, _ = gorm.Open(postgres.Open(model.AppConfig.DBConnection), &gorm.Config{})
-	symbol := `BABYDOGE_USDT`
+	symbol := `OMNI_USDT`
 	account := model.GetAccounts(0)[market]
 	api.InitMarketInfos(market)
 	//go api.MaintainConns(market)
 	//time.Sleep(5 * time.Second)
-	order1 := api.PlaceOrder(account, model.OrderSideSell, model.OrderTypeLimit, market, symbol, ``, `test`, 0.00000000221778, 0.00000000221778, 9305338243.31595, true, nil)
+	order1 := api.PlaceOrder(account, model.OrderSideBuy, model.OrderTypeLimit, market, symbol, ``, `test`,
+		4.53453, 4.53453, 2, false, nil)
 	fmt.Println(fmt.Sprintf(`%#v`, order1))
 	//go func() {
 	//	for {
