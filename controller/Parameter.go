@@ -565,7 +565,7 @@ func holdPage(c *gin.Context) {
 			if coin == `USDT` {
 				fundingFee += fee
 			} else {
-				_, price := api.GetPriceForce(symbol, market)
+				_, price := api.GetPriceForce(market, symbol, false)
 				interestFee += price * fee
 				util.Log(util.LogLevelInfo, fmt.Sprintf(`add in all fee %s %s %f %f=%f`,
 					market, coin, fee, price, interestFee))

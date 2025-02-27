@@ -1141,8 +1141,7 @@ func parseOrderOKEX(value map[string]interface{}) (order *model.Order) {
 	return order
 }
 
-// getPriceOKEX
-func _(account *model.Account, symbol string) (success bool, price float64) {
+func getPriceOKEX(account *model.Account, symbol string) (success bool, price float64) {
 	param := map[string]interface{}{`instId`: symbol}
 	path := `/api/v5/market/ticker`
 	responseBody, _ := sendSignRequestOKEX(account, http.MethodGet, path, param, nil)

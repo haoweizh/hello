@@ -979,7 +979,7 @@ func getBalanceGate(key, secret string) (success bool, balances []*model.Balance
 		balance.Amount = balance.AvailableWithBorrow + balance.FrozenAmount - balance.Borrow
 		canBorrow := 0.0 // todo remove 不允许借币
 		balance.AvailableWithBorrow = math.Max(0, balance.Amount) + canBorrow
-		_, price := GetPriceForce(balance.Coin+model.UniStandardTail[model.MarketTypeSpot], model.Gate)
+		_, price := GetPriceForce(model.Gate, balance.Coin+model.UniStandardTail[model.MarketTypeSpot], false)
 		balance.UsdValue = balance.Amount * price
 		balances = append(balances, balance)
 	}
@@ -1029,8 +1029,7 @@ func getPositionsGate(key string, secret string) (success bool, positions []*mod
 	return true, positions
 }
 
-// getPriceGate
-func _(key, secret, symbol string) (success bool, price float64) {
+func getPriceGate(key, secret, symbol string) (success bool, price float64) {
 	client, ctx := getClientGate(key, secret)
 	_, marketType, _, dialectSymbol := model.GetFromStandard(model.Gate, symbol)
 	if marketType == model.MarketTypeSpot {

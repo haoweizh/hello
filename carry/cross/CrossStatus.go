@@ -181,7 +181,7 @@ func GetHoldings(accounts map[string]*model.Account) (holding [][]interface{}) {
 			account := accounts[setting.Market]
 			valid := `false`
 			_, marketType, _, _ := model.GetFromStandard(setting.Market, setting.Symbol)
-			_, price := api.GetPriceForce(setting.Symbol, setting.Market)
+			_, price := api.GetPriceForce(setting.Market, setting.Symbol, false)
 			if marketType == model.MarketTypeSpot {
 				smValue, _ := spotMarkets.Load(account.Key)
 				balance := smValue.(*spotMarket).balances[setting.Symbol]
@@ -275,7 +275,7 @@ func GetHoldings(accounts map[string]*model.Account) (holding [][]interface{}) {
 						success, _, coin, _ := model.GetFromStandard(position.Market, position.Currency)
 						if success {
 							coinHold[coin] += position.Holding
-							_, price := api.GetPriceForce(position.Currency, position.Market)
+							_, price := api.GetPriceForce(position.Market, position.Currency, false)
 							holdingLine := []interface{}{position.Market, coin, position.Currency,
 								position.Holding, math.Round(price * position.Holding), valid, `未纳入监管`}
 							coinValue[coin] += math.Round(price * position.Holding)
@@ -306,7 +306,7 @@ func GetHoldings(accounts map[string]*model.Account) (holding [][]interface{}) {
 		coin := holding[i][1].(string)
 		market := holding[i][0].(string)
 		symbol := holding[i][2].(string)
-		_, price := api.GetPriceForce(symbol, market)
+		_, price := api.GetPriceForce(market, symbol, false)
 		_, marketType, _, _ := model.GetFromStandard(market, symbol)
 		value, _ := util.LoadSyncMap(carryCoinMap, coin, `0`)
 		currentStep := 0
@@ -491,7 +491,7 @@ func syncFees(account *model.Account) {
 			if coin == `USDT` {
 				price = 1.0
 			} else {
-				_, price = api.GetPriceForce(symbol, account.Market)
+				_, price = api.GetPriceForce(account.Market, symbol, false)
 			}
 			fees[symbol] += balChg * price
 			//util.Log(util.LogLevelInfo, fmt.Sprintf(`set market symbol fee %s %s %s %f*%f=%f`,

@@ -128,7 +128,7 @@ var ProcessCrossBalances = func(market, accountKey string, balances []*model.Bal
 			}
 			holding += status.Holding * setting.GridAmount
 			if price == 0 {
-				_, price = api.GetPriceForce(setting.Symbol, setting.Market)
+				_, price = api.GetPriceForce(setting.Market, setting.Symbol, false)
 				price = price / setting.PriceX
 			}
 		}

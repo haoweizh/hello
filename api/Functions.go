@@ -382,44 +382,66 @@ func GetMultiCandle(account *model.Account, market string, slotSeconds int, begi
 }
 
 // GetPriceForce 返回tick价格
-func GetPriceForce(symbol, market string) (result bool, price float64) {
+func GetPriceForce(market, symbol string, force bool) (result bool, price float64) {
 	getBidAsk, bidAsk := model.AppEnvironment.GetBidAsk(market, symbol)
 	if getBidAsk && bidAsk != nil {
 		return true, bidAsk.Bids[0].Price
+	} else if !force {
+		return false, 0
 	}
-	//markets := GetMarkets()
-	//_, _, coin, _ := model.GetFromStandard(market, symbol)
-	//symbolSpot := coin + model.UniStandardTail[model.MarketTypeSpot]
-	//symbolPerp := coin + model.UniStandardTail[model.MarketTypePerp]
-	//for _, m := range markets {
-	//	getBidAsk, bidAsk = model.AppEnvironment.GetBidAsk(m, symbolSpot)
-	//	if getBidAsk && bidAsk != nil {
-	//		return true, bidAsk.Bids[0].Price
-	//	}
-	//	getBidAsk, bidAsk = model.AppEnvironment.GetBidAsk(m, symbolPerp)
-	//	if getBidAsk && bidAsk != nil {
-	//		return true, bidAsk.Bids[0].Price
-	//	}
-	//}
-	//value, okPrice := lastPrice.Load(market + `_` + symbol)
-	//priceTime, okTime := lastPriceTime.Load(market + `_` + symbol)
-	//if okPrice && okTime && value != nil && priceTime.(time.Time).Add(time.Minute*10).After(time.Now()) {
-	//	return true, value.(float64)
-	//}
-	//coins := strings.Split(symbol, `_`)
-	//if len(coins) == 2 && coins[0] == coins[1] {
-	//	return true, 1
-	//}
-	//marketInfo := model.GetMarketInfo(market, symbol)
-	//if marketInfo == nil {
-	//	//util.Info(fmt.Sprintf(`not in market infos %s %s %s %s`, market, symbol, key, secret[0:1]))
-	//	return false, 0
-	//}
-	//lastPriceTime.Store(market+`_`+symbol, time.Now().Add(time.Second*14400))
-	//lastPrice.Store(market+`_`+symbol, price)
-	//util.Log(util.LogLevelError, fmt.Sprintf(`fail to get price for %s %s`, market, symbol))
+	accounts := model.GetAccounts(0)
+	if accounts == nil {
+		return false, 0
+	}
+	account := accounts[market]
+	if account == nil {
+		return false, 0
+	}
+	switch market {
+	case model.Gate:
+		result, price = getPriceGate(account.Key, account.Secret, symbol)
+	case model.Bybit:
+	case model.OKEX:
+		result, price = getPriceOKEX(account, symbol)
+	case model.BinancePerp:
+		result, price = getPriceBinancePerp(account.Key, account.Secret, symbol)
+	case model.BinanceSpot:
+		result, price = getPriceBinanceSpot(account.Key, account.Secret, symbol)
+	}
 	return false, price
 }
+
+//markets := GetMarkets()
+//_, _, coin, _ := model.GetFromStandard(market, symbol)
+//symbolSpot := coin + model.UniStandardTail[model.MarketTypeSpot]
+//symbolPerp := coin + model.UniStandardTail[model.MarketTypePerp]
+//for _, m := range markets {
+//	getBidAsk, bidAsk = model.AppEnvironment.GetBidAsk(m, symbolSpot)
+//	if getBidAsk && bidAsk != nil {
+//		return true, bidAsk.Bids[0].Price
+//	}
+//	getBidAsk, bidAsk = model.AppEnvironment.GetBidAsk(m, symbolPerp)
+//	if getBidAsk && bidAsk != nil {
+//		return true, bidAsk.Bids[0].Price
+//	}
+//}
+//value, okPrice := lastPrice.Load(market + `_` + symbol)
+//priceTime, okTime := lastPriceTime.Load(market + `_` + symbol)
+//if okPrice && okTime && value != nil && priceTime.(time.Time).Add(time.Minute*10).After(time.Now()) {
+//	return true, value.(float64)
+//}
+//coins := strings.Split(symbol, `_`)
+//if len(coins) == 2 && coins[0] == coins[1] {
+//	return true, 1
+//}
+//marketInfo := model.GetMarketInfo(market, symbol)
+//if marketInfo == nil {
+//	//util.Info(fmt.Sprintf(`not in market infos %s %s %s %s`, market, symbol, key, secret[0:1]))
+//	return false, 0
+//}
+//lastPriceTime.Store(market+`_`+symbol, time.Now().Add(time.Second*14400))
+//lastPrice.Store(market+`_`+symbol, price)
+//util.Log(util.LogLevelError, fmt.Sprintf(`fail to get price for %s %s`, market, symbol))
 
 var getEquityTime = &sync.Map{}
 var equityMsg = &sync.Map{}
@@ -495,7 +517,7 @@ func GetBalances(account *model.Account, market string) (
 				totalInUsd += balance.Amount
 			} else {
 				symbolStandard := balance.Coin + model.UniStandardTail[model.MarketTypeSpot]
-				_, price := GetPriceForce(symbolStandard, market)
+				_, price := GetPriceForce(market, symbolStandard, false)
 				totalInUsd += price * balance.Amount
 				if price == 0 && balance.Amount > 0 {
 					setting := GetSetting(model.FunctionCross, market, symbolStandard)

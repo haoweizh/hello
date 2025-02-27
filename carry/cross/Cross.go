@@ -25,7 +25,7 @@ func createContractMarket(account *model.Account, market string) (cm *contractMa
 			if settings != nil {
 				value, ok := settings.Load(position.Currency)
 				if ok && value != nil {
-					_, price := api.GetPriceForce(position.Currency, market)
+					_, price := api.GetPriceForce(market, position.Currency, false)
 					if price > 0 {
 						cm.contractValueInU += price * math.Abs(position.Holding)
 					} else {
@@ -108,7 +108,7 @@ func createFromPosition(account *model.Account, setting *model.Setting) (carrySt
 	if setting.Market == model.Gate {
 		handledActValueInU = 0.6 * cm.accountValueInU
 	}
-	_, price := api.GetPriceForce(setting.Symbol, setting.Market)
+	_, price := api.GetPriceForce(setting.Market, setting.Symbol, false)
 	limitAmount := 0.0
 	availableAmount := 0.0
 	carryStatus = &model.CarryStatus{IsSpot: false, Market: setting.Market, Symbol: setting.Symbol, Account: account, Setting: setting}
@@ -199,7 +199,7 @@ func createFromBalance(account *model.Account, setting *model.Setting) (carrySta
 		value, ok = spotMarkets.Load(key)
 		util.Log(util.LogLevelInfo, fmt.Sprintf(`success set sm %d %s`, account.Index, setting.Market))
 	}
-	success, price := api.GetPriceForce(setting.Symbol, setting.Market)
+	success, price := api.GetPriceForce(setting.Market, setting.Symbol, false)
 	if value == nil {
 		util.Log(util.LogLevelError, fmt.Sprintf(`nil spot market %s %s getPrice %#v %f`, setting.Market, setting.Symbol, success, price))
 		return nil
@@ -577,7 +577,7 @@ func syncGridHoldings() {
 		var priceSetting *model.Setting
 		for _, setting := range settings.([]*model.Setting) {
 			if price == 0 {
-				_, price = api.GetPriceForce(setting.Symbol, setting.Market)
+				_, price = api.GetPriceForce(setting.Market, setting.Symbol, false)
 				priceSetting = setting
 			}
 			crossStyles := model.AppConfig.GetCrossStyles()

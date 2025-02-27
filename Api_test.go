@@ -585,17 +585,29 @@ func Test_ClearActs(t *testing.T) {
 	//	time.Sleep(time.Millisecond * 70)
 	//}
 }
+
+func Test_GetPrice(t *testing.T) {
+	model.NewConfig()
+	markets := []string{model.BinanceSpot, model.BinancePerp, model.Gate, model.Gate, model.OKEX, model.OKEX}
+	symbols := []string{`BTC_USDT`, `BTC_PERP`, `BTC_PERP`, `BTC_USDT`, `BTC_PERP`, `BTC_USDT`, `BTC_PERP`, `BTC_USDT`}
+	for i, market := range markets {
+		result, price := api.GetPriceForce(market, symbols[i], true)
+		fmt.Println(fmt.Sprintf(`%s %s %v %f`, market, symbols[i], result, price))
+	}
+}
+
 func Test_Order(t *testing.T) {
-	market := model.Bybit
+	market := model.Gate
 	model.NewConfig()
 	//model.AppDB, _ = gorm.Open(postgres.Open(model.AppConfig.DBConnection), &gorm.Config{})
-	symbol := `OMNI_USDT`
+	symbol := `BTC_USDT`
 	account := model.GetAccounts(0)[market]
+	api.GetPriceForce(market, symbol, false)
 	api.InitMarketInfos(market)
 	//go api.MaintainConns(market)
 	//time.Sleep(5 * time.Second)
 	order1 := api.PlaceOrder(account, model.OrderSideBuy, model.OrderTypeLimit, market, symbol, ``, `test`,
-		4.53453, 4.53453, 2, false, nil)
+		0.00614, 0.00614, 1000, false, nil)
 	fmt.Println(fmt.Sprintf(`%#v`, order1))
 	//go func() {
 	//	for {
@@ -793,8 +805,8 @@ func Test_wallet(t *testing.T) {
 	}
 	orderQuery0 := api.QueryOrderById(account, market, symbol, model.OrderTypeMarket, `1841956120781220352`)
 	fmt.Println(orderQuery0.OrderId)
-	success, price := api.GetPriceForce(`LDBNB_USDT`, market)
-	success, price = api.GetPriceForce(`BTC_USDT`, market)
+	success, price := api.GetPriceForce(market, `LDBNB_USDT`, false)
+	success, price = api.GetPriceForce(market, `BTC_USDT`, false)
 	fmt.Println(fmt.Sprintf(`%#v %f`, success, price))
 	//order := api.PlaceOrder(key, secret, model.OrderSideBuy, model.OrderTypeStop,
 	//	market, symbol, ``, 4444, 4444, 0.1, false, nil, nil)
@@ -940,7 +952,7 @@ func Test_TradingStatus(t *testing.T) {
 			if coin == `USDT` {
 				price = 1.0
 			} else {
-				_, price = api.GetPriceForce(symbol, account.Market)
+				_, price = api.GetPriceForce(account.Market, symbol, false)
 			}
 			fmt.Println(price)
 		}

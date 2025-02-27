@@ -464,7 +464,7 @@ var wsActHandlerBinance = func(market, key string, event []byte) {
 						collateral.AccountValueInU += balance
 						collateral.AccountValueInU += crossUnPnl
 					} else {
-						getPrice, price := GetPriceForce(asset+model.UniStandardTail[model.MarketTypePerp], model.BinancePerp)
+						getPrice, price := GetPriceForce(model.BinancePerp, asset+model.UniStandardTail[model.MarketTypePerp], false)
 						if getPrice {
 							collateral.AccountValueInU += balance * price
 						}
@@ -604,7 +604,7 @@ func getBalanceBinanceMargin(key, secret string) (success bool, balances []*mode
 		}
 		if balance.UsdValue == 0 && balance.Amount > 0 {
 			symbolStandard := balance.Coin + model.UniStandardTail[model.MarketTypeSpot]
-			_, price := GetPriceForce(symbolStandard, model.BinanceMargin)
+			_, price := GetPriceForce(model.BinanceMargin, symbolStandard, false)
 			balance.UsdValue = balance.Amount * price
 		}
 		balances = append(balances, balance)
@@ -650,7 +650,7 @@ func getBalanceBinanceSpot(key string, secret string) (success bool, totalInUsdt
 		}
 		if balance.UsdValue == 0 && balance.Amount > 0 {
 			symbolStandard := balance.Coin + model.UniStandardTail[model.MarketTypeSpot]
-			_, price := GetPriceForce(symbolStandard, model.BinanceSpot)
+			_, price := GetPriceForce(model.BinanceSpot, symbolStandard, false)
 			balance.UsdValue = balance.Amount * price
 		}
 		//if asset[`netAsset`] != nil {
@@ -666,17 +666,7 @@ func getBalanceBinanceSpot(key string, secret string) (success bool, totalInUsdt
 		time.Sleep(time.Second * 5)
 		return getBalanceBinanceSpot(key, secret)
 	}
-	_, btcPrice := GetPriceForce(`BTC_USDT`, model.BinanceSpot)
-	if btcPrice == 0 {
-		btcResp := signedRequestBinance(key, secret, model.BinanceSpot, http.MethodGet,
-			restBinance+`/api/v3/avgPrice?symbol=BTCUSDT`, false, nil)
-		if btcResp != nil {
-			btcJson, _ := util.NewJSON(btcResp)
-			if btcJson != nil {
-				btcPrice, _ = strconv.ParseFloat(btcJson.Get(`price`).MustString(), 64)
-			}
-		}
-	}
+	_, btcPrice := GetPriceForce(model.BinanceSpot, `BTC_USDT`, false)
 	btcValue := 0.0
 	walletResp := signedRequestBinance(key, secret, model.BinanceSpot, http.MethodGet,
 		restBinance+`/sapi/v1/asset/wallet/balance`, true, nil)
@@ -696,6 +686,19 @@ func getBalanceBinanceSpot(key string, secret string) (success bool, totalInUsdt
 	return true, totalInUsdt, balances
 }
 
+func getPriceBinanceSpot(key, secret, symbol string) (success bool, price float64) {
+	_, _, _, dialectSymbol := model.GetFromStandard(model.BinanceSpot, symbol)
+	resp := signedRequestBinance(key, secret, model.BinanceSpot, http.MethodGet,
+		restBinance+`/api/v3/avgPrice?symbol=`+dialectSymbol, false, nil)
+	if resp != nil {
+		respJson, _ := util.NewJSON(resp)
+		if respJson != nil {
+			success = true
+			price, _ = strconv.ParseFloat(respJson.Get(`price`).MustString(), 64)
+		}
+	}
+	return success, price
+}
 func queryOpenOrdersBinanceSpot(key, secret, symbol string) (orders []*model.Order) {
 	success, _, _, dialectSymbol := model.GetFromStandard(model.BinanceSpot, symbol)
 	if success || symbol == `` {

@@ -62,17 +62,7 @@ func MaintainConnsBinance(market string, accounts []*model.Account) {
 				if market == model.BinancePerp {
 					GetAccountFromWsAPI(account, wsAccountBalanceV2, market)
 				} else if market == model.BinanceSpot {
-					_, btcPrice := GetPriceForce(`BTC_USDT`, model.BinanceSpot)
-					if btcPrice == 0 {
-						btcResp := signedRequestBinance(account.Key, account.Secret, model.BinanceSpot, http.MethodGet,
-							restBinance+`/api/v3/avgPrice?symbol=BTCUSDT`, false, nil)
-						if btcResp != nil {
-							btcJson, _ := util.NewJSON(btcResp)
-							if btcJson != nil {
-								btcPrice, _ = strconv.ParseFloat(btcJson.Get(`price`).MustString(), 64)
-							}
-						}
-					}
+					_, btcPrice := GetPriceForce(model.BinanceSpot, `BTC_USDT`, true)
 					btcValue := 0.0
 					walletResp := signedRequestBinance(account.Key, account.Secret, model.BinanceSpot, http.MethodGet,
 						restBinance+`/sapi/v1/asset/wallet/balance`, true, nil)
@@ -808,8 +798,7 @@ func setPosSideBinancePerp(key, secret string) {
 	}
 }
 
-// getPriceBinancePerp
-func _(key, secret, symbol string) (success bool, price float64) {
+func getPriceBinancePerp(key, secret, symbol string) (success bool, price float64) {
 	var dialectSymbol string
 	success, _, _, dialectSymbol = model.GetFromStandard(model.BinancePerp, symbol)
 	if !success {
