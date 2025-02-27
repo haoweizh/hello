@@ -84,7 +84,10 @@ func handledFRate(status *model.CarryStatus, marketInfo *model.MarketInfo, price
 		if !got {
 			return
 		}
-		hours := float64(marketInfo.FundingRateInterval) / 3600000.0
+		hours := float64(status.Setting.ChanceLimit)
+		if hours == 0 {
+			hours = float64(marketInfo.FundingRateInterval) / 3600000.0
+		}
 		leftHours := float64(fundingRate.ExpireTime-time.Now().Unix()) / 3600.0
 		if fundingRate.ExpireTime < time.Now().Unix() {
 			util.Log(util.LogLevelError, fmt.Sprintf(`funding rate expired %s %s %d %d`, status.Market, status.Symbol, fundingRate.ExpireTime, marketInfo.FundingRateInterval))

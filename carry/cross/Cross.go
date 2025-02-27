@@ -908,6 +908,7 @@ func placeEqual(status *model.CarryStatus, price, amount float64, orderSide stri
 // Order.Fee 记录了原始下单的价格，用以判断最终comp成功时损失了多少
 // AmountRate 开仓、换仓资金费率倍数
 // AmountRateCombine平仓资金费率倍数
+// ChanceLimit 手工设置的资金费率收取周期（小时数）
 var ProcessCross = func(setting *model.Setting, tick *model.BidAsk) {
 	coinSettings := api.GetCoinSettings(setting.Function)
 	var settings []*model.Setting
