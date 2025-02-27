@@ -1209,6 +1209,17 @@ func getInterestBybit(account *model.Account) (interestDay, amountLimit map[stri
 	}
 	return interestDay, amountLimit
 }
+
+// getApikeyBybit 根据给定的账户信息查询并返回Bybit账户的VIP等级。
+// 此函数通过发送签名请求到Bybit API服务器来获取账户信息，
+// 然后解析响应以找出VIP等级。
+// 参数:
+//
+//	account - 包含账户密钥和密钥的秘密信息的账户模型指针。
+//
+// 返回值:
+//
+//	vipLevel - 以字符串形式返回账户的VIP等级，如果获取失败则返回"No VIP"。
 func getApikeyBybit(account *model.Account) (vipLevel string) {
 	response, _ := SignedRequestBybit(account.Key, account.Secret, http.MethodGet, bybitRestUrl, "/v5/user/query-api", nil)
 	loanJson, err := util.NewJSON(response)

@@ -1333,14 +1333,14 @@ func getInterestGate(account *model.Account, coins []string) (interestDay, amoun
 			}
 			for k, v := range rate {
 				if v != "" {
-					interestDay[k], _ = strconv.ParseFloat(v, 64)
+					dayRate, _ := strconv.ParseFloat(v, 64)
+					interestDay[k] = dayRate * 24
 				}
 			}
 			// 重置计数器和切片
 			counter = 0
 			coinsToRecord = make([]string, 0, 10)
 		}
-		time.Sleep(time.Millisecond * 70)
 	}
 	// 如果剩余的coin数量不足10个，但需要记录
 	if counter > 0 {
@@ -1348,7 +1348,10 @@ func getInterestGate(account *model.Account, coins []string) (interestDay, amoun
 		rate, _, err := client.UnifiedApi.GetUnifiedEstimateRate(ctx, coinsToRecord)
 		if err == nil {
 			for k, v := range rate {
-				interestDay[k], _ = strconv.ParseFloat(v, 64)
+				if v != "" {
+					dayRate, _ := strconv.ParseFloat(v, 64)
+					interestDay[k] = dayRate * 24
+				}
 			}
 		} else {
 			util.Log(util.LogLevelError, fmt.Sprintf(`market %s to UnifiedEstimateRate response error %v `, model.Bybit, err))
