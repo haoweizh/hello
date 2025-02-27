@@ -1180,10 +1180,9 @@ func getBillsBybit(account *model.Account, begin, end int64) (bool, []*model.Fun
 	return true, fundingFees
 }
 
+// https://bybit-exchange.github.io/docs/zh-TW/v5/account/collateral-info
 func getInterestBybit(account *model.Account) (interestDay, amountLimit map[string]float64) {
-	vipLevel := getApikeyBybit(account)
-	param := map[string]interface{}{`vipLevel`: vipLevel}
-	response, _ := SignedRequestBybit(account.Key, account.Secret, http.MethodGet, bybitRestUrl, "/v5/spot-margin-trade/data", param)
+	response, _ := SignedRequestBybit(account.Key, account.Secret, http.MethodGet, bybitRestUrl, "/v5/account/collateral-info", nil)
 	loanJson, err := util.NewJSON(response)
 	if loanJson == nil || err != nil || loanJson.Get(`result`) == nil || loanJson.Get(`retCode`).MustInt() != 0 {
 		util.Log(util.LogLevelError, fmt.Sprintf(`market %s to getInterest http error %v `, model.Bybit, err))
@@ -1191,31 +1190,21 @@ func getInterestBybit(account *model.Account) (interestDay, amountLimit map[stri
 	}
 	interestDay = map[string]float64{}
 	amountLimit = map[string]float64{}
-	for _, item := range loanJson.GetPath(`result`, `vipCoinList`).MustArray() {
-		vipCoinList := item.(map[string]interface{})
-		if vipCoinList["vipLevel"] == vipLevel {
-			list, ok := vipCoinList["list"].([]interface{})
-			if !ok {
-				util.Log(util.LogLevelError, fmt.Sprintf(`market %s to getInterest response error %v `, model.Bybit, err))
-				return
-			}
-			for _, v := range list {
-				value := v.(map[string]interface{})
-				if !value[`borrowable`].(bool) {
-					continue
-				}
-				if value[`currency`] == nil {
-					continue
-				}
-				coin := value[`currency`].(string)
-				if value[`maxBorrowingAmount`] != nil {
-					amountLimit[coin], _ = strconv.ParseFloat(value[`maxBorrowingAmount`].(string), 64)
-				}
-				if value[`hourlyBorrowRate`] != nil {
-					dayRate, _ := strconv.ParseFloat(value[`hourlyBorrowRate`].(string), 64)
-					interestDay[coin] = dayRate * 24
-				}
-			}
+	for _, item := range loanJson.GetPath(`result`, `list`).MustArray() {
+		value := item.(map[string]interface{})
+		if !value[`borrowable`].(bool) {
+			continue
+		}
+		if value[`currency`] == nil {
+			continue
+		}
+		coin := value[`currency`].(string)
+		if value[`availableToBorrow`] != nil {
+			amountLimit[coin], _ = strconv.ParseFloat(value[`availableToBorrow`].(string), 64)
+		}
+		if value[`hourlyBorrowRate`] != nil {
+			dayRate, _ := strconv.ParseFloat(value[`hourlyBorrowRate`].(string), 64)
+			interestDay[coin] = dayRate * 24
 		}
 	}
 	return interestDay, amountLimit
@@ -1229,3 +1218,29 @@ func getApikeyBybit(account *model.Account) (vipLevel string) {
 	}
 	return loanJson.GetPath(`result`, `vipLevel`).MustString()
 }
+
+// https://bybit-exchange.github.io/docs/zh-TW/v5/crypto-loan/borrow
+// borrowBybit 执行向Bybit平台借贷的操作。
+// 此函数通过发送签名请求来借贷加密货币。
+// 参数:
+//
+//	account: 包含用户账户信息的指针，包括API密钥和密钥。
+//	loan: 包含借贷详情的指针，包括借贷货币、借贷金额和抵押货币。
+//func borrowBybit(account *model.Account, loan *model.Loan) {
+//	param := map[string]interface{}{"loanCurrency": loan.LoanCurrency, "loanAmount": loan.LoanAmount, "collateralCurrency": loan.CollateralCurrency}
+//	response, _ := SignedRequestBybit(account.Key, account.Secret, http.MethodPost, bybitRestUrl, "/v5/crypto-loan/borrow", param)
+//	fmt.Println(string(response))
+//}
+//
+//// https://bybit-exchange.github.io/docs/zh-TW/v5/crypto-loan/repay
+//// repayBybit 执行 Bybit 平台的还款操作。
+//// 参数:
+////
+////	account: 用户账户信息，包含访问 Bybit API 所需的 key 和 secret。
+////	orderId: 还款订单ID。
+////	amount: 还款金额。
+//func repayBybit(account *model.Account, orderId, amount string) {
+//	param := map[string]interface{}{"orderId": orderId, "amount": amount}
+//	response, _ := SignedRequestBybit(account.Key, account.Secret, http.MethodPost, bybitRestUrl, "/v5/crypto-loan/repay", param)
+//	fmt.Println(string(response))
+//}

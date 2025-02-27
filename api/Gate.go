@@ -1308,13 +1308,51 @@ func queryOrderGate(key, secret, symbol, orderId string) (order *model.Order) {
 	return order
 }
 
-func getInterestGate(account *model.Account) (order *model.Order) {
+func getInterestGate(account *model.Account, coins []string) (interestDay, amountLimit map[string]float64) {
 	client, ctx := getClientGate(account.Key, account.Secret)
-	rate, _, err := client.UnifiedApi.GetUnifiedEstimateRate(ctx, []string{`BTC`, `ETH`})
-	//rate, _, err := client.UnifiedApi.GetUnifiedBorrowable(ctx, ``)
-	if err != nil {
-		return nil
+	interestDay = map[string]float64{}
+	amountLimit = map[string]float64{}
+	counter := 0
+	coinsToRecord := make([]string, 0, 10)
+	for _, coin := range coins {
+		coinsToRecord = append(coinsToRecord, coin)
+		BorrowReq, _, err := client.UnifiedApi.GetUnifiedBorrowable(ctx, coin)
+		if err != nil {
+			continue
+		}
+		if BorrowReq.Amount != "" {
+			amountLimit[coin], _ = strconv.ParseFloat(BorrowReq.Amount, 64)
+		}
+		counter++
+		if counter == 10 {
+			// 在这里执行记录操作
+			rate, _, errRate := client.UnifiedApi.GetUnifiedEstimateRate(ctx, coinsToRecord)
+			if errRate != nil {
+				util.Log(util.LogLevelError, fmt.Sprintf(`market %s to UnifiedEstimateRate response error %v `, model.Bybit, err))
+				continue
+			}
+			for k, v := range rate {
+				if v != "" {
+					interestDay[k], _ = strconv.ParseFloat(v, 64)
+				}
+			}
+			// 重置计数器和切片
+			counter = 0
+			coinsToRecord = make([]string, 0, 10)
+		}
+		time.Sleep(time.Millisecond * 70)
 	}
-	fmt.Println(rate)
-	return
+	// 如果剩余的coin数量不足10个，但需要记录
+	if counter > 0 {
+		// 在这里执行记录操作
+		rate, _, err := client.UnifiedApi.GetUnifiedEstimateRate(ctx, coinsToRecord)
+		if err == nil {
+			for k, v := range rate {
+				interestDay[k], _ = strconv.ParseFloat(v, 64)
+			}
+		} else {
+			util.Log(util.LogLevelError, fmt.Sprintf(`market %s to UnifiedEstimateRate response error %v `, model.Bybit, err))
+		}
+	}
+	return interestDay, amountLimit
 }
