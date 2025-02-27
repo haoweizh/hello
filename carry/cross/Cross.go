@@ -438,6 +438,7 @@ var ClearCross = func() {
 	syncGridHoldings()
 	// 用于更新资金费率 todo 增加其他可借币市场
 	api.InitMarketInfos(model.OKEX)
+	customizeFrHours()
 	model.AppEnvironment.CrossEqualing = false
 	util.Log(util.LogLevelInfo, fmt.Sprintf("end to clearing cross get set %v %d", model.AppEnvironment.CrossEqualing, traceId))
 }
@@ -491,6 +492,27 @@ func equalAccounts(doEqual bool, traceId int64) {
 		}
 	}
 	util.Log(util.LogLevelInfo, fmt.Sprintf(`exit clearing cross all %d`, traceId))
+}
+
+func customizeFrHours() {
+	value := api.GetCoinSettings(model.FunctionCross)
+	if value == nil {
+		return
+	}
+	value.Range(func(coin, settings interface{}) bool {
+		if settings == nil {
+			return true
+		}
+		for _, setting := range settings.([]*model.Setting) {
+			if setting.ChanceLimit > 0 {
+				marketInfo := model.GetMarketInfo(setting.Market, setting.Symbol)
+				if marketInfo != nil {
+					marketInfo.FundingRateInterval = int(setting.ChanceLimit * 3600000)
+				}
+			}
+		}
+		return true
+	})
 }
 
 func updateMoneyPerStep(account *model.Account) {
@@ -724,8 +746,8 @@ func getHolding(statuses []*model.CarryStatus) (bids, asks model.Ticks, statusMa
 			price = bids[0].Price / status.Setting.PriceX
 		}
 		if !status.Setting.Valid {
-			util.Log(util.LogLevelError, fmt.Sprintf(`setting still invalid %s %s %s funding %f interval %d %#v`,
-				status.Market, status.Symbol, status.Setting.Coin, handledRate, marketInfo.FundingRateInterval, status.Setting))
+			util.Log(util.LogLevelError, fmt.Sprintf(`setting still invalid %s %s %s funding %f %#v`,
+				status.Market, status.Symbol, status.Setting.Coin, handledRate, status.Setting))
 			status.Setting.Valid = true
 		}
 	}
@@ -908,6 +930,7 @@ func placeEqual(status *model.CarryStatus, price, amount float64, orderSide stri
 // Order.Fee 记录了原始下单的价格，用以判断最终comp成功时损失了多少
 // AmountRate 开仓、换仓资金费率倍数
 // AmountRateCombine平仓资金费率倍数
+// ChanceLimit 手工设置的资金费率收取周期（小时数）
 var ProcessCross = func(setting *model.Setting, tick *model.BidAsk) {
 	coinSettings := api.GetCoinSettings(setting.Function)
 	var settings []*model.Setting
