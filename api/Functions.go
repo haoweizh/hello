@@ -1155,7 +1155,7 @@ func GetInterest(account *model.Account) (success bool) {
 	case model.Bybit:
 		getInterestBybit(account)
 	case model.Gate:
-		getInterestGate(account)
+		getInterestGate(account, []string{`BTC`, `ETH`, `DOGE`, `OKB`, `SOL`, `TON`, `XRP`, `TRUMP`, `NOT`, `LTC`, `BCH`, `AIDOGE`})
 	}
 	return false
 }

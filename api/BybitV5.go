@@ -1180,10 +1180,9 @@ func getBillsBybit(account *model.Account, begin, end int64) (bool, []*model.Fun
 	return true, fundingFees
 }
 
+// https://bybit-exchange.github.io/docs/zh-TW/v5/account/collateral-info
 func getInterestBybit(account *model.Account) (interestDay, amountLimit map[string]float64) {
-	vipLevel := getApikeyBybit(account)
-	param := map[string]interface{}{`vipLevel`: vipLevel}
-	response, _ := SignedRequestBybit(account.Key, account.Secret, http.MethodGet, bybitRestUrl, "/v5/spot-margin-trade/data", param)
+	response, _ := SignedRequestBybit(account.Key, account.Secret, http.MethodGet, bybitRestUrl, "/v5/account/collateral-info", nil)
 	loanJson, err := util.NewJSON(response)
 	if loanJson == nil || err != nil || loanJson.Get(`result`) == nil || loanJson.Get(`retCode`).MustInt() != 0 {
 		util.Log(util.LogLevelError, fmt.Sprintf(`market %s to getInterest http error %v `, model.Bybit, err))
@@ -1191,35 +1190,36 @@ func getInterestBybit(account *model.Account) (interestDay, amountLimit map[stri
 	}
 	interestDay = map[string]float64{}
 	amountLimit = map[string]float64{}
-	for _, item := range loanJson.GetPath(`result`, `vipCoinList`).MustArray() {
-		vipCoinList := item.(map[string]interface{})
-		if vipCoinList["vipLevel"] == vipLevel {
-			list, ok := vipCoinList["list"].([]interface{})
-			if !ok {
-				util.Log(util.LogLevelError, fmt.Sprintf(`market %s to getInterest response error %v `, model.Bybit, err))
-				return
-			}
-			for _, v := range list {
-				value := v.(map[string]interface{})
-				if !value[`borrowable`].(bool) {
-					continue
-				}
-				if value[`currency`] == nil {
-					continue
-				}
-				coin := value[`currency`].(string)
-				if value[`maxBorrowingAmount`] != nil {
-					amountLimit[coin], _ = strconv.ParseFloat(value[`maxBorrowingAmount`].(string), 64)
-				}
-				if value[`hourlyBorrowRate`] != nil {
-					dayRate, _ := strconv.ParseFloat(value[`hourlyBorrowRate`].(string), 64)
-					interestDay[coin] = dayRate * 24
-				}
-			}
+	for _, item := range loanJson.GetPath(`result`, `list`).MustArray() {
+		value := item.(map[string]interface{})
+		if !value[`borrowable`].(bool) {
+			continue
+		}
+		if value[`currency`] == nil {
+			continue
+		}
+		coin := value[`currency`].(string)
+		if value[`availableToBorrow`] != nil {
+			amountLimit[coin], _ = strconv.ParseFloat(value[`availableToBorrow`].(string), 64)
+		}
+		if value[`hourlyBorrowRate`] != nil {
+			dayRate, _ := strconv.ParseFloat(value[`hourlyBorrowRate`].(string), 64)
+			interestDay[coin] = dayRate * 24
 		}
 	}
 	return interestDay, amountLimit
 }
+
+// getApikeyBybit 根据给定的账户信息查询并返回Bybit账户的VIP等级。
+// 此函数通过发送签名请求到Bybit API服务器来获取账户信息，
+// 然后解析响应以找出VIP等级。
+// 参数:
+//
+//	account - 包含账户密钥和密钥的秘密信息的账户模型指针。
+//
+// 返回值:
+//
+//	vipLevel - 以字符串形式返回账户的VIP等级，如果获取失败则返回"No VIP"。
 func getApikeyBybit(account *model.Account) (vipLevel string) {
 	response, _ := SignedRequestBybit(account.Key, account.Secret, http.MethodGet, bybitRestUrl, "/v5/user/query-api", nil)
 	loanJson, err := util.NewJSON(response)
