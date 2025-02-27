@@ -1229,29 +1229,3 @@ func getApikeyBybit(account *model.Account) (vipLevel string) {
 	}
 	return loanJson.GetPath(`result`, `vipLevel`).MustString()
 }
-
-// https://bybit-exchange.github.io/docs/zh-TW/v5/crypto-loan/borrow
-// borrowBybit 执行向Bybit平台借贷的操作。
-// 此函数通过发送签名请求来借贷加密货币。
-// 参数:
-//
-//	account: 包含用户账户信息的指针，包括API密钥和密钥。
-//	loan: 包含借贷详情的指针，包括借贷货币、借贷金额和抵押货币。
-//func borrowBybit(account *model.Account, loan *model.Loan) {
-//	param := map[string]interface{}{"loanCurrency": loan.LoanCurrency, "loanAmount": loan.LoanAmount, "collateralCurrency": loan.CollateralCurrency}
-//	response, _ := SignedRequestBybit(account.Key, account.Secret, http.MethodPost, bybitRestUrl, "/v5/crypto-loan/borrow", param)
-//	fmt.Println(string(response))
-//}
-//
-//// https://bybit-exchange.github.io/docs/zh-TW/v5/crypto-loan/repay
-//// repayBybit 执行 Bybit 平台的还款操作。
-//// 参数:
-////
-////	account: 用户账户信息，包含访问 Bybit API 所需的 key 和 secret。
-////	orderId: 还款订单ID。
-////	amount: 还款金额。
-//func repayBybit(account *model.Account, orderId, amount string) {
-//	param := map[string]interface{}{"orderId": orderId, "amount": amount}
-//	response, _ := SignedRequestBybit(account.Key, account.Secret, http.MethodPost, bybitRestUrl, "/v5/crypto-loan/repay", param)
-//	fmt.Println(string(response))
-//}
