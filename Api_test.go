@@ -588,8 +588,8 @@ func Test_ClearActs(t *testing.T) {
 
 func Test_GetPrice(t *testing.T) {
 	model.NewConfig()
-	markets := []string{model.BinanceSpot, model.BinancePerp, model.Gate, model.Gate, model.OKEX, model.OKEX}
-	symbols := []string{`BTC_USDT`, `BTC_PERP`, `BTC_PERP`, `BTC_USDT`, `BTC_PERP`, `BTC_USDT`, `BTC_PERP`, `BTC_USDT`}
+	markets := []string{model.Bybit, model.Bybit, model.BinanceSpot, model.BinancePerp, model.Gate, model.Gate, model.OKEX, model.OKEX}
+	symbols := []string{`BTC_USDT`, `BTC_PERP`, `BTC_USDT`, `BTC_PERP`, `BTC_PERP`, `BTC_USDT`, `BTC_PERP`, `BTC_USDT`, `BTC_PERP`, `BTC_USDT`}
 	for i, market := range markets {
 		result, price := api.GetPriceForce(market, symbols[i], true)
 		fmt.Println(fmt.Sprintf(`%s %s %v %f`, market, symbols[i], result, price))

@@ -401,6 +401,7 @@ func GetPriceForce(market, symbol string, force bool) (result bool, price float6
 	case model.Gate:
 		result, price = getPriceGate(account.Key, account.Secret, symbol)
 	case model.Bybit:
+		result, price = getPriceBybit(symbol)
 	case model.OKEX:
 		result, price = getPriceOKEX(account, symbol)
 	case model.BinancePerp:

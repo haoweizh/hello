@@ -739,6 +739,32 @@ func setBybitMarginLeverage(key, secret string) {
 	}
 }
 
+func getPriceBybit(symbol string) (success bool, price float64) {
+	_, marketType, _, dialectSymbol := model.GetFromStandard(model.Bybit, symbol)
+	param := map[string]interface{}{"category": "linear", "symbol": dialectSymbol}
+	if marketType == model.MarketTypePerp {
+		param["category"] = "linear"
+	} else if marketType == model.MarketTypeSpot {
+		param["category"] = "spot"
+	}
+	composeParams := util.ComposeParams(param)
+	httpResp, httpErr := util.HttpRequest(http.MethodGet, bybitRestUrl+"/v5/market/tickers?"+composeParams, "", map[string]string{}, 30)
+	bybitTickersResp := &dtos.BybitTickersResp{}
+	perpJsonErr := json.Unmarshal(httpResp, bybitTickersResp)
+	if bybitTickersResp == nil || bybitTickersResp.RetCode != 0 {
+		util.Log(util.LogLevelError, fmt.Sprintf(
+			"get bybit perp funding rate error, resp: %s, httpErr: %#v, jsonErr: %#v", httpResp, httpErr, perpJsonErr))
+		return
+	}
+	for _, ticker := range bybitTickersResp.Result.List {
+		priceTicker, err := strconv.ParseFloat(ticker.LastPrice, 64)
+		if err == nil {
+			return true, priceTicker
+		}
+	}
+	return false, 0
+}
+
 func setSymbolLeverageBybit(account *model.Account, symbol string) (setSuc bool) {
 	success, marketType, _, dialectSymbol := model.GetFromStandard(model.Bybit, symbol)
 	if !success {
