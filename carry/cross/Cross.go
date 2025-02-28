@@ -108,7 +108,7 @@ func createFromPosition(account *model.Account, setting *model.Setting) (carrySt
 	if setting.Market == model.Gate {
 		handledActValueInU = 0.6 * cm.accountValueInU
 	}
-	_, price := api.GetPriceForce(setting.Market, setting.Symbol, false)
+	_, price := api.GetPriceForce(setting.Market, setting.Symbol, true)
 	limitAmount := 0.0
 	availableAmount := 0.0
 	carryStatus = &model.CarryStatus{IsSpot: false, Market: setting.Market, Symbol: setting.Symbol, Account: account, Setting: setting}
@@ -199,7 +199,7 @@ func createFromBalance(account *model.Account, setting *model.Setting) (carrySta
 		value, ok = spotMarkets.Load(key)
 		util.Log(util.LogLevelInfo, fmt.Sprintf(`success set sm %d %s`, account.Index, setting.Market))
 	}
-	success, price := api.GetPriceForce(setting.Market, setting.Symbol, false)
+	success, price := api.GetPriceForce(setting.Market, setting.Symbol, true)
 	if value == nil {
 		util.Log(util.LogLevelError, fmt.Sprintf(`nil spot market %s %s getPrice %#v %f`, setting.Market, setting.Symbol, success, price))
 		return nil
