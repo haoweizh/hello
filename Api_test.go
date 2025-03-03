@@ -95,7 +95,7 @@ func Test_getCommonMarketInfos(t *testing.T) {
 	model.NewConfig()
 	market := model.Bybit
 	account := model.AppConfig.GetAccounts(market)[0]
-	api.QueryOrderById(account, account.Market, `COW_PERP`, model.OrderTypeLimit, `0ee81f8d-b2fb-4e88-8b45-2a3b9e25f224`)
+	//api.QueryOrderById(account, account.Market, `COW_PERP`, model.OrderTypeLimit, `0ee81f8d-b2fb-4e88-8b45-2a3b9e25f224`)
 	//api.GetPositions(account, market)
 	//api.GetInterest(account)
 	api.GetBalances(account, market)
@@ -597,17 +597,16 @@ func Test_GetPrice(t *testing.T) {
 }
 
 func Test_Order(t *testing.T) {
-	market := model.Gate
+	market := model.Bybit
 	model.NewConfig()
 	//model.AppDB, _ = gorm.Open(postgres.Open(model.AppConfig.DBConnection), &gorm.Config{})
-	symbol := `BTC_USDT`
 	account := model.GetAccounts(0)[market]
-	api.GetPriceForce(market, symbol, false)
 	api.InitMarketInfos(market)
 	//go api.MaintainConns(market)
 	//time.Sleep(5 * time.Second)
-	order1 := api.PlaceOrder(account, model.OrderSideBuy, model.OrderTypeLimit, market, symbol, ``, `test`,
-		0.00614, 0.00614, 1000, false, nil)
+	symbol := `ETH_USDT`
+	order1 := api.PlaceOrder(account, model.OrderSideSell, model.OrderTypeLimit, market, symbol, ``, `test`,
+		2444, 2444, 0.01, false, nil)
 	fmt.Println(fmt.Sprintf(`%#v`, order1))
 	//go func() {
 	//	for {
@@ -617,10 +616,10 @@ func Test_Order(t *testing.T) {
 	//		time.Sleep(2 * time.Minute)
 	//	}
 	//}()
-	select {
-	case <-time.After(time.Second * 33):
-
-	}
+	//select {
+	//case <-time.After(time.Second * 33):
+	//
+	//}
 }
 
 func Test_WSOKPair(t *testing.T) {
@@ -883,7 +882,7 @@ func Test_GateSols(t *testing.T) {
 }
 
 func Test_SetLeverage(t *testing.T) {
-	market := model.Gate
+	market := model.Bybit
 	model.NewConfig()
 	//api.InitMarketInfos(market)
 	symbol := `DUCK_PERP`
@@ -924,7 +923,7 @@ func Test_C(t *testing.T) {
 }
 
 func Test_Funding(t *testing.T) {
-	market := model.OKEX
+	market := model.Bybit
 	model.NewConfig()
 	model.AppDB, _ = gorm.Open(postgres.Open(model.AppConfig.DBConnection), &gorm.Config{})
 	//_ = model.AppDB.AutoMigrate(&model.FundingFee{})

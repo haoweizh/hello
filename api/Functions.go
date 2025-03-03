@@ -1056,7 +1056,7 @@ func InitMarketInfos(market string) (success bool) {
 	//	marketInfos = deprecated.getMarketsKucoinPerp(accounts[0].Key)
 	//	deprecated.setFutureAutoDeposit()
 	case model.Bybit:
-		marketInfos = getMarketsBybit()
+		marketInfos = getMarketsBybit(accounts[0])
 		//case model.BitgetSpot:
 		//	marketInfos = deprecated.getMarketsBitgetSpot()
 		//case model.BitgetPerp:
@@ -1140,7 +1140,15 @@ func GetBills(account *model.Account, begin, end int64) (success bool, fundingFe
 	case model.Gate:
 		return getBillsGate(account, begin, end)
 	case model.Bybit:
-		return getBillsBybit(account, begin, end)
+		_, fundingFees = getBillsBybit(account, begin, end, `SETTLEMENT`)
+		if fundingFees == nil {
+			fundingFees = []*model.FundingFee{}
+		}
+		_, interestFees := getBillsBybit(account, begin, end, `INTEREST`)
+		for _, fee := range interestFees {
+			fundingFees = append(fundingFees, fee)
+		}
+		success = true
 	case model.BinancePerp:
 		return getBillsBinance(account, begin, end)
 	default:
@@ -1154,7 +1162,7 @@ func GetInterest(account *model.Account) (success bool) {
 	case model.OKEX:
 		getInterestOkx(account)
 	case model.Bybit:
-		getInterestBybit(account)
+		getInterestBybit(account.Key, account.Secret)
 	case model.Gate:
 		getInterestGate(account, []string{`BTC`, `ETH`, `DOGE`, `OKB`, `SOL`, `TON`, `XRP`, `TRUMP`, `NOT`, `LTC`, `BCH`, `AIDOGE`})
 	}
