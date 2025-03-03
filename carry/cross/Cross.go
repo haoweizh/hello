@@ -578,6 +578,7 @@ func syncGridHoldings() {
 		for _, setting := range settings.([]*model.Setting) {
 			if price == 0 {
 				_, price = api.GetPriceForce(setting.Market, setting.Symbol, false)
+				price /= setting.GridAmount
 				priceSetting = setting
 			}
 			crossStyles := model.AppConfig.GetCrossStyles()
@@ -610,7 +611,7 @@ func syncGridHoldings() {
 			return true
 		}
 		change := false
-		moneyInAll := coinHolding / priceSetting.GridAmount * price
+		moneyInAll := coinHolding * price
 		carryCoin := valueCarryCoin.(*model.CarryCoin)
 		if moneyInAll < carryCoin.MoneyCurStep {
 			carryCoin.CurrentStep = 0
