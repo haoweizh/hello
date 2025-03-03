@@ -707,7 +707,7 @@ func sendSignRequestOKEX(account *model.Account, method, path string, param, bod
 // triggerPriceStr := strconv.FormatFloat(order.TriggerPrice, 'f', -1, 64)
 func placeOrderOKEX(account *model.Account, isWs bool, order *model.Order, orderParam string) {
 	reduceOnly := false
-	if orderParam == model.ReduceOnly {
+	if strings.Contains(orderParam, model.ReduceOnly) {
 		reduceOnly = true
 	}
 	price, decimal := model.FormatPrice(model.OKEX, order.Symbol, order.Price)

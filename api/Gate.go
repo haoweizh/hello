@@ -1183,11 +1183,11 @@ func placeOrderGate(account *model.Account, isWs bool, order *model.Order, order
 		if orderSide == model.OrderSideSell {
 			futuresOrder.Size = -1 * futuresOrder.Size
 		}
-		if orderParam == model.CloseContract {
+		if strings.Contains(orderParam, model.CloseContract) {
 			futuresOrder.Size = 0
 			futuresOrder.Close = true
 		}
-		if orderParam == model.ReduceOnly {
+		if strings.Contains(orderParam, model.ReduceOnly) {
 			futuresOrder.ReduceOnly = true
 		}
 		util.Log(util.LogLevelInfo, fmt.Sprintf(`create future order request: %#v`, futuresOrder))

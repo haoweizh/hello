@@ -885,9 +885,9 @@ func Test_SetLeverage(t *testing.T) {
 	market := model.Bybit
 	model.NewConfig()
 	//api.InitMarketInfos(market)
-	symbol := `DUCK_PERP`
+	//symbol := `DUCK_PERP`
 	account := model.GetAccounts(0)[market]
-	api.SetSymbolLeverage(account, market, symbol)
+	//api.SetSymbolLeverage(account, market, symbol)
 	api.GetInterest(account)
 }
 

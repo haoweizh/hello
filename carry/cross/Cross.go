@@ -1123,6 +1123,10 @@ func placeCross(carryCoin *model.CarryCoin, statusBuy, statusSell *model.CarrySt
 	if statusSell.Setting.Chance < 0 || !statusSell.Setting.Liquidated {
 		orderParamSell = model.ReduceOnly
 	}
+	marketInfoSell := model.GetMarketInfo(statusSell.Market, statusSell.Symbol)
+	if marketInfoSell != nil && marketInfoSell.CanBorrow {
+		orderParamSell += model.SpotLeverage
+	}
 	go api.PlaceOrder(statusBuy.Account, model.OrderSideBuy, model.OrderTypeLimit, statusBuy.Market,
 		statusBuy.Symbol, orderParamBuy, model.FunctionCross, priceBuy, priceBuy, amountBuy, true, PostOrderCross)
 	go api.PlaceOrder(statusSell.Account, model.OrderSideSell, model.OrderTypeLimit, statusSell.Market,

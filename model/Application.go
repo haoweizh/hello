@@ -81,6 +81,7 @@ const WSTypeTicker = `ticker`
 const Open = `open`
 const Close = `close`
 const ReduceOnly = `reduceOnly`
+const SpotLeverage = `leverage`
 const CloseContract = `closeContract`
 const WsBinanceSpotApi = `wss://ws-api.binance.com:443/ws-api/v3`
 const WsBinance = "wss://stream.binance.com:9443"

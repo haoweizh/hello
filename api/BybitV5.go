@@ -277,12 +277,15 @@ func getMarketsBybitSpot(account *model.Account, marketInfos map[string]*model.M
 		marketInfos[marketInfo.Symbol] = marketInfo
 		coinMarketInfos[symbolInfo.BaseCoin] = marketInfo
 	}
-	interestRates, _ := getInterestBybit(account.Key, account.Secret)
+	interestRates, canBorrowAmt := getInterestBybit(account.Key, account.Secret)
 	for coin, info := range coinMarketInfos {
 		if info == nil {
 			continue
 		}
 		info.InterestRate = interestRates[coin]
+		if canBorrowAmt[coin] > 0 {
+			info.CanBorrow = true
+		}
 	}
 }
 
@@ -838,7 +841,7 @@ func setBybitPerpLeverage(key, secret string) {
 
 func placeOrderBybit(account *model.Account, isWs bool, order *model.Order, orderParam string) {
 	reduceOnly := false
-	if orderParam == model.ReduceOnly {
+	if strings.Contains(orderParam, model.ReduceOnly) {
 		reduceOnly = true
 	}
 	price, decimal := model.FormatPrice(model.Bybit, order.Symbol, order.Price)
@@ -864,9 +867,11 @@ func placeOrderBybit(account *model.Account, isWs bool, order *model.Order, orde
 		"qty":         amountStr,
 		"price":       priceStr,
 		`marketUnit`:  `baseCoin`,
-		`isLeverage`:  1,
 		`orderLinkId`: order.ClientOrdId,
 		`reduceOnly`:  reduceOnly}
+	if strings.Contains(orderParam, model.SpotLeverage) {
+		param[`isLeverage`] = 1
+	}
 	if marketType == model.MarketTypePerp {
 		param["category"] = "linear"
 	} else {

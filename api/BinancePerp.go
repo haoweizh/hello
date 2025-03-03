@@ -342,7 +342,7 @@ func placeOrderBinancePerp(account *model.Account, isWS bool, order *model.Order
 	price, decimal := model.FormatPrice(model.BinancePerp, symbol, oriPrice)
 	priceStr := util.CutTailZero(strconv.FormatFloat(price, 'f', decimal, 64))
 	reduceOnly := false
-	if orderParam == model.ReduceOnly {
+	if strings.Contains(orderParam, model.ReduceOnly) {
 		reduceOnly = true
 	}
 	formattedAmount, format := model.GetAmountInMarket(model.BinancePerp, symbol, amount, price, reduceOnly)
