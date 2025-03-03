@@ -1222,6 +1222,15 @@ func getBillsBybit(account *model.Account, begin, end int64, billType string) (b
 	return true, fundingFees
 }
 
+func GetBorrowAbleBybit(account *model.Account) {
+	response, _ := SignedRequestBybit(account.Key, account.Secret, http.MethodGet, bybitRestUrl, `/v5/crypto-loan/borrowable-collateralisable-number`, nil)
+	loanJson, err := util.NewJSON(response)
+	if loanJson == nil || err != nil || loanJson.Get(`result`) == nil || loanJson.Get(`retCode`).MustInt() != 0 {
+		util.Log(util.LogLevelError, fmt.Sprintf(`market %s to getInterest http error %v `, model.Bybit, err))
+		return
+	}
+}
+
 // https://bybit-exchange.github.io/docs/zh-TW/v5/account/collateral-info
 func getInterestBybit(key, secret string) (interestDay, amountLimit map[string]float64) {
 	response, _ := SignedRequestBybit(key, secret, http.MethodGet, bybitRestUrl, "/v5/account/collateral-info", nil)
@@ -1241,9 +1250,9 @@ func getInterestBybit(key, secret string) (interestDay, amountLimit map[string]f
 			continue
 		}
 		coin := value[`currency`].(string)
-		if value[`availableToBorrow`] != nil {
-			amountLimit[coin], _ = strconv.ParseFloat(value[`availableToBorrow`].(string), 64)
-		}
+		//if value[`availableToBorrow`] != nil {
+		//	amountLimit[coin], _ = strconv.ParseFloat(value[`availableToBorrow`].(string), 64)
+		//}
 		if value[`hourlyBorrowRate`] != nil {
 			dayRate, _ := strconv.ParseFloat(value[`hourlyBorrowRate`].(string), 64)
 			interestDay[coin] = dayRate * 24
