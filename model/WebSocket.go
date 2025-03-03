@@ -110,9 +110,9 @@ func (wsConn *WSConn) WriteMsg(msg []byte) (err error) {
 	if (wsConn.conn == nil || wsConn.Closed) && wsConn.WSType == ChanTypeWS {
 		return fmt.Errorf(fmt.Sprintf(`nil conn %s`, wsConn.WSType.String()))
 	}
-	if strings.Contains(string(msg), `order`) {
-		util.Log(util.LogLevelInfo, fmt.Sprintf("time mark before %d %s", time.Now().UnixMicro(), string(msg)))
-	}
+	//if strings.Contains(string(msg), `order`) {
+	//	util.Log(util.LogLevelInfo, fmt.Sprintf("time mark before %d %s", time.Now().UnixMicro(), string(msg)))
+	//}
 	wsConn.WSChan <- msg
 	return
 }
