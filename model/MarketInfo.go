@@ -20,10 +20,10 @@ var NoTurtleCoins = map[string]bool{`yfii`: true}
 
 type MarketInfo struct {
 	Market, Symbol, CTCurrency              string
-	CanBorrow, DeListing                    bool
+	DeListing                               bool
+	PriceDecimal                            int // 价格精确到小数点后几位
+	FundingRateInterval                     int // 以毫秒为单位的资金费率周期
 	SizeIncrement, PriceIncrement, CTValue  float64
-	PriceDecimal                            int     // 价格精确到小数点后几位
-	FundingRateInterval                     int     // 以毫秒为单位的资金费率周期
 	PriceMax                                float64 //最高单价
 	TradeAmount                             float64 // 过去24小时以usd记交易额
 	MoneyMin                                float64 //最小下单金额需达到的计费货币数值

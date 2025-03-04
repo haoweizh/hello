@@ -224,6 +224,9 @@ func createFromBalance(account *model.Account, setting *model.Setting) (carrySta
 		carryStatus.Holding = balance.Amount
 		carryStatus.LimitSell, carryStatus.AvailableSell = limitSell, limitSell
 		carryStatus.RateInAll = math.Abs(carryStatus.Holding * price / handledActValueInU)
+		if setting.Market == model.Bybit && balance.AvailableWithBorrow > balance.Amount {
+			carryStatus.BybitSpotLever = true
+		}
 	}
 	usdLowLine := math.Min(MarginULowLimit, 0.1*handledActValueInU)
 	if sm.availableU < usdLowLine || carryStatus.RateInAll > 0.2 {
@@ -436,8 +439,9 @@ var ClearCross = func() {
 		equalAccounts(doEqual, traceId)
 	}
 	syncGridHoldings()
-	// 用于更新资金费率 todo 增加其他可借币市场
-	api.InitMarketInfos(model.OKEX)
+	for _, market := range model.AppEnvironment.Markets {
+		PostInit(market)
+	}
 	customizeFrHours()
 	model.AppEnvironment.CrossEqualing = false
 	util.Log(util.LogLevelInfo, fmt.Sprintf("end to clearing cross get set %v %d", model.AppEnvironment.CrossEqualing, traceId))
@@ -1123,8 +1127,7 @@ func placeCross(carryCoin *model.CarryCoin, statusBuy, statusSell *model.CarrySt
 	if statusSell.Setting.Chance < 0 || !statusSell.Setting.Liquidated {
 		orderParamSell = model.ReduceOnly
 	}
-	marketInfoSell := model.GetMarketInfo(statusSell.Market, statusSell.Symbol)
-	if marketInfoSell != nil && marketInfoSell.CanBorrow && statusSell.Setting.Market == model.Bybit {
+	if statusSell.BybitSpotLever {
 		orderParamSell += model.SpotLeverage
 	}
 	go api.PlaceOrder(statusBuy.Account, model.OrderSideBuy, model.OrderTypeLimit, statusBuy.Market,

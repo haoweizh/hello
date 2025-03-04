@@ -104,58 +104,12 @@ func handledFRate(status *model.CarryStatus, marketInfo *model.MarketInfo, price
 	return
 }
 
-// getTradeLineExtra
-func _(coin string, closeLine float64) (tradeLineExtra *TradeLineExtra) {
-	now := time.Now()
-	//value, ok := extras.Load(coin)
-	//if ok && value != nil && value.(*TradeLineExtra).updateTime.Add(time.Minute*10).After(now) {
-	//	return value.(*TradeLineExtra)
-	//}
-	tradeLineExtra = &TradeLineExtra{coin: coin, updateTime: now}
-	crossRows, _ := model.AppDB.Model(model.Order{}).Select(`order_side, refresh_type,sum(price*abs(amount)),avg(price)`).
-		Where(`coin=? and created_at>?`, coin, time.Now().Add(time.Minute*-180)).Group(`order_side, refresh_type`).Rows()
-	if crossRows != nil {
-		crossValues := make(map[string]float64)
-		crossPrices := make(map[string]float64)
-		for crossRows.Next() {
-			var orderSide, refreshType string
-			var valueAll, priceAvg float64
-			_ = crossRows.Scan(&orderSide, &refreshType, &valueAll, &priceAvg)
-			crossValues[orderSide+refreshType] = valueAll
-			crossPrices[orderSide+refreshType] = priceAvg
-		}
-		err := crossRows.Close()
-		if err != nil {
-			util.Log(util.LogLevelError, fmt.Sprintf(`fail to close db query %s`, err.Error()))
-		}
-		// 当发生comp的单均利润小于closeShortMargin，同向comp占比越大，开仓line越高
-		if crossValues[model.OrderSideBuy+model.FunctionComplement] > 300 &&
-			crossPrices[model.OrderSideSell+model.FunctionCross] > 0 && crossValues[model.OrderSideBuy+model.FunctionCross] > 0 {
-			lossRate := crossPrices[model.OrderSideBuy+model.FunctionComplement]/crossPrices[model.OrderSideSell+model.FunctionCross] - 1
-			if lossRate > 0 {
-				amtRate := crossValues[model.OrderSideBuy+model.FunctionComplement] / crossValues[model.OrderSideBuy+model.FunctionCross]
-				extra := math.Max(closeLine, 0.001) * math.Pow(amtRate, 3) * lossRate * 400000
-				extra = math.Max(extra, 3*lossRate)
-				tradeLineExtra.buyExtra = math.Min(extra, 0.4)
-				util.Log(util.LogLevelInfo, fmt.Sprintf(`comp extra buy %s compU %f compRate %f lossRate %f add %f`,
-					coin, crossValues[model.OrderSideBuy+model.FunctionComplement], amtRate, lossRate, extra))
-			}
-		}
-		if crossValues[model.OrderSideSell+model.FunctionComplement] > 300 &&
-			crossPrices[model.OrderSideSell+model.FunctionComplement] > 0 && crossValues[model.OrderSideSell+model.FunctionCross] > 0 {
-			lossRate := crossPrices[model.OrderSideBuy+model.FunctionCross]/crossPrices[model.OrderSideSell+model.FunctionComplement] - 1
-			if lossRate > 0 {
-				amtRate := crossValues[model.OrderSideSell+model.FunctionComplement] / crossValues[model.OrderSideSell+model.FunctionCross]
-				extra := math.Max(closeLine, 0.001) * math.Pow(amtRate, 3) * lossRate * 400000
-				extra = math.Max(extra, 3*lossRate)
-				tradeLineExtra.sellExtra = math.Min(extra, 0.4)
-				util.Log(util.LogLevelInfo, fmt.Sprintf(`comp extra sell %s compU %f compRate %f lossRate %f add %f`,
-					coin, crossValues[model.OrderSideSell+model.FunctionComplement], amtRate, lossRate, extra))
-			}
-		}
+func PostInit(market string) {
+	switch market {
+	case model.OKEX:
+		// 更新资金费率
+		api.InitMarketInfos(model.OKEX)
 	}
-	//extras.Store(coin, tradeLineExtra)
-	return
 }
 
 func GetHoldings(accounts map[string]*model.Account) (holding [][]interface{}) {

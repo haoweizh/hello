@@ -9,8 +9,9 @@ import (
 const SmallHolding = 50 // 设定以money计20位较少持仓，可以归入下一等级
 
 type CarryStatus struct {
-	IsSpot, DoRevert              bool
 	Market, Symbol                string
+	IsSpot, DoRevert              bool
+	BybitSpotLever                bool // bybit sell时是否设置leverage参数
 	ReduceOnlyBuy, ReduceOnlySell bool
 	Setting                       *Setting
 	Account                       *Account

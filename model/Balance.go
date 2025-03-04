@@ -5,21 +5,20 @@ import "time"
 type ProcessBalancesHandler func(market, accountKey string, balances []*Balance)
 
 type Balance struct {
-	AccountId string
-	Action    float64 // 1: deposit, -1: withdraw, 0: snapshot
-	Address   string  // for transaction
-	Amount    float64 //实际持仓头寸
-	//Available           float64
-	AvailableWithBorrow float64 //可借+持仓-已挂的卖单=现在总的可下卖单数量（千万别用这个作为持仓！）,binance、huobi现货按0计算可借
-	FrozenAmount        float64 //冻结数量
-	Borrow              float64
-	BalanceTime         time.Time // confirm time if transaction
+	AccountId           string
 	Coin                string
 	Fee                 string // for transaction
 	Market              string
 	Notes               string
 	Status              string // for transaction
 	TransactionId       string
+	Address             string  // for transaction
+	Action              float64 // 1: deposit, -1: withdraw, 0: snapshot
+	Amount              float64 //实际持仓头寸
+	AvailableWithBorrow float64 //可借+持仓-已挂的卖单=现在总的可下卖单数量（千万别用这个作为持仓！）,binance、huobi现货按0计算可借
+	FrozenAmount        float64 //冻结数量
+	Borrow              float64
+	BalanceTime         time.Time // confirm time if transaction
 	UsdValue            float64
 	ID                  string `gorm:"primary_key"`
 	CreatedAt           time.Time

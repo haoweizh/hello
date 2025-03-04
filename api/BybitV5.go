@@ -595,6 +595,7 @@ func getBalanceBybit(key string, secret string) (success bool, balances []*model
 					}
 				}
 				balance.UsdValue = usdValue
+				_, balance.AvailableWithBorrow = GetBorrowAbleBybit(key, secret, balance.Coin)
 				balances = append(balances, balance)
 			}
 		}
@@ -1212,15 +1213,27 @@ func getBillsBybit(account *model.Account, begin, end int64, billType string) (b
 	return true, fundingFees
 }
 
-// /v5/crypto-loan/borrowable-collateralisable-number
-func GetBorrowAbleBybit(account *model.Account) {
-	param := map[string]interface{}{`category`: `spot`, `symbol`: `ETHUSDT`, `side`: `Sell`}
-	response, _ := SignedRequestBybit(account.Key, account.Secret, http.MethodGet, bybitRestUrl, `/v5/order/spot-borrow-check`, param)
+func GetBorrowAbleBybit(key, secret, coin string) (canMargin bool, availableWithBorrow float64) {
+	_, _, _, dialectSymbol := model.GetFromStandard(model.Bybit, coin+model.UniStandardTail[model.MarketTypeSpot])
+	param := map[string]interface{}{`category`: `spot`, `symbol`: dialectSymbol, `side`: `Sell`}
+	response, _ := SignedRequestBybit(key, secret, http.MethodGet, bybitRestUrl, `/v5/order/spot-borrow-check`, param)
 	loanJson, err := util.NewJSON(response)
 	if loanJson == nil || err != nil || loanJson.Get(`result`) == nil || loanJson.Get(`retCode`).MustInt() != 0 {
 		util.Log(util.LogLevelError, fmt.Sprintf(`market %s to getInterest http error %v `, model.Bybit, err))
 		return
 	}
+	data := loanJson.Get(`result`).MustMap()
+	if data[`maxTradeQty`] != nil {
+		availableWithBorrow, _ = strconv.ParseFloat(data[`maxTradeQty`].(string), 64)
+	}
+	if data[`spotMaxTradeQty`] != nil {
+		spotAmt, _ := strconv.ParseFloat(data[`spotMaxTradeQty`].(string), 64)
+		if availableWithBorrow > spotAmt {
+			canMargin = true
+		}
+	}
+	time.Sleep(time.Millisecond * 20)
+	return
 }
 
 // https://bybit-exchange.github.io/docs/zh-TW/v5/account/collateral-info
