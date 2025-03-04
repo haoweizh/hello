@@ -897,8 +897,12 @@ func placeEqual(status *model.CarryStatus, price, amount float64, orderSide stri
 	checkAmount, _ := model.GetAmountInMarket(status.Market, status.Symbol, amount, price, reduceOnly)
 	if checkAmount > 0 {
 		util.Log(util.LogLevelInfo, fmt.Sprintf(`do equal %f %f %#v`, price, amount, status))
+		orderParam := ``
+		if status.BybitSpotLever && orderSide == model.OrderSideSell {
+			orderParam = model.SpotLeverage
+		}
 		order := api.PlaceOrder(status.Account, orderSide, model.OrderTypeLimit,
-			status.Market, status.Symbol, ``, model.FunctionCompAll, price, price, amount, false, nil)
+			status.Market, status.Symbol, orderParam, model.FunctionCompAll, price, price, amount, false, nil)
 		if order != nil && order.Status != model.CarryStatusFail {
 			compOrders.Store(order.OrderId, order)
 			if orderSide == model.OrderSideBuy {
@@ -1153,6 +1157,8 @@ func placeCross(carryCoin *model.CarryCoin, statusBuy, statusSell *model.CarrySt
 		placeStatus(statusBuy, priceBuy, amountBuy)
 	}
 	placeStatus(statusSell, priceSell, -1*amountSell)
+	util.DelSyncMap(&model.AppEnvironment.BidAsk, statusSell.Market, statusSell.Symbol)
+	util.DelSyncMap(&model.AppEnvironment.BidAsk, statusBuy.Market, statusBuy.Symbol)
 	//if marketTypeBuy == model.MarketTypeSpot {
 	//	value, _ := util.LoadSyncMap(carryStatusMap, statusBuy.Setting.Coin, statusBuy.Market, statusBuy.Symbol, statusBuy.Account.Key)
 	//	if value != nil {

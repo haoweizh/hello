@@ -49,7 +49,7 @@ type WSResp struct {
 
 type Environment struct {
 	markPriceInfos                    sync.Map // symbol - market - ticker 行情包含标记价格
-	bidAsks                           sync.Map // market*symbol - bidAsk
+	BidAsk                            sync.Map // market*symbol - bidAsk
 	kLines                            sync.Map // symbol - market - *candle
 	MsgChanKLine                      sync.Map // market - []chan struct{}
 	WsInitTime                        sync.Map // market - time
@@ -188,7 +188,7 @@ func (environment *Environment) SetCandle(symbol, market string, candle *Candle)
 }
 
 func (environment *Environment) GetBidAsk(market, symbol string) (result bool, bidAsk *BidAsk) {
-	value, _ := util.LoadSyncMap(&environment.bidAsks, market, symbol)
+	value, _ := util.LoadSyncMap(&environment.BidAsk, market, symbol)
 	if value != nil {
 		return true, value.(*BidAsk)
 	}
@@ -205,17 +205,17 @@ func (environment *Environment) SetBidAsk(market, symbol string, bidAsk *BidAsk)
 		bidAsk.Asks[0].Price == 0 || bidAsk.Asks[0].Amount == 0 {
 		return false
 	}
-	//last, _ := util.LoadSyncMap(&environment.bidAsks, market, symbol)
+	//last, _ := util.LoadSyncMap(&environment.BidAsk, market, symbol)
 	//if last == nil || last.(*BidAsk).Ts <= bidAsk.Ts {
 	//	if last != nil && AppConfig.Debug && time.Now().UnixMilli()-int64(bidAsk.Ts) < 100 {
 	//		go AppMetric.AddTick(market, symbol, util.GetNow(), last.(*BidAsk), bidAsk)
 	//	}
-	//	util.StoreSyncMap(&environment.bidAsks, bidAsk, market, symbol)
+	//	util.StoreSyncMap(&environment.BidAsk, bidAsk, market, symbol)
 	//	return true
 	//}
 	if time.Now().UnixMilli() == 0 {
 		go AppMetric.AddTick(market, symbol, util.GetNow(), nil, bidAsk)
 	}
-	util.StoreSyncMap(&environment.bidAsks, bidAsk, market, symbol)
+	util.StoreSyncMap(&environment.BidAsk, bidAsk, market, symbol)
 	return true
 }
