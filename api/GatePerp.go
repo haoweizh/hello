@@ -128,8 +128,33 @@ var wsPriHandlerGatePerp = func(market, key string, msg []byte) {
 			UpdateOrderDeal(market, orderId, ``, status, string(msg), dealAmount)
 		}
 	} else if channel == `futures.positions` {
-		//https: //www.gate.io/docs/developers/futures/ws/zh_CN/#%E4%BB%93%E4%BD%8D%E8%AE%A2%E9%98%85
-		util.LogLess(util.LogLevelInfo, "risk check ws update positions gate "+string(msg))
+		//https://www.gate.io/docs/developers/futures/ws/zh_CN/#%E4%BB%93%E4%BD%8D%E8%AE%A2%E9%98%85
+		util.Log(util.LogLevelInfo, "risk check ws update positions gate "+string(msg))
+		positions := make([]*model.Position, 0)
+		data := responseJson.Get(`result`).MustArray()
+		for _, item := range data {
+			value := item.(map[string]interface{})
+			getCoin, _, symbol := model.GetFromDialect(model.Gate, model.MarketTypePerp, value[`contract`].(string))
+			if !getCoin {
+				continue
+			}
+			position := &model.Position{Market: model.Gate, Ts: util.GetNowUnixMillion(), Currency: symbol}
+			size, _ := value[`size`].(json.Number).Float64()
+			_, realAmount := model.ParseRealAmount(model.Gate, symbol, size)
+			position.Holding = realAmount
+			position.LeverRate, _ = value[`cross_leverage_limit`].(json.Number).Int64()
+			position.EntryPrice, _ = value[`entry_price`].(json.Number).Float64()
+			position.Margin, _ = value[`margin`].(json.Number).Float64()
+			position.LiquidationPrice, _ = value[`liq_price`].(json.Number).Float64()
+			//ws没有未实现盈利
+			//position.ProfitUnreal, _ = strconv.ParseFloat(item.UnrealisedPnl, 64)
+			position.ProfitReal, _ = value[`realised_pnl`].(json.Number).Float64()
+			position.RiskLimit, _ = value[`risk_limit`].(json.Number).Float64()
+			positions = append(positions, position)
+		}
+		if len(positions) > 0 {
+			model.CrossPositionsHandler(market, key, positions)
+		}
 	} else {
 		channel = responseJson.GetPath(`header`, `channel`).MustString()
 		if channel == `futures.order_place` {

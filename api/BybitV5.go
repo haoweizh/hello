@@ -112,6 +112,9 @@ var wsOrdUdtHandlerBybit = func(market, key string, msg []byte) {
 				//util.Log(util.LogLevelInfo, fmt.Sprintf(`get position bybit %#v`, position))
 			}
 		}
+		if len(positions) > 0 {
+			model.CrossPositionsHandler(market, key, positions)
+		}
 	}
 }
 
