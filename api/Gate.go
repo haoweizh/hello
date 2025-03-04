@@ -446,7 +446,6 @@ var wsPriHandlerGateSpot = func(market, key string, msg []byte) {
 		}
 	} else if channel == `spot.balances` {
 		// https://www.gate.io/docs/developers/apiv4/ws/en/#client-subscription-12
-		util.LogLess(util.LogLevelInfo, "risk check ws update balances gate "+string(msg))
 		dataArray := responseJson.Get(`result`).MustArray()
 		var balances []*model.Balance
 		if dataArray != nil {
@@ -464,6 +463,7 @@ var wsPriHandlerGateSpot = func(market, key string, msg []byte) {
 			}
 		}
 		if balances != nil && len(balances) > 0 {
+			util.LogLess(util.LogLevelInfo, fmt.Sprintf("risk check ws update balances gate %d %s", len(balances), string(msg)))
 			model.CrossBalancesHandler(market, key, balances)
 		}
 	} else {

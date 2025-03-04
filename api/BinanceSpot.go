@@ -396,7 +396,6 @@ var wsOrderUpdateBinance = func(market, key string, msg []byte) {
 		UpdateOrderDeal(market, orderId, clientOId, status, string(msg), dealAmount)
 	case `outboundAccountPosition`:
 		//https://developers.binance.com/docs/binance-spot-api-docs/user-data-stream#account-update
-		util.LogLess(util.LogLevelInfo, fmt.Sprintf(`risk check ws update balances bybit`+string(msg)))
 		dataArray := resJson.Get(`B`).MustArray()
 		var balances []*model.Balance
 		if dataArray != nil {
@@ -411,6 +410,7 @@ var wsOrderUpdateBinance = func(market, key string, msg []byte) {
 			}
 		}
 		if balances != nil && len(balances) > 0 {
+			util.LogLess(util.LogLevelInfo, fmt.Sprintf(`risk check ws update balances binancespot %d %s`, len(balances), string(msg)))
 			model.CrossBalancesHandler(market, key, balances)
 		}
 	case `ACCOUNT_UPDATE`:

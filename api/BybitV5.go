@@ -59,7 +59,6 @@ var wsOrdUdtHandlerBybit = func(market, key string, msg []byte) {
 			collateral.Available, _ = strconv.ParseFloat(walletResp.Data[0].TotalAvailableBalance, 64)
 			collateral.Rate, _ = strconv.ParseFloat(walletResp.Data[0].AccountMMRate, 64)
 			collateral.AccountValueInU, _ = strconv.ParseFloat(walletResp.Data[0].TotalEquity, 64)
-			util.LogLess(util.LogLevelInfo, fmt.Sprintf("risk check ws update balances bybit %s", msg))
 			model.CollateralHandler(key, ``, false, collateral)
 			var balances []*model.Balance
 			coins := walletResp.Data[0].Coin
@@ -77,6 +76,7 @@ var wsOrdUdtHandlerBybit = func(market, key string, msg []byte) {
 				}
 			}
 			if balances != nil && len(balances) > 0 {
+				util.LogLess(util.LogLevelInfo, fmt.Sprintf("risk check ws update balances bybit %d %s", len(balances), msg))
 				model.CrossBalancesHandler(market, key, balances)
 			}
 		}
