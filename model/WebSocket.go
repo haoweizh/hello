@@ -73,7 +73,7 @@ func (wsConn *WSConn) Close() {
 }
 
 func (wsConn *WSConn) handle() {
-	for {
+	for !util.Terminal {
 		msg := <-wsConn.WSChan
 		if len(wsConn.WSChan) > 10 {
 			util.Log(util.LogLevelError, fmt.Sprintf(`wsConn wait list 10 %d %s %#v`, len(wsConn.WSChan), string(msg), wsConn))
@@ -258,7 +258,7 @@ func publicHandler(market, url string, connection *WSConn, subHandler SubscribeH
 		//err := connection.conn.Close(websocket.StatusNormalClosure, "")
 		connection.Close()
 	}()
-	for {
+	for !util.Terminal {
 		if connection.WSType == ChanTypeWS {
 			//msgType, message, err := connection.conn.Read(context.Background())
 			msgType, message, err := connection.conn.ReadMessage()
@@ -316,7 +316,7 @@ func WsPrivateClient(account *Account, connMap *sync.Map, connKey, market, url s
 			//closeErr := connection.conn.Close(websocket.StatusNormalClosure, "")
 			connection.Close()
 		}()
-		for {
+		for !util.Terminal {
 			if connection.WSType == ChanTypeWS {
 				_, message, readErr := connection.conn.ReadMessage()
 				if readErr != nil {

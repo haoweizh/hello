@@ -139,7 +139,7 @@ func maintainConnsBybit(accounts []*model.Account) {
 	for _, account := range accounts {
 		model.AppEnvironment.PriConnecting.Store(model.Bybit+account.Key, false)
 	}
-	for {
+	for !util.Terminal {
 		pingMsg := []byte(fmt.Sprintf(`{ "req_id": "%d","op": "ping"}`, time.Now().Unix()))
 		publicConnKey := GetPublicConnKey(model.Bybit, ``)
 		connTick, _ := model.AppEnvironment.ConnTick.Load(publicConnKey)
@@ -315,9 +315,9 @@ func getMarketsBybitSpot(account *model.Account, marketInfos map[string]*model.M
 
 func getMarketsBybitPerp(marketInfos map[string]*model.MarketInfo) {
 	cursor := "init"
-	for {
+	for !util.Terminal {
 		param := map[string]interface{}{"category": "linear", "limit": "1000"}
-		if cursor != "" && cursor != "init" {
+		if cursor != "init" {
 			param["cursor"] = cursor
 		}
 		composeParams := util.ComposeParams(param)
@@ -641,9 +641,9 @@ func getBalanceBybit(key string, secret string) (success bool, balances []*model
 func getPositionsBybit(key, secret string) (success bool, positions []*model.Position, posBalance float64) {
 	cursor := "init"
 	positions = make([]*model.Position, 0)
-	for {
+	for !util.Terminal {
 		param := map[string]interface{}{"category": "linear", "settleCoin": "USDT", "limit": "200"}
-		if cursor != "" && cursor != "init" {
+		if cursor != "init" {
 			param["cursor"] = cursor
 		}
 		positionHttpResp, positionHttpErr := SignedRequestBybit(key, secret, http.MethodGet, bybitRestUrl, "/v5/position/list", param)
@@ -689,6 +689,7 @@ func getPositionsBybit(key, secret string) (success bool, positions []*model.Pos
 			return true, positions, 0
 		}
 	}
+	return false, positions, 0
 }
 
 func SignedRequestBybit(key, secret, method, host, path string, body map[string]interface{}) ([]byte, error) {
@@ -1204,7 +1205,7 @@ func getBillsBybit(account *model.Account, begin, end int64, billType string) (b
 	param := map[string]interface{}{`type`: billType, `startTime`: begin, `endTime`: end, `limit`: 50}
 	response, _ := SignedRequestBybit(account.Key, account.Secret, http.MethodGet, bybitRestUrl, "/v5/account/transaction-log", param)
 	var fundingFees = make([]*model.FundingFee, 0)
-	for {
+	for !util.Terminal {
 		loanJson, err := util.NewJSON(response)
 		if loanJson == nil || err != nil || loanJson.Get(`result`) == nil || loanJson.Get(`retCode`).MustInt() != 0 {
 			util.Log(util.LogLevelError, fmt.Sprintf(`market %s to getbills http error %v `, model.Bybit, err))

@@ -82,7 +82,7 @@ type MarkPriceInfo struct {
 }
 
 func (environment *Environment) HandleWSResp() {
-	for {
+	for !util.Terminal {
 		wsResp := <-environment.WSRespChan
 		value, _ := environment.ReqIdOrders.Load(wsResp.RequestId)
 		if value == nil {

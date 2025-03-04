@@ -33,7 +33,7 @@ func NewOkexAgentService(conn *model.WSConn, okexConn *model.WSConn) *OkexAgentS
 func (s *OkexAgentService) HandleClientPublicMessages() {
 	defer close(s.doneCh)
 	go func() {
-		for {
+		for !util.Terminal {
 			buf := make([]byte, 4096)
 			msgSize := s.ClientConn.MarketReceiver.ReceiveMarket(buf)
 			if msgSize > 0 {
@@ -47,7 +47,7 @@ func (s *OkexAgentService) HandleClientPublicMessages() {
 		}
 	}()
 	go func() {
-		for {
+		for !util.Terminal {
 			buf := make([]byte, 4096)
 			msgSize := s.OkexConn.MarketReceiver.ReceiveMarket(buf)
 			if msgSize > 0 {
@@ -67,7 +67,7 @@ func (s *OkexAgentService) HandleClientPublicMessages() {
 func (s *OkexAgentService) HandleClientPrivateMessages() {
 	defer close(s.doneCh)
 	go func() {
-		for {
+		for !util.Terminal {
 			buf := make([]byte, 4096)
 			msgSize := s.ClientConn.OrderReceiver.ReceiveOrder(buf)
 			if msgSize > 0 {
@@ -81,7 +81,7 @@ func (s *OkexAgentService) HandleClientPrivateMessages() {
 		}
 	}()
 	go func() {
-		for {
+		for !util.Terminal {
 			buf := make([]byte, 4096)
 			msgSize := s.OkexConn.OrderReceiver.ReceiveOrder(buf)
 			if msgSize > 0 {
@@ -104,7 +104,7 @@ func (s *OkexAgentService) processMessage(message []byte, wsType model.ChannelTy
 
 // HandleMessages 处理通道中的消息
 func (s *OkexAgentService) HandleMessages() {
-	for {
+	for !util.Terminal {
 		select {
 		case msg, ok := <-s.ClientToOkex:
 			if !ok {

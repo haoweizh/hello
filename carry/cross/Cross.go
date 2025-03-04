@@ -468,7 +468,7 @@ func equalAccounts(doEqual bool, traceId int64) {
 		waitEqual[i] = true
 		go equalAccount(i, equalChannel, accounts, doEqual, traceId)
 	}
-	for {
+	for !util.Terminal {
 		index := <-equalChannel
 		waitEqual[index] = false
 		finish := true
@@ -1273,7 +1273,7 @@ func handleCross(account *model.Account, order *model.Order) {
 }
 
 func ContinueComp() {
-	for {
+	for !util.Terminal {
 		compOrders.Range(func(key, value interface{}) bool {
 			if value == nil {
 				return true

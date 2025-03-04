@@ -30,7 +30,7 @@ func MaintainConnsBinance(market string, accounts []*model.Account) {
 		model.AppEnvironment.PriConnecting.Store(market+account.Key, false)
 	}
 	spotWalletUptTs := time.Now().Unix()
-	for {
+	for !util.Terminal {
 		updateAccountValue := false
 		if time.Now().Unix()-spotWalletUptTs > 120 {
 			updateAccountValue = true
@@ -875,7 +875,7 @@ func getBillsBinance(account *model.Account, begin, end int64) (bool, []*model.F
 	response := signedRequestBinance(account.Key, account.Secret, model.BinancePerp,
 		http.MethodGet, restBinancePerp+"/fapi/v1/income", true, param)
 	var fundingFees = make([]*model.FundingFee, 0)
-	for {
+	for !util.Terminal {
 		loanJson, err := util.NewJSON(response)
 		if loanJson == nil || err != nil {
 			break

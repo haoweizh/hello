@@ -33,7 +33,7 @@ const chanelOKEX = `bbo-tbt` //`books5`
 func maintainConnsOKEX(accounts []*model.Account) {
 	//subscribes := GetWSSubscribes(model.OKEX, []string{model.SubscribeDepth})
 	//go func() {
-	//	for {
+	//	for !util.Terminal {
 	//		time.Sleep(time.Minute * 5)
 	//		reSubscribe(subscribes)
 	//	}
@@ -44,7 +44,7 @@ func maintainConnsOKEX(accounts []*model.Account) {
 	for _, account := range accounts {
 		model.AppEnvironment.PriConnecting.Store(model.OKEX+account.Key, false)
 	}
-	for {
+	for !util.Terminal {
 		connTick, ok := model.AppEnvironment.ConnTick.Load(GetPublicConnKey(model.OKEX, ``))
 		if ok && connTick != nil {
 			if err := SendToConnections(model.OKEX, connTick.(map[*model.WSConn]bool), []byte(`ping`)); err != nil {
@@ -411,7 +411,7 @@ func handleBooksUpdate(symbol string, data map[string]interface{}, bidAsk *model
 	newBids := make([]model.Tick, 0)
 	i := 0
 	j := 0
-	for {
+	for !util.Terminal {
 		if j >= len(bidAskUpdate.Asks) {
 			if i < len(bidAsk.Asks) {
 				newAsks = append(newAsks, bidAsk.Asks[i])
@@ -448,7 +448,7 @@ func handleBooksUpdate(symbol string, data map[string]interface{}, bidAsk *model
 	}
 	i = 0
 	j = 0
-	for {
+	for !util.Terminal {
 		if j >= len(bidAskUpdate.Bids) {
 			if i < len(bidAsk.Bids) {
 				newBids = append(newBids, bidAsk.Bids[i])
@@ -1722,7 +1722,7 @@ func getBillsOkx(account *model.Account, begin, end int64, billType string) (boo
 	param := map[string]interface{}{`type`: billType, `begin`: begin, `end`: end, `limit`: 100}
 	response, _ := sendSignRequestOKEX(account, http.MethodGet, `/api/v5/account/bills`, param, nil)
 	var fundingFees = make([]*model.FundingFee, 0)
-	for {
+	for !util.Terminal {
 		loanJson, err := util.NewJSON(response)
 		if loanJson == nil || err != nil || loanJson.Get(`data`) == nil {
 			break

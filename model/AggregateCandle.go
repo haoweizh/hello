@@ -19,7 +19,7 @@ func (aggregate *AggregateCandle) GetKey() string {
 }
 
 //func (aggregate *AggregateCandle) refreshLink() {
-//	for {
+//	for !util.Terminal {
 //		nodeHead := aggregate.LinkList.Head
 //		nodeTail := aggregate.LinkList.Tail
 //		if nodeHead == nil || nodeTail == nil {
@@ -41,7 +41,7 @@ func (aggregate *AggregateCandle) GetKey() string {
 //	aggregate.PriceHigh = node.Data.(*Candle).PriceHigh
 //	aggregate.PriceLow = node.Data.(*Candle).PriceLow
 //	aggregate.VolumeQuote = 0
-//	for {
+//	for !util.Terminal {
 //		if node == nil {
 //			break
 //		} else {
@@ -66,7 +66,7 @@ func (aggregate *AggregateCandle) GetKey() string {
 //		return
 //	}
 //	nodeCurrent := aggregate.LinkList.Tail
-//	for {
+//	for !util.Terminal {
 //		if nodeCurrent == nil {
 //			aggregate.LinkList.AddHead(&util.Node{Data: candle})
 //			break
@@ -80,7 +80,7 @@ func (aggregate *AggregateCandle) GetKey() string {
 //		}
 //	}
 //	needRefresh := false
-//	for {
+//	for !util.Terminal {
 //		head := aggregate.LinkList.Head
 //		if head == nil {
 //			break

@@ -524,7 +524,7 @@ func maintainConnsGate(accounts []*model.Account) {
 	}
 	loginTSSpot := time.Now().Unix()
 	loginTSPerp := time.Now().Unix()
-	for {
+	for !util.Terminal {
 		connTick, _ := model.AppEnvironment.ConnTick.Load(GetPublicConnKey(model.Gate, model.MarketTypeSpot))
 		if connTick != nil {
 			if err := SendToConnections(model.Gate, connTick.(map[*model.WSConn]bool),

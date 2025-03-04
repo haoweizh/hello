@@ -173,7 +173,7 @@ func (agent *WSAgent) Close() {
 }
 
 func (agent *WSAgent) WriteServe() {
-	for {
+	for !util.Terminal {
 		select {
 		case message, ok := <-agent.ChanWrite:
 			if !ok {
@@ -196,7 +196,7 @@ func (agent *WSAgent) ReadServe(msgHandler WSMsgHandler) {
 		}
 	}()
 	go func() {
-		for {
+		for !util.Terminal {
 			_, message, err := agent.Socket.ReadMessage()
 			if err != nil {
 				break
@@ -204,7 +204,7 @@ func (agent *WSAgent) ReadServe(msgHandler WSMsgHandler) {
 			agent.ChanRead <- message
 		}
 	}()
-	for {
+	for !util.Terminal {
 		select {
 		case message, ok := <-agent.ChanRead:
 			if !ok {

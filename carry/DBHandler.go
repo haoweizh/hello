@@ -9,6 +9,9 @@ import (
 	"hello/carry/monitor"
 	"hello/model"
 	"hello/util"
+	"os"
+	"os/signal"
+	"syscall"
 	"time"
 )
 
@@ -17,7 +20,7 @@ var balanceMaintainDay = util.GetNow()
 
 // MaintainBalance
 func _(account *model.Account) {
-	for {
+	for !util.Terminal {
 		markets := model.AppEnvironment.Markets
 		balances := make([]*model.Balance, 0)
 		balanceTime := util.GetNow()
@@ -52,9 +55,9 @@ func _(account *model.Account) {
 
 // MaintainTransFee
 func _() {
-	for {
+	for !util.Terminal {
 		var orders []model.Order
-		for {
+		for !util.Terminal {
 			d, _ := time.ParseDuration("-240h")
 			dMin10, _ := time.ParseDuration("-10m")
 			now := util.GetNow()
@@ -151,6 +154,8 @@ func ManageConnTicks(market string) (reset bool) {
 
 func Maintain() {
 	util.Log(util.LogLevelInfo, "start carrying")
+	sigs := make(chan os.Signal, 1)
+	signal.Notify(sigs, syscall.SIGINT, syscall.SIGTERM)
 	model.TickHandlers[model.FunctionTurtle] = Turtle.ProcessTurtle
 	model.TickHandlers[model.FunctionCross] = cross.ProcessCross
 	model.TickHandlers[model.FunctionCombineTurtle] = Turtle.ProcessCombineTurtle
@@ -191,7 +196,18 @@ func Maintain() {
 			c.Start()
 		}
 	}
-	for {
+	// 监听信号的 goroutine
+	go func() {
+		sig := <-sigs
+		fmt.Println("\nReceived signal:", sig)
+		fmt.Println("Gracefully shutting down...")
+		util.Terminal = true
+		// 这里可以添加清理操作，例如关闭数据库连接、释放资源等
+		time.Sleep(20 * time.Second)
+		fmt.Println("Cleanup done. Exiting.")
+		os.Exit(0)
+	}()
+	for !util.Terminal {
 		for _, market := range model.AppEnvironment.Markets {
 			go ManageConnTicks(market)
 		}

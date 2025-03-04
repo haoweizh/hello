@@ -36,7 +36,7 @@ func getBillsGate(account *model.Account, begin, end int64) (bool, []*model.Fund
 		Type_: optional.NewString("fund"), Limit: optional.NewInt32(int32(limit)), Offset: optional.NewInt32(int32(offset))}
 	var fundingFees = make([]*model.FundingFee, 0)
 	book, _, err := client.FuturesApi.ListFuturesAccountBook(ctx, settle, opts)
-	for {
+	for !util.Terminal {
 		if err != nil {
 			util.Log(util.LogLevelError, fmt.Sprintf(`market %s to getbills http error %v`, model.Gate, err))
 			break

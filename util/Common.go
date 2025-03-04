@@ -15,6 +15,8 @@ import (
 	"time"
 )
 
+var Terminal = false
+
 func Compress(content []byte) []byte {
 	var b bytes.Buffer
 	writer := gzip.NewWriter(&b)
@@ -132,20 +134,6 @@ func NumDecPlaces(v float64) int {
 		return len(s) - i - 1
 	}
 	return 0
-}
-
-// StartMidNightTimer
-func _(f func()) {
-	go func() {
-		for {
-			now := time.Now()
-			next := now.Add(time.Hour * 24)
-			next = time.Date(next.Year(), next.Month(), next.Day(), 0, 0, 0, 0, next.Location())
-			t := time.NewTimer(next.Sub(now))
-			<-t.C
-			f()
-		}
-	}()
 }
 
 func DelSyncMap(syncMap *sync.Map, keys ...string) {

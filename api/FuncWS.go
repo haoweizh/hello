@@ -103,7 +103,7 @@ func _(market string, symbols map[string]bool) (
 
 func CreateWSTick(environment *model.Environment, market string) (
 	socketMap map[*model.WSConn]bool, channels []chan struct{}) {
-	for {
+	for !util.Terminal {
 		locking := CheckSetProcessing(model.FunctionTickMaintain, market, ``, true)
 		if !locking {
 			break

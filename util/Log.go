@@ -55,7 +55,7 @@ func LogChanHandler(apiUrl, serverName string) {
 		//ServerName:       serverName,
 		System: serverName,
 	}))
-	for {
+	for !Terminal {
 		glcData := <-logChan
 		//glcData.ServerName = serverName
 		if apiUrl == `local` {
