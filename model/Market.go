@@ -205,13 +205,17 @@ func (environment *Environment) SetBidAsk(market, symbol string, bidAsk *BidAsk)
 		bidAsk.Asks[0].Price == 0 || bidAsk.Asks[0].Amount == 0 {
 		return false
 	}
-	last, _ := util.LoadSyncMap(&environment.bidAsks, market, symbol)
-	if last == nil || last.(*BidAsk).Ts <= bidAsk.Ts {
-		if last != nil && AppConfig.Debug && time.Now().UnixMilli()-int64(bidAsk.Ts) < 100 {
-			go AppMetric.AddTick(market, symbol, util.GetNow(), last.(*BidAsk), bidAsk)
-		}
-		util.StoreSyncMap(&environment.bidAsks, bidAsk, market, symbol)
-		return true
+	//last, _ := util.LoadSyncMap(&environment.bidAsks, market, symbol)
+	//if last == nil || last.(*BidAsk).Ts <= bidAsk.Ts {
+	//	if last != nil && AppConfig.Debug && time.Now().UnixMilli()-int64(bidAsk.Ts) < 100 {
+	//		go AppMetric.AddTick(market, symbol, util.GetNow(), last.(*BidAsk), bidAsk)
+	//	}
+	//	util.StoreSyncMap(&environment.bidAsks, bidAsk, market, symbol)
+	//	return true
+	//}
+	if time.Now().UnixMilli() == 0 {
+		go AppMetric.AddTick(market, symbol, util.GetNow(), nil, bidAsk)
 	}
-	return false
+	util.StoreSyncMap(&environment.bidAsks, bidAsk, market, symbol)
+	return true
 }

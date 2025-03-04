@@ -14,8 +14,6 @@ import (
 
 func createContractMarket(account *model.Account, market string) (cm *contractMarket) {
 	success, positions, accountValue, availableU, mmr := api.GetPositions(account, market)
-	util.Log(util.LogLevelInfo, fmt.Sprintf(`get positions %s %d %#v account value %f available u %f maintain rate %f positions %d`,
-		market, account.Index, success, accountValue, availableU, mmr, len(positions)))
 	settings := api.GetSettings(model.FunctionCross, market)
 	if success {
 		cm = &contractMarket{key: account.Key, market: market}
@@ -39,6 +37,8 @@ func createContractMarket(account *model.Account, market string) (cm *contractMa
 		cm.accountValueInU = accountValue
 		cm.collateralsAvailable = availableU
 		cm.mmr = mmr
+		util.Log(util.LogLevelInfo, fmt.Sprintf(`get positions %s %d %#v account value %f available u %f maintain rate %f cm %#v positions %d`,
+			market, account.Index, success, accountValue, availableU, mmr, cm, len(positions)))
 	} else {
 		util.Log(util.LogLevelError, fmt.Sprintf(`fail to createContractMarket %s %s`, market, account.Key))
 		return nil
@@ -48,7 +48,6 @@ func createContractMarket(account *model.Account, market string) (cm *contractMa
 
 func createSpotMarket(account *model.Account, market string) (sm *spotMarket) {
 	success, balances, totalInUsd, collateral := api.GetBalances(account, market)
-	util.Log(util.LogLevelInfo, fmt.Sprintf(`create spot market %s %d`, market, len(balances)))
 	if success {
 		sm = &spotMarket{key: account.Key, market: market}
 		sm.balances = make(map[string]*model.Balance)
@@ -74,6 +73,7 @@ func createSpotMarket(account *model.Account, market string) (sm *spotMarket) {
 				}
 			}
 		}
+		util.Log(util.LogLevelInfo, fmt.Sprintf(`create spot market %s %#v %d`, market, sm, len(balances)))
 		//if collateral != nil {
 		//	util.Log(util.LogLevelInfo, fmt.Sprintf(`collateral for sm available u %s %f to %f maintain rate %f`,
 		//		market, sm.availableU, collateral.Available, collateral.Rate))
@@ -1013,7 +1013,7 @@ var ProcessCross = func(setting *model.Setting, tick *model.BidAsk) {
 			}
 			if amount > 0 {
 				//tsDis2 := time.Now().UnixMicro() - tsMark
-				placeCross(carryCoin.(*model.CarryCoin), statusBuy, statusSell, priceBuy, priceSell, amount)
+				placeCross(carryCoin.(*model.CarryCoin), statusBuy, statusSell, priceBuy, priceSell, amount, tick, tickRelate)
 				//util.Log(util.LogLevelInfo, fmt.Sprintf(`time mark coin %s %s %s <- %s %s amt %f ts %d %d %d %d`,
 				//	setting.Coin, statusBuy.Symbol, statusBuy.Market, statusSell.Symbol, statusSell.Market, amount, tsMark, tsDis1, tsDis2, time.Now().UnixMicro()-tsMark))
 				return
@@ -1097,7 +1097,8 @@ func breakMarkPrice(account *model.Account, setting *model.Setting, price float6
 //}
 //}
 
-func placeCross(carryCoin *model.CarryCoin, statusBuy, statusSell *model.CarryStatus, priceBuy, priceSell, amount float64) {
+func placeCross(carryCoin *model.CarryCoin, statusBuy, statusSell *model.CarryStatus, priceBuy, priceSell,
+	amount float64, tick, tickRelate *model.BidAsk) {
 	_, marketTypeBuy, _, _ := model.GetFromStandard(statusBuy.Market, statusBuy.Symbol)
 	_, marketTypeSell, _, _ := model.GetFromStandard(statusSell.Market, statusSell.Symbol)
 	if marketTypeBuy == model.MarketTypeSpot {
@@ -1135,9 +1136,10 @@ func placeCross(carryCoin *model.CarryCoin, statusBuy, statusSell *model.CarrySt
 	go api.PlaceOrder(statusSell.Account, model.OrderSideSell, model.OrderTypeLimit, statusSell.Market,
 		statusSell.Symbol, orderParamSell, model.FunctionCross, priceSell, priceSell, amountSell, true, PostOrderCross)
 	util.Log(util.LogLevelInfo, fmt.Sprintf(
-		`place cross %s %s -> %s %s at %f %f amount %f %f %f score %f hold %f buy %f limit %f hold %f sell %f limit %f`,
+		`place cross %s %s -> %s %s at %f %f amount %f %f %f score %f hold %f buy %f limit %f hold %f sell %f limit %f %f-%f ts %d %f-%f ts %d`,
 		statusSell.Market, statusSell.Symbol, statusBuy.Market, statusBuy.Symbol, priceSell, priceBuy, amount, amountBuy, amountSell,
-		score, statusBuy.Holding, statusBuy.TradeLineBuy, statusBuy.LimitBuy, statusSell.Holding, statusSell.TradeLineSell, statusSell.LimitSell))
+		score, statusBuy.Holding, statusBuy.TradeLineBuy, statusBuy.LimitBuy, statusSell.Holding, statusSell.TradeLineSell, statusSell.LimitSell,
+		tick.Bids[0].Price, tick.Asks[0].Price, tick.Ts, tickRelate.Bids[0].Price, tickRelate.Asks[0].Price, tickRelate.Ts))
 	// 买入现货时要交手续费，故而实际到手少于下单量，校准以免未来买单时数量不足
 	if marketTypeBuy == model.MarketTypeSpot {
 		amountBuy = amountBuy * 0.9992
