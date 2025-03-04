@@ -79,9 +79,9 @@ func (wsConn *WSConn) handle() {
 			util.Log(util.LogLevelError, fmt.Sprintf(`wsConn wait list 10 %d %s %#v`, len(wsConn.WSChan), string(msg), wsConn))
 			continue
 		}
-		//if strings.Contains(string(msg), `order`) {
-		//util.Log(util.LogLevelInfo, fmt.Sprintf("time mark after %s %d %s", wsConn.WSType.String(), time.Now().UnixMicro(), string(msg)))
-		//}
+		if strings.Contains(string(msg), `order`) {
+			util.Log(util.LogLevelInfo, fmt.Sprintf("time mark after %s %d %s", wsConn.WSType.String(), time.Now().UnixMicro(), string(msg)))
+		}
 		var err error
 		if wsConn.WSType == ChanTypeWS {
 			err = wsConn.conn.WriteMessage(websocket.TextMessage, msg)
