@@ -10,7 +10,6 @@ import (
 	"hello/api/dtos"
 	"hello/model"
 	"hello/util"
-	"math"
 	"math/rand"
 	"net/http"
 	"strconv"
@@ -277,15 +276,12 @@ func getMarketsBybitSpot(account *model.Account, marketInfos map[string]*model.M
 		marketInfos[marketInfo.Symbol] = marketInfo
 		coinMarketInfos[symbolInfo.BaseCoin] = marketInfo
 	}
-	interestRates, canBorrowAmt := getInterestBybit(account.Key, account.Secret)
+	interestRates := getInterestBybit(account.Key, account.Secret)
 	for coin, info := range coinMarketInfos {
 		if info == nil {
 			continue
 		}
 		info.InterestRate = interestRates[coin]
-		if canBorrowAmt[coin] > 0 {
-			info.CanBorrow = true
-		}
 	}
 }
 
@@ -573,7 +569,6 @@ func getBalanceBybit(key string, secret string) (success bool, balances []*model
 		return getBalanceBybit(key, secret)
 	}
 	balances = make([]*model.Balance, 0)
-	balanceMap := make(map[string]*model.Balance)
 	for _, account := range balanceResp.Result.List {
 		if account.AccountType == "UNIFIED" {
 			maintenanceRate, _ := strconv.ParseFloat(account.AccountMMRate, 64)
@@ -601,7 +596,6 @@ func getBalanceBybit(key string, secret string) (success bool, balances []*model
 				}
 				balance.UsdValue = usdValue
 				balances = append(balances, balance)
-				balanceMap[coinInfo.Coin] = balance
 			}
 		}
 	}
@@ -611,10 +605,6 @@ func getBalanceBybit(key string, secret string) (success bool, balances []*model
 			httpResp, httpErr, jsonErr, len(balances)))
 		time.Sleep(time.Second * 5)
 		return getBalanceBybit(key, secret)
-	}
-	_, canBorrows := getInterestBybit(key, secret)
-	for coin, balance := range balanceMap {
-		balance.AvailableWithBorrow = math.Max(0, balance.Amount) + canBorrows[coin]
 	}
 	return true, balances, totalInUsd, collateral
 }
@@ -1182,7 +1172,7 @@ func queryOrderBybit(key, secret, symbol, orderId string) *model.Order {
 //	bool - 表示操作是否成功的标志
 //	[]*model.FundingFee - 融资费用记录的切片
 func getBillsBybit(account *model.Account, begin, end int64, billType string) (bool, []*model.FundingFee) {
-	param := map[string]interface{}{`accountType`: `UNIFIED`, `type`: billType, `startTime`: begin, `endTime`: end}
+	param := map[string]interface{}{`type`: billType, `startTime`: begin, `endTime`: end, `limit`: 50}
 	response, _ := SignedRequestBybit(account.Key, account.Secret, http.MethodGet, bybitRestUrl, "/v5/account/transaction-log", param)
 	var fundingFees = make([]*model.FundingFee, 0)
 	for {
@@ -1194,15 +1184,15 @@ func getBillsBybit(account *model.Account, begin, end int64, billType string) (b
 		for _, item := range loanJson.GetPath(`result`, `list`).MustArray() {
 			data := item.(map[string]interface{})
 			ts, _ := strconv.ParseInt(data[`transactionTime`].(string), 10, 64)
-			balChg, _ := strconv.ParseFloat(data[`funding`].(string), 64)
-			success, _, symbol := model.GetFromDialect(model.Bybit, model.MarketTypePerp, data[`symbol`].(string))
-			if !success {
-				util.Log(util.LogLevelError, fmt.Sprintf(`market %s to getbills instId %s can not get standardSymbol`, model.Bybit, data[`symbol`].(string)))
-				continue
+			balChg, _ := strconv.ParseFloat(data[`change`].(string), 64)
+			_, _, symbol := model.GetFromDialect(model.Bybit, model.MarketTypePerp, data[`symbol`].(string))
+			coin := data[`currency`].(string)
+			if billType == `INTEREST` {
+				symbol = data[`currency`].(string) + model.UniStandardTail[model.MarketTypeSpot]
 			}
 			fundingFee := &model.FundingFee{
 				Market: model.Bybit,
-				Ccy:    data[`currency`].(string),
+				Ccy:    coin,
 				Ts:     ts,
 				BalChg: balChg,
 				Symbol: symbol,
@@ -1222,8 +1212,10 @@ func getBillsBybit(account *model.Account, begin, end int64, billType string) (b
 	return true, fundingFees
 }
 
+// /v5/crypto-loan/borrowable-collateralisable-number
 func GetBorrowAbleBybit(account *model.Account) {
-	response, _ := SignedRequestBybit(account.Key, account.Secret, http.MethodGet, bybitRestUrl, `/v5/crypto-loan/borrowable-collateralisable-number`, nil)
+	param := map[string]interface{}{`category`: `spot`, `symbol`: `ETHUSDT`, `side`: `Sell`}
+	response, _ := SignedRequestBybit(account.Key, account.Secret, http.MethodGet, bybitRestUrl, `/v5/order/spot-borrow-check`, param)
 	loanJson, err := util.NewJSON(response)
 	if loanJson == nil || err != nil || loanJson.Get(`result`) == nil || loanJson.Get(`retCode`).MustInt() != 0 {
 		util.Log(util.LogLevelError, fmt.Sprintf(`market %s to getInterest http error %v `, model.Bybit, err))
@@ -1232,7 +1224,8 @@ func GetBorrowAbleBybit(account *model.Account) {
 }
 
 // https://bybit-exchange.github.io/docs/zh-TW/v5/account/collateral-info
-func getInterestBybit(key, secret string) (interestDay, amountLimit map[string]float64) {
+// availableToBorrow 不是本账户可借数量，不可用
+func getInterestBybit(key, secret string) (interestDay map[string]float64) {
 	response, _ := SignedRequestBybit(key, secret, http.MethodGet, bybitRestUrl, "/v5/account/collateral-info", nil)
 	loanJson, err := util.NewJSON(response)
 	if loanJson == nil || err != nil || loanJson.Get(`result`) == nil || loanJson.Get(`retCode`).MustInt() != 0 {
@@ -1240,7 +1233,6 @@ func getInterestBybit(key, secret string) (interestDay, amountLimit map[string]f
 		return
 	}
 	interestDay = map[string]float64{}
-	amountLimit = map[string]float64{}
 	for _, item := range loanJson.GetPath(`result`, `list`).MustArray() {
 		value := item.(map[string]interface{})
 		if !value[`borrowable`].(bool) {
@@ -1250,15 +1242,12 @@ func getInterestBybit(key, secret string) (interestDay, amountLimit map[string]f
 			continue
 		}
 		coin := value[`currency`].(string)
-		//if value[`availableToBorrow`] != nil {
-		//	amountLimit[coin], _ = strconv.ParseFloat(value[`availableToBorrow`].(string), 64)
-		//}
 		if value[`hourlyBorrowRate`] != nil {
 			dayRate, _ := strconv.ParseFloat(value[`hourlyBorrowRate`].(string), 64)
 			interestDay[coin] = dayRate * 24
 		}
 	}
-	return interestDay, amountLimit
+	return interestDay
 }
 
 // getApikeyBybit 根据给定的账户信息查询并返回Bybit账户的VIP等级。
