@@ -65,7 +65,6 @@ func createSpotMarket(account *model.Account, market string) (sm *spotMarket) {
 			// 可用usd数量需要减去现有所有借币负债总额
 			if balance.UsdValue < 0 {
 				sm.availableU -= math.Abs(balance.UsdValue)
-				util.Log(util.LogLevelInfo, fmt.Sprintf(`minus usd value %d %s %s %f to %f`, account.Index, market, symbol, balance.UsdValue, sm.availableU))
 			}
 			if settings != nil {
 				value, ok := settings.Load(symbol)

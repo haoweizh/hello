@@ -626,7 +626,9 @@ func getBalanceBybit(key string, secret string) (success bool, balances []*model
 					}
 				}
 				balance.UsdValue = usdValue
-				_, balance.AvailableWithBorrow = GetBorrowAbleBybit(key, secret, balance.Coin)
+				if balance.Coin != `USDT` {
+					_, balance.AvailableWithBorrow = GetBorrowAbleBybit(key, secret, balance.Coin)
+				}
 				balances = append(balances, balance)
 			}
 		}

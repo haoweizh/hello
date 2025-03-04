@@ -887,7 +887,7 @@ func Test_SetLeverage(t *testing.T) {
 	//api.InitMarketInfos(market)
 	//symbol := `DUCK_PERP`
 	account := model.GetAccounts(0)[market]
-	fmt.Println(api.GetBorrowAbleBybit(account.Key, account.Secret, `ETH`))
+	fmt.Println(api.GetBorrowAbleBybit(account.Key, account.Secret, `USDT`))
 	//api.SetSymbolLeverage(account, market, symbol)
 	//api.GetInterest(account)
 }
