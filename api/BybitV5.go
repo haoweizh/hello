@@ -84,6 +84,34 @@ var wsOrdUdtHandlerBybit = func(market, key string, msg []byte) {
 	if responseJson.Get(`topic`).MustString() == `position` {
 		//https://bybit-exchange.github.io/docs/zh-TW/v5/websocket/private/position
 		util.LogLess(util.LogLevelInfo, "risk check ws update positions bybit "+string(msg))
+		positions := make([]*model.Position, 0)
+		data := responseJson.Get(`data`).MustArray()
+		for _, item := range data {
+			if item == nil {
+				continue
+			}
+			value := item.(map[string]interface{})
+			_, _, currency := model.GetFromDialect(model.Bybit, model.MarketTypePerp, value[`symbol`].(string))
+			position := &model.Position{Market: model.Bybit, Ts: util.GetNowUnixMillion(), Currency: currency}
+			side := value[`side`].(string)
+			if side == "Buy" {
+				position.Holding, _ = strconv.ParseFloat(value[`size`].(string), 64)
+			} else if side == "Sell" {
+				total, _ := strconv.ParseFloat(value[`size`].(string), 64)
+				position.Holding = -1 * total
+			} else {
+				position.Holding = 0
+			}
+			position.LeverRate, _ = strconv.ParseInt(value[`leverage`].(string), 10, 64)
+			position.EntryPrice, _ = strconv.ParseFloat(value[`entryPrice`].(string), 64)
+			position.BankruptcyPrice, _ = strconv.ParseFloat(value[`bustPrice`].(string), 64)
+			position.LiquidationPrice, _ = strconv.ParseFloat(value[`liqPrice`].(string), 64)
+			position.Margin, _ = strconv.ParseFloat(value[`positionMM`].(string), 64)
+			if position.Holding != 0 {
+				positions = append(positions, position)
+				//util.Log(util.LogLevelInfo, fmt.Sprintf(`get position bybit %#v`, position))
+			}
+		}
 	}
 }
 
