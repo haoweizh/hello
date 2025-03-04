@@ -3,6 +3,7 @@ package model
 import "time"
 
 type ProcessBalancesHandler func(market, accountKey string, balances []*Balance)
+type ProcessPositionsHandler func(market, accountKey string, balances []*Position)
 
 type Balance struct {
 	AccountId           string

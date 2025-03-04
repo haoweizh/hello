@@ -85,6 +85,61 @@ var ProcessADL = func(accountKey, market, symbol, adlSide string, amount float64
 	equalCoin(triggerAccount.Index, adlSetting.Coin, statuses)
 }
 
+var ProcessCrossPositions = func(market, accountKey string, positions []*model.Position) {
+	value := api.GetCoinSettings(model.FunctionCross)
+	if value == nil {
+		return
+	}
+	triggerAccount := model.AppConfig.GetAccountFromKeyIndex(market, accountKey, -1)
+	accounts := model.GetAccounts(triggerAccount.Index)
+	for _, position := range positions {
+		posSetting := api.GetSetting(model.FunctionCross, market, position.Currency)
+		if posSetting == nil {
+			continue
+		}
+		// 针对1000倍币等种进行coin转换
+		settings, _ := value.Load(posSetting.Coin)
+		if settings == nil {
+			continue
+		}
+		holding := 0.0
+		price := 0.0
+		for _, setting := range settings.([]*model.Setting) {
+			account := accounts[setting.Market]
+			if account == nil {
+				continue
+			}
+			item, _ := util.LoadSyncMap(carryStatusMap, setting.Coin, setting.Market, setting.Symbol, account.Key)
+			if item == nil {
+				continue
+			}
+			status := item.(*model.CarryStatus)
+			if status.Market == position.Market && status.Symbol == position.Currency {
+				status.Holding = position.Holding
+				util.Log(util.LogLevelInfo, fmt.Sprintf(`update position holding %d %s %s %f to %f %#v`,
+					account.Index, status.Market, status.Symbol, status.Holding, position.Holding, position))
+			}
+			holding += status.Holding * setting.GridAmount
+			if price == 0 {
+				_, price = api.GetPriceForce(setting.Market, setting.Symbol, false)
+				price = price / setting.PriceX
+			}
+		}
+		if math.Abs(price*holding) >= openValueLimit*5 {
+			for _, setting := range settings.([]*model.Setting) {
+				account := accounts[setting.Market]
+				if account == nil {
+					continue
+				}
+				util.StoreSyncMap(&model.AppEnvironment.PauseTrade, true, setting.Coin, setting.Market, setting.Symbol, account.Key, model.OrderSideSell)
+				util.StoreSyncMap(&model.AppEnvironment.PauseTrade, true, setting.Coin, setting.Market, setting.Symbol, account.Key, model.OrderSideBuy)
+				util.Log(util.LogLevelError, fmt.Sprintf(`pause trade when update position %s %s %s %f setting %s %s holding %e value %e`,
+					market, accountKey, position.Currency, position.Holding, setting.Market, setting.Symbol, holding, math.Abs(holding*price)))
+			}
+		}
+	}
+}
+
 var ProcessCrossBalances = func(market, accountKey string, balances []*model.Balance) {
 	value := api.GetCoinSettings(model.FunctionCross)
 	if value == nil {
@@ -117,14 +172,12 @@ var ProcessCrossBalances = func(market, accountKey string, balances []*model.Bal
 			status := item.(*model.CarryStatus)
 			if status.Market == balance.Market && status.Symbol == balance.Coin+model.UniStandardTail[model.MarketTypeSpot] {
 				status.Holding = balance.Amount
-				if status.IsSpot {
-					if account.Index == 0 {
-						util.Log(util.LogLevelInfo, fmt.Sprintf(`update limit sell %d %s %s %f to %f %#v`,
-							account.Index, status.Market, status.Symbol, status.LimitSell, balance.AvailableWithBorrow-balance.FrozenAmount, balance))
-					}
-					status.LimitSell = math.Max(balance.Amount-balance.FrozenAmount, balance.AvailableWithBorrow)
-					status.AvailableSell = math.Max(balance.Amount-balance.FrozenAmount, balance.AvailableWithBorrow)
+				if account.Index == 0 {
+					util.Log(util.LogLevelInfo, fmt.Sprintf(`update limit sell %d %s %s %f to %f %#v`,
+						account.Index, status.Market, status.Symbol, status.LimitSell, balance.AvailableWithBorrow-balance.FrozenAmount, balance))
 				}
+				status.LimitSell = math.Max(balance.Amount-balance.FrozenAmount, balance.AvailableWithBorrow)
+				status.AvailableSell = math.Max(balance.Amount-balance.FrozenAmount, balance.AvailableWithBorrow)
 			}
 			holding += status.Holding * setting.GridAmount
 			if price == 0 {
