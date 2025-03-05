@@ -131,14 +131,14 @@ func TestWs(t *testing.T) {
 }
 
 func Test_WsAndOrderApi(t *testing.T) {
-	market := model.Mexc
+	market := model.Gate
 	coin := `ETH`
 	orderType := model.OrderTypeLimit
 	orderSide := model.OrderSideSell
 	symbols := []string{coin + model.UniStandardTail[model.MarketTypePerp]}
 	//coin + model.UniStandardTail[model.MarketTypeSpot]}
 	model.NewConfig()
-	model.AppDB, _ = gorm.Open(postgres.Open(model.AppConfig.DBConnection), &gorm.Config{})
+	//model.AppDB, _ = gorm.Open(postgres.Open(model.AppConfig.DBConnection), &gorm.Config{})
 	api.InitMarketInfos(model.Gate)
 	account := model.AppConfig.GetAccounts(market)[0]
 	api.CreateWSTick(model.AppEnvironment, market)

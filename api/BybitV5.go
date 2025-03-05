@@ -85,7 +85,7 @@ var wsOrdUdtHandlerBybit = func(market, key string, msg []byte) {
 	}
 	if responseJson.Get(`topic`).MustString() == `position` {
 		//https://bybit-exchange.github.io/docs/zh-TW/v5/websocket/private/position
-		util.LogLess(util.LogLevelInfo, "risk check ws update positions bybit "+string(msg))
+		//util.LogLess(util.LogLevelInfo, "risk check ws update positions bybit "+string(msg))
 		positions := make([]*model.Position, 0)
 		data := responseJson.Get(`data`).MustArray()
 		for _, item := range data {

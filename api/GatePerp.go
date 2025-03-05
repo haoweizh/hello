@@ -129,7 +129,7 @@ var wsPriHandlerGatePerp = func(market, key string, msg []byte) {
 		}
 	} else if channel == `futures.positions` {
 		//https://www.gate.io/docs/developers/futures/ws/zh_CN/#%E4%BB%93%E4%BD%8D%E8%AE%A2%E9%98%85
-		util.Log(util.LogLevelInfo, "risk check ws update positions gate "+string(msg))
+		//util.Log(util.LogLevelInfo, "risk check ws update positions gate "+string(msg))
 		positions := make([]*model.Position, 0)
 		data := responseJson.Get(`result`).MustArray()
 		for _, item := range data {

@@ -306,7 +306,6 @@ var wsAccountHandlerOKEX = func(market, key string, event []byte) {
 		if len(positions) > 0 {
 			model.CrossPositionsHandler(market, key, positions)
 		}
-
 	}
 }
 

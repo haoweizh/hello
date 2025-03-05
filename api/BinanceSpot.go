@@ -415,7 +415,7 @@ var wsOrderUpdateBinance = func(market, key string, msg []byte) {
 		}
 	case `ACCOUNT_UPDATE`:
 		//https://developers.binance.com/docs/zh-CN/derivatives/usds-margined-futures/user-data-streams/Event-Balance-and-Position-Update
-		util.LogLess(util.LogLevelInfo, "risk check ws update positions binance "+string(msg))
+		//util.LogLess(util.LogLevelInfo, "risk check ws update positions binance "+string(msg))
 		//	collateral := &model.Collateral{AccountKey: key}
 		//	dataarray := resJson.GetPath(`a`, `B`).MustArray()
 		//	for _, v := range dataarray {
@@ -426,9 +426,9 @@ var wsOrderUpdateBinance = func(market, key string, msg []byte) {
 		//	}
 		//	util.Log(util.LogLevelInfo, fmt.Sprintf("binance unified %s %f", collateral.AccountKey, collateral.Available))
 		//	model.CollateralHandler(collateral)
-		dataarray := resJson.GetPath(`a`, `P`).MustArray()
+		dataArray := resJson.GetPath(`a`, `P`).MustArray()
 		positions := make([]*model.Position, 0)
-		for _, v := range dataarray {
+		for _, v := range dataArray {
 			value := v.(map[string]interface{})
 			position := &model.Position{Market: model.BinancePerp, Ts: util.GetNowUnixMillion()}
 			if value[`s`] != nil {

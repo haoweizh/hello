@@ -116,7 +116,7 @@ var ProcessCrossPositions = func(market, accountKey string, positions []*model.P
 			status := item.(*model.CarryStatus)
 			if status.Market == position.Market && status.Symbol == position.Currency {
 				status.Holding = position.Holding
-				util.Log(util.LogLevelInfo, fmt.Sprintf(`update position holding %d %s %s %f to %f %#v`,
+				util.LogLess(util.LogLevelInfo, fmt.Sprintf(`update position holding %d %s %s %f to %f %#v`,
 					account.Index, status.Market, status.Symbol, status.Holding, position.Holding, position))
 			}
 			holding += status.Holding * setting.GridAmount
@@ -173,7 +173,7 @@ var ProcessCrossBalances = func(market, accountKey string, balances []*model.Bal
 			if status.Market == balance.Market && status.Symbol == symbol {
 				status.Holding = balance.Amount
 				if account.Index == 0 && account.Market != model.OKEX {
-					util.Log(util.LogLevelInfo, fmt.Sprintf(`update limit sell %d %s %s %f to %f %#v`,
+					util.LogLess(util.LogLevelInfo, fmt.Sprintf(`update limit sell %d %s %s %f to %f %#v`,
 						account.Index, status.Market, status.Symbol, status.LimitSell, balance.AvailableWithBorrow-balance.FrozenAmount, balance))
 				}
 				status.LimitSell = math.Max(balance.Amount-balance.FrozenAmount, balance.AvailableWithBorrow)
