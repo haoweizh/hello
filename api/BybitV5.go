@@ -111,10 +111,10 @@ var wsOrdUdtHandlerBybit = func(market, key string, msg []byte) {
 			position.Margin, _ = strconv.ParseFloat(value[`positionMM`].(string), 64)
 			if position.Holding != 0 {
 				positions = append(positions, position)
-				//util.Log(util.LogLevelInfo, fmt.Sprintf(`get position bybit %#v`, position))
 			}
 		}
 		if len(positions) > 0 {
+			util.LogLess(util.LogLevelInfo, fmt.Sprintf("risk check ws update positions %s %s %#v", market, key, positions[0]))
 			model.CrossPositionsHandler(market, key, positions)
 		}
 	}
