@@ -193,8 +193,8 @@ var wsAccountHandlerOKEX = func(market, key string, event []byte) {
 	}
 	connKey := getPrivateConnKey(market, key, ``)
 	value, success := model.AppEnvironment.ConnOrder.Load(connKey)
-	if responseJson.Get(`code`).MustString() == `60011` {
-		util.Log(util.LogLevelInfo, fmt.Sprintf("okex 60011 login error %s", string(event)))
+	if responseJson.Get(`code`).MustString() == `60011` || responseJson.Get(`ctlOp`).MustString() == `Reconnection` {
+		util.Log(util.LogLevelInfo, fmt.Sprintf("okex need reconnect and login %s %v %v", string(event), success, value))
 		if !success || value == nil {
 			return
 		}

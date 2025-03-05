@@ -338,7 +338,8 @@ func WsPrivateClient(account *Account, connMap *sync.Map, connKey, market, url s
 				if msgSize > 0 {
 					if NeedReconnection(buf[:msgSize]) {
 						util.Log(util.LogLevelInfo, fmt.Sprintf(`order channel reconnect %s %s `, market, buf[:msgSize]))
-					} else if accountMsgHandler != nil {
+					}
+					if accountMsgHandler != nil {
 						go accountMsgHandler(market, account.Key, buf[:msgSize])
 					}
 				}
