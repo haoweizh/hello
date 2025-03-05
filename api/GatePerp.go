@@ -152,7 +152,7 @@ var wsPriHandlerGatePerp = func(market, key string, msg []byte) {
 			positions = append(positions, position)
 		}
 		if len(positions) > 0 {
-			util.LogLess(util.LogLevelInfo, fmt.Sprintf("risk check ws update positions %s %s %#v", market, key, positions[0]))
+			//util.LogLess(util.LogLevelInfo, fmt.Sprintf("risk check ws update positions %s %s %#v", market, key, positions[0]))
 			model.CrossPositionsHandler(market, key, positions)
 		}
 	} else {

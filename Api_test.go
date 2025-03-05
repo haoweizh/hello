@@ -26,6 +26,21 @@ import (
 	"time"
 )
 
+func Test_chan(t *testing.T) {
+	testChan := make(chan int, 10)
+	testChan <- 1
+	testChan <- 2
+	for {
+		select {
+		case a := <-testChan:
+			fmt.Println(a)
+		default:
+			fmt.Println(`default`)
+			time.Sleep(time.Second)
+		}
+	}
+}
+
 func Test_Com(t *testing.T) {
 	src := `0x00000000458cEec48586a85fCFEb4A179706656eE321730E`
 	samples := make([]string, 10)
