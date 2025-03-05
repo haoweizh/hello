@@ -343,6 +343,7 @@ func WsPrivateClient(account *Account, connMap *sync.Map, connKey, market, url s
 				}
 			}
 		}
+		fmt.Println(fmt.Sprintf(`ws private exit %s %d`, account.Index, account.Market))
 	}()
 	return connection, nil
 }
