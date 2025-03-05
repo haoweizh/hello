@@ -114,10 +114,10 @@ var ProcessCrossPositions = func(market, accountKey string, positions []*model.P
 				continue
 			}
 			status := item.(*model.CarryStatus)
+			util.LogLess(util.LogLevelInfo, fmt.Sprintf(`update position holding %d %s-%s %s-%s %f to %f %#v`,
+				account.Index, status.Market, position.Market, status.Symbol, position.Currency, status.Holding, position.Holding, position))
 			if status.Market == position.Market && status.Symbol == position.Currency {
 				status.Holding = position.Holding
-				util.LogLess(util.LogLevelInfo, fmt.Sprintf(`update position holding %d %s %s %f to %f %#v`,
-					account.Index, status.Market, status.Symbol, status.Holding, position.Holding, position))
 			}
 			holding += status.Holding * setting.GridAmount
 			if price == 0 {
