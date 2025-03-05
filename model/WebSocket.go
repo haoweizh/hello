@@ -104,6 +104,7 @@ func (wsConn *WSConn) handle() {
 			util.Log(util.LogLevelError, `handle ws err `+err.Error())
 		}
 	}
+	fmt.Println(fmt.Sprintf(`ws private exit write`))
 }
 
 func (wsConn *WSConn) WriteMsg(msg []byte) (err error) {
@@ -316,7 +317,7 @@ func WsPrivateClient(account *Account, connMap *sync.Map, connKey, market, url s
 			//closeErr := connection.conn.Close(websocket.StatusNormalClosure, "")
 			connection.Close()
 		}()
-		for !util.Terminal {
+		for {
 			if connection.WSType == ChanTypeWS {
 				_, message, readErr := connection.conn.ReadMessage()
 				if readErr != nil {
@@ -343,7 +344,7 @@ func WsPrivateClient(account *Account, connMap *sync.Map, connKey, market, url s
 				}
 			}
 		}
-		fmt.Println(fmt.Sprintf(`ws private exit %s %d`, account.Index, account.Market))
+		//fmt.Println(fmt.Sprintf(`ws private exit resd %d %s`, account.Index, account.Market))
 	}()
 	return connection, nil
 }
