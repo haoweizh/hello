@@ -1157,16 +1157,9 @@ func placeCross(carryCoin *model.CarryCoin, statusBuy, statusSell *model.CarrySt
 		placeStatus(statusBuy, priceBuy, amountBuy)
 	}
 	placeStatus(statusSell, priceSell, -1*amountSell)
-	util.DelSyncMap(&model.AppEnvironment.BidAsk, statusSell.Market, statusSell.Symbol)
-	util.DelSyncMap(&model.AppEnvironment.BidAsk, statusBuy.Market, statusBuy.Symbol)
-	//if marketTypeBuy == model.MarketTypeSpot {
-	//	value, _ := util.LoadSyncMap(carryStatusMap, statusBuy.Setting.Coin, statusBuy.Market, statusBuy.Symbol, statusBuy.Account.Key)
-	//	if value != nil {
-	//		statusBuy = value.(*model.CarryStatus)
-	//		util.Log(util.LogLevelInfo, fmt.Sprintf(`spot buy amount after %d %s %s now %f %f`,
-	//			statusBuy.Account.Index, statusBuy.Market, statusBuy.Symbol, statusBuy.LimitSell, statusBuy.AvailableSell))
-	//	}
-	//}
+	// 把ts改成0后，此tick不会再被使用
+	tick.Ts = 0
+	tickRelate.Ts = 0
 }
 
 func placeStatus(status *model.CarryStatus, price float64, amount float64) {
