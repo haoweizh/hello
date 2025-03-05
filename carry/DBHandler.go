@@ -203,9 +203,9 @@ func Maintain() {
 		fmt.Println("Gracefully shutting down...")
 		util.Terminal = true
 		// 这里可以添加清理操作，例如关闭数据库连接、释放资源等
-		time.Sleep(20 * time.Second)
+		time.Sleep(30 * time.Second)
 		fmt.Println("Cleanup done. Exiting.")
-		os.Exit(0)
+		//os.Exit(0)
 	}()
 	for !util.Terminal {
 		for _, market := range model.AppEnvironment.Markets {
