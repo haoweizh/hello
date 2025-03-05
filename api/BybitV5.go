@@ -66,6 +66,7 @@ var wsOrdUdtHandlerBybit = func(market, key string, msg []byte) {
 				for _, value := range coins {
 					balance := &model.Balance{Market: market, Coin: value.Coin}
 					balance.Amount, _ = strconv.ParseFloat(value.WalletBalance, 64)
+					balance.FrozenAmount, _ = strconv.ParseFloat(value.Locked, 64)
 					// 該字段已廢棄, 總是返回""
 					//balance.AvailableWithBorrow, _ = strconv.ParseFloat(value.AvailableToBorrow, 64)
 					//if balance.Amount > 0 {

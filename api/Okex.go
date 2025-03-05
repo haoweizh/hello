@@ -1390,6 +1390,9 @@ func parseBalanceOKEX(value map[string]interface{}) (balance *model.Balance) {
 	if value[`maxLoan`] != nil && len(strings.TrimSpace(value[`maxLoan`].(string))) > 0 {
 		balance.AvailableWithBorrow, _ = strconv.ParseFloat(value[`maxLoan`].(string), 64)
 	}
+	if value[`frozenBal`] != nil && len(strings.TrimSpace(value[`frozenBal`].(string))) > 0 {
+		balance.FrozenAmount, _ = strconv.ParseFloat(value[`frozenBal`].(string), 64)
+	}
 	if balance.Amount > 0 {
 		balance.AvailableWithBorrow += balance.Amount
 	}

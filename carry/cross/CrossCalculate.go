@@ -176,8 +176,8 @@ var ProcessCrossBalances = func(market, accountKey string, balances []*model.Bal
 					util.LogLess(util.LogLevelInfo, fmt.Sprintf(`update limit sell %d %s %s %f to %f %#v`,
 						account.Index, status.Market, status.Symbol, status.LimitSell, balance.AvailableWithBorrow-balance.FrozenAmount, balance))
 				}
-				status.LimitSell = math.Max(balance.Amount-balance.FrozenAmount, balance.AvailableWithBorrow)
-				status.AvailableSell = math.Max(balance.Amount-balance.FrozenAmount, balance.AvailableWithBorrow)
+				status.LimitSell = math.Max(balance.Amount, balance.AvailableWithBorrow) - balance.FrozenAmount
+				status.AvailableSell = math.Max(balance.Amount, balance.AvailableWithBorrow) - balance.FrozenAmount
 			}
 			holding += status.Holding * setting.GridAmount
 			if price == 0 {
