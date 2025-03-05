@@ -401,7 +401,7 @@ var wsOrderUpdateBinance = func(market, key string, msg []byte) {
 		if dataArray != nil {
 			for _, item := range dataArray {
 				value := item.(map[string]interface{})
-				balance := &model.Balance{Coin: value[`a`].(string)}
+				balance := &model.Balance{Market: market, Coin: value[`a`].(string)}
 				free, _ := strconv.ParseFloat(value[`f`].(string), 64)
 				balance.BalanceTime = time.UnixMilli(resJson.Get(`u`).MustInt64())
 				balance.FrozenAmount, _ = strconv.ParseFloat(value[`l`].(string), 64)
@@ -410,7 +410,7 @@ var wsOrderUpdateBinance = func(market, key string, msg []byte) {
 			}
 		}
 		if balances != nil && len(balances) > 0 {
-			util.LogLess(util.LogLevelInfo, fmt.Sprintf(`risk check ws update balances binancespot %d %s`, len(balances), string(msg)))
+			//util.LogLess(util.LogLevelInfo, fmt.Sprintf(`risk check ws update balances %s %#v %s`, market, balances, key))
 			model.CrossBalancesHandler(market, key, balances)
 		}
 	case `ACCOUNT_UPDATE`:

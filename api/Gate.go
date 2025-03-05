@@ -451,7 +451,7 @@ var wsPriHandlerGateSpot = func(market, key string, msg []byte) {
 		if dataArray != nil {
 			for _, item := range dataArray {
 				value := item.(map[string]interface{})
-				balance := &model.Balance{Coin: value[`currency`].(string)}
+				balance := &model.Balance{Market: market, Coin: value[`currency`].(string)}
 				balance.AvailableWithBorrow, _ = strconv.ParseFloat(value[`available`].(string), 64)
 				ts, _ := strconv.ParseInt(value[`timestamp_ms`].(string), 10, 64)
 				balance.BalanceTime = time.UnixMilli(ts)
@@ -463,7 +463,7 @@ var wsPriHandlerGateSpot = func(market, key string, msg []byte) {
 			}
 		}
 		if balances != nil && len(balances) > 0 {
-			util.LogLess(util.LogLevelInfo, fmt.Sprintf("risk check ws update balances gate %d %s", len(balances), string(msg)))
+			//util.LogLess(util.LogLevelInfo, fmt.Sprintf("risk check ws update balances %s %#v %s", market, balances, key))
 			model.CrossBalancesHandler(market, key, balances)
 		}
 	} else {

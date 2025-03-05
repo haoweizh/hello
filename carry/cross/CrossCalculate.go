@@ -170,9 +170,9 @@ var ProcessCrossBalances = func(market, accountKey string, balances []*model.Bal
 				continue
 			}
 			status := item.(*model.CarryStatus)
-			if status.Market == balance.Market && status.Symbol == balance.Coin+model.UniStandardTail[model.MarketTypeSpot] {
+			if status.Market == balance.Market && status.Symbol == symbol {
 				status.Holding = balance.Amount
-				if account.Index == 0 {
+				if account.Index == 0 && account.Market != model.OKEX {
 					util.Log(util.LogLevelInfo, fmt.Sprintf(`update limit sell %d %s %s %f to %f %#v`,
 						account.Index, status.Market, status.Symbol, status.LimitSell, balance.AvailableWithBorrow-balance.FrozenAmount, balance))
 				}

@@ -64,19 +64,21 @@ var wsOrdUdtHandlerBybit = func(market, key string, msg []byte) {
 			coins := walletResp.Data[0].Coin
 			if coins != nil && len(coins) > 0 {
 				for _, value := range coins {
-					balance := &model.Balance{Coin: value.Coin}
+					balance := &model.Balance{Market: market, Coin: value.Coin}
 					balance.Amount, _ = strconv.ParseFloat(value.WalletBalance, 64)
 					// 該字段已廢棄, 總是返回""
 					//balance.AvailableWithBorrow, _ = strconv.ParseFloat(value.AvailableToBorrow, 64)
 					//if balance.Amount > 0 {
 					//	balance.AvailableWithBorrow += balance.Amount
 					//}
+					account := model.AppConfig.GetAccountFromKeyIndex(market, key, -1)
+					_, balance.AvailableWithBorrow = GetBorrowAbleBybit(account.Key, account.Secret, balance.Coin)
 					balance.BalanceTime = time.UnixMilli(walletResp.CreationTime)
 					balances = append(balances, balance)
 				}
 			}
 			if balances != nil && len(balances) > 0 {
-				util.LogLess(util.LogLevelInfo, fmt.Sprintf("risk check ws update balances bybit %d %s", len(balances), msg))
+				//util.LogLess(util.LogLevelInfo, fmt.Sprintf("risk check ws update balances %s %#v %s", market, balances, key))
 				model.CrossBalancesHandler(market, key, balances)
 			}
 		}
