@@ -976,7 +976,7 @@ func getBalanceGate(key, secret string) (success bool, balances []*model.Balance
 		balance.FrozenAmount, _ = strconv.ParseFloat(item.Freeze, 64)
 		balance.Borrow, _ = strconv.ParseFloat(item.Borrowed, 64)
 		balance.AvailableWithBorrow, _ = strconv.ParseFloat(item.Available, 64)
-		balance.Amount = balance.AvailableWithBorrow + balance.FrozenAmount - balance.Borrow
+		balance.Amount, _ = strconv.ParseFloat(item.Equity, 64)
 		canBorrow := 0.0 // todo remove 不允许借币
 		balance.AvailableWithBorrow = math.Max(0, balance.Amount) + canBorrow
 		_, price := GetPriceForce(model.Gate, balance.Coin+model.UniStandardTail[model.MarketTypeSpot], false)

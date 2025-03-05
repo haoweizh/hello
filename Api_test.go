@@ -108,7 +108,7 @@ func Test_ws(t *testing.T) {
 
 func Test_getCommonMarketInfos(t *testing.T) {
 	model.NewConfig()
-	market := model.Bybit
+	market := model.Gate
 	account := model.AppConfig.GetAccounts(market)[0]
 	//api.QueryOrderById(account, account.Market, `COW_PERP`, model.OrderTypeLimit, `0ee81f8d-b2fb-4e88-8b45-2a3b9e25f224`)
 	//api.GetPositions(account, market)

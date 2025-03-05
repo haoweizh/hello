@@ -501,7 +501,7 @@ func GetBalances(account *model.Account, market string) (
 	//case model.BitgetSpot:
 	//	success, balances = deprecated.getBalanceBitgetSpot(key, secret)
 	case model.Gate:
-		success, balances, totalInUsd, collateral = getBalanceGate(account.Key, account.Key)
+		success, balances, totalInUsd, collateral = getBalanceGate(account.Key, account.Secret)
 	case model.OKEX:
 		success, balances, totalInUsd, collateral = getBalanceOKEX(account)
 	case model.BinanceSpot:
