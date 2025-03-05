@@ -199,7 +199,7 @@ func Maintain() {
 	// 监听信号的 goroutine
 	go func() {
 		sig := <-sigs
-		fmt.Println("\nReceived signal:", sig)
+		fmt.Println(time.Now().String()+"Received signal:", sig)
 		fmt.Println("Gracefully shutting down...")
 		util.Terminal = true
 	}()
@@ -208,7 +208,7 @@ func Maintain() {
 		time.Sleep(time.Second * 10)
 	}
 	time.Sleep(30 * time.Second)
-	fmt.Println("Cleanup done. Exiting.")
+	fmt.Println(time.Now().String() + "Cleanup done. Exiting.")
 }
 
 func ManageMarketConnTicks() {
