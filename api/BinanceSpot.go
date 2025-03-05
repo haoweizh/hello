@@ -426,6 +426,37 @@ var wsOrderUpdateBinance = func(market, key string, msg []byte) {
 		//	}
 		//	util.Log(util.LogLevelInfo, fmt.Sprintf("binance unified %s %f", collateral.AccountKey, collateral.Available))
 		//	model.CollateralHandler(collateral)
+		dataarray := resJson.GetPath(`a`, `P`).MustArray()
+		positions := make([]*model.Position, 0)
+		for _, v := range dataarray {
+			value := v.(map[string]interface{})
+			position := &model.Position{Market: model.BinancePerp, Ts: util.GetNowUnixMillion()}
+			if value[`s`] != nil {
+				isSuccess, _, symbol := model.GetFromDialect(model.BinancePerp, model.MarketTypePerp, value[`s`].(string))
+				if !isSuccess {
+					continue
+				}
+				position.Currency = symbol
+			}
+			if value[`pa`] != nil {
+				position.Holding, _ = strconv.ParseFloat(value[`pa`].(string), 64)
+			}
+			if value[`ep`] != nil {
+				position.EntryPrice, _ = strconv.ParseFloat(value[`ep`].(string), 64)
+			}
+			if value[`up`] != nil {
+				position.ProfitUnreal, _ = strconv.ParseFloat(value[`up`].(string), 64)
+			}
+			if value[`bep`] != nil {
+				position.BankruptcyPrice, _ = strconv.ParseFloat(value[`bep`].(string), 64)
+			}
+			if position.Holding != 0 {
+				positions = append(positions, position)
+			}
+		}
+		if len(positions) > 0 {
+			model.CrossPositionsHandler(market, key, positions)
+		}
 	}
 }
 
