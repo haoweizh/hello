@@ -90,7 +90,7 @@ var ProcessCombineTurtle = func(settingCombine *model.Setting, tick *model.BidAs
 	canOpen, canStartCombine, canStartTurtle, turtleSymbolNum, turtleCoins, commonTurtleChances := api.CanOpenCombine(settingCombine, settingNormal, dataNormal)
 	if api.HandleOrders(account, market, symbol, settings, turtleData, tick) ||
 		api.CheckBreak(account, market, symbol, settings, turtleData, tick) ||
-		api.CheckActiveTrail(account, settingNormal, dataNormal, tick) {
+		api.CheckActiveTrail(account, settingNormal, dataNormal, tick, commonTurtleChances) {
 		//util.Notice(fmt.Sprintf(`combine return handle or break %s %s`, market, symbol))
 		return
 	}

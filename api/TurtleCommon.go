@@ -184,8 +184,18 @@ func AdjustPosHolding(account *model.Account, setting *model.Setting, data *mode
 	model.AppDB.Save(setting)
 }
 
-func CheckActiveTrail(account *model.Account, setting *model.Setting, data *model.TurtleData, bidAsk *model.BidAsk) (trailed bool) {
-	if data.Liquidated || int64(math.Abs(float64(setting.Chance))) < setting.ChanceLimit {
+// CheckActiveTrail 海龟主流的追踪平仓单要注意一下，自己的两仓开仓单都满了或者整个主流的6仓单子都满了，只要价格到了就可以下追踪平仓单了
+// 和非主流的不一样，非主流是要自己的两仓都满了才会有机会触发追踪单
+func CheckActiveTrail(account *model.Account, setting *model.Setting, data *model.TurtleData, bidAsk *model.BidAsk,
+	commonTurtleChances int64) (trailed bool) {
+	if data.Liquidated {
+		return false
+	}
+	if !model.CommonSymbols[setting.Symbol] && int64(math.Abs(float64(setting.Chance))) < setting.ChanceLimit {
+		return false
+	}
+	if model.CommonSymbols[setting.Symbol] && int64(math.Abs(float64(setting.Chance))) < setting.ChanceLimit &&
+		math.Abs(float64(commonTurtleChances)) < setting.AmountLimit {
 		return false
 	}
 	var trails []*model.Order
