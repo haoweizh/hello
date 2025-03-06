@@ -622,7 +622,7 @@ func syncGridHoldings() {
 			carryCoin.MoneyCurStep = coinHolding * price
 			change = true
 		}
-		if carryCoin.CurrentStep == 0 && carryCoin.MoneyCurStep == 0 {
+		if carryCoin.CurrentStep == 0 && carryCoin.MoneyCurStep < model.SmallHolding {
 			carryCoin.CurrentStep = int(moneyInAll / carryCoin.MoneyPerStep)
 			carryCoin.MoneyCurStep = moneyInAll - carryCoin.MoneyPerStep*float64(carryCoin.CurrentStep)
 			change = true
