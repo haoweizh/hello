@@ -114,7 +114,7 @@ func appendSpotMarketsGate(key, secret string, marketInfos map[string]*model.Mar
 		if spot.MinBaseAmount != "" {
 			marketInfo.SizeMin, _ = strconv.ParseFloat(spot.MinBaseAmount, 64)
 		}
-		marketInfos[spot.Id] = marketInfo
+		marketInfos[symbol] = marketInfo
 	}
 }
 
@@ -457,6 +457,9 @@ var wsPriHandlerGateSpot = func(market, key string, msg []byte) {
 				balance.BalanceTime = time.UnixMilli(ts)
 				balance.FrozenAmount, _ = strconv.ParseFloat(value[`freeze`].(string), 64)
 				balance.Amount, _ = strconv.ParseFloat(value[`total`].(string), 64)
+				account := model.AppConfig.GetAccountFromKeyIndex(market, key, -1)
+				_, balance.AvailableWithBorrow = GetBorrowGate(account, balance.Coin)
+				balance.AvailableWithBorrow += balance.Amount
 				// todo remove following line
 				balance.AvailableWithBorrow = math.Max(0, balance.Amount)
 				balances = append(balances, balance)
@@ -975,7 +978,6 @@ func getBalanceGate(key, secret string) (success bool, balances []*model.Balance
 		balance := &model.Balance{AccountId: key, BalanceTime: util.GetNow(), Market: model.Gate, Coin: coin}
 		balance.FrozenAmount, _ = strconv.ParseFloat(item.Freeze, 64)
 		balance.Borrow, _ = strconv.ParseFloat(item.Borrowed, 64)
-		// todo remove 不允许借币
 		balance.AvailableWithBorrow, _ = strconv.ParseFloat(item.Available, 64)
 		//balance.AvailableWithBorrow = math.Max(0, balance.Amount) + canBorrow
 		balance.Amount, _ = strconv.ParseFloat(item.Equity, 64)
@@ -1126,8 +1128,10 @@ func placeOrderGate(account *model.Account, isWs bool, order *model.Order, order
 	}
 	ts := time.Now().Unix()
 	if marketType == model.MarketTypeSpot {
-		relatedOrder := gateApi.Order{Price: orderPriceStr, Side: orderSide, CurrencyPair: dialectSymbol, Type: orderType, TimeInForce: tif, AutoRepay: true}
-		relatedOrder.Account = "spot"
+		accountMode := `unified`
+		relatedOrder := gateApi.Order{Price: orderPriceStr, Side: orderSide, CurrencyPair: dialectSymbol, Type: orderType,
+			TimeInForce: tif, AutoRepay: true, AutoBorrow: true}
+		relatedOrder.Account = accountMode
 		formattedAmount, format := model.GetAmountInMarket(model.Gate, symbol, amount, price, false)
 		relatedOrder.Amount = util.CutTailZero(fmt.Sprintf(format, formattedAmount))
 		if orderType == model.OrderTypeMarket && orderSide == model.OrderSideBuy {
@@ -1136,8 +1140,8 @@ func placeOrderGate(account *model.Account, isWs bool, order *model.Order, order
 		util.Log(util.LogLevelInfo, fmt.Sprintf(`create spot order request: %#v`, relatedOrder))
 		if isWs {
 			param := map[string]interface{}{"text": `t-` + order.ClientOrdId, `currency_pair`: dialectSymbol, `type`: orderType,
-				`account`: `spot`, `side`: orderSide, `amount`: relatedOrder.Amount, `price`: orderPriceStr,
-				`time_in_force`: tif, `auto_repay`: true}
+				`account`: accountMode, `side`: orderSide, `amount`: relatedOrder.Amount, `price`: orderPriceStr,
+				`time_in_force`: tif, `auto_repay`: true, `auto_borrow`: true}
 			reqMap := map[string]interface{}{`time`: ts, `channel`: `spot.order_place`, `event`: `api`,
 				`payload`: map[string]interface{}{`req_id`: order.ClientOrdId, `req_param`: param}}
 			wsOrderMsg := util.JsonEncodeToByte(reqMap)
@@ -1310,54 +1314,39 @@ func queryOrderGate(key, secret, symbol, orderId string) (order *model.Order) {
 	return order
 }
 
-func getInterestGate(account *model.Account, coins []string) (interestDay, amountLimit map[string]float64) {
+func GetBorrowGate(account *model.Account, coin string) (canMargin bool, availableWithBorrow float64) {
 	client, ctx := getClientGate(account.Key, account.Secret)
-	interestDay = map[string]float64{}
-	amountLimit = map[string]float64{}
-	counter := 0
-	coinsToRecord := make([]string, 0, 10)
-	for _, coin := range coins {
-		coinsToRecord = append(coinsToRecord, coin)
-		BorrowReq, _, err := client.UnifiedApi.GetUnifiedBorrowable(ctx, coin)
-		if err != nil {
+	BorrowReq, _, err := client.UnifiedApi.GetUnifiedBorrowable(ctx, coin)
+	if err != nil {
+		return false, 0
+	}
+	if BorrowReq.Amount != "" {
+		availableWithBorrow, _ = strconv.ParseFloat(BorrowReq.Amount, 64)
+	}
+	return availableWithBorrow > 0, availableWithBorrow
+}
+
+func getInterestGate(account *model.Account, coins []string) (interestRates map[string]float64) {
+	client, ctx := getClientGate(account.Key, account.Secret)
+	step := 10
+	interestRates = make(map[string]float64)
+	for i := 0; i < len(coins); i += step {
+		end := i + step
+		if end > len(coins) {
+			end = len(coins)
+		}
+		interestRateMap, _, errRate := client.UnifiedApi.GetUnifiedEstimateRate(ctx, coins[i:end])
+		if errRate != nil {
+			util.Log(util.LogLevelError, fmt.Sprintf(`market %s to UnifiedEstimateRate response error interestRate %v`, model.Gate, errRate))
 			continue
 		}
-		if BorrowReq.Amount != "" {
-			amountLimit[coin], _ = strconv.ParseFloat(BorrowReq.Amount, 64)
-		}
-		counter++
-		if counter == 10 {
-			// 在这里执行记录操作
-			rate, _, errRate := client.UnifiedApi.GetUnifiedEstimateRate(ctx, coinsToRecord)
-			if errRate != nil {
-				util.Log(util.LogLevelError, fmt.Sprintf(`market %s to UnifiedEstimateRate response error %v `, model.Bybit, err))
-				continue
+		for coin, interestRate := range interestRateMap {
+			if interestRate != "" {
+				dayRate, _ := strconv.ParseFloat(interestRate, 64)
+				interestRates[coin] = dayRate * 24
 			}
-			for k, v := range rate {
-				if v != "" {
-					dayRate, _ := strconv.ParseFloat(v, 64)
-					interestDay[k] = dayRate * 24
-				}
-			}
-			// 重置计数器和切片
-			counter = 0
-			coinsToRecord = make([]string, 0, 10)
 		}
+		time.Sleep(time.Millisecond * 70)
 	}
-	// 如果剩余的coin数量不足10个，但需要记录
-	if counter > 0 {
-		// 在这里执行记录操作
-		rate, _, err := client.UnifiedApi.GetUnifiedEstimateRate(ctx, coinsToRecord)
-		if err == nil {
-			for k, v := range rate {
-				if v != "" {
-					dayRate, _ := strconv.ParseFloat(v, 64)
-					interestDay[k] = dayRate * 24
-				}
-			}
-		} else {
-			util.Log(util.LogLevelError, fmt.Sprintf(`market %s to UnifiedEstimateRate response error %v `, model.Bybit, err))
-		}
-	}
-	return interestDay, amountLimit
+	return
 }

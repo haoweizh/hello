@@ -1158,14 +1158,14 @@ func GetBills(account *model.Account, begin, end int64) (success bool, fundingFe
 	return success, fundingFees
 }
 
-func GetInterest(account *model.Account) (success bool) {
+func GetInterest(account *model.Account, symbols []string) (interestRates map[string]float64) {
 	switch account.Market {
 	case model.OKEX:
-		getInterestOkx(account)
+		interestRates, _ = getInterestOkx(account)
 	case model.Bybit:
-		getInterestBybit(account.Key, account.Secret)
+		interestRates = getInterestBybit(account.Key, account.Secret)
 	case model.Gate:
-		getInterestGate(account, []string{`BTC`, `ETH`, `DOGE`, `OKB`, `SOL`, `TON`, `XRP`, `TRUMP`, `NOT`, `LTC`, `BCH`, `AIDOGE`})
+		interestRates = getInterestGate(account, symbols)
 	}
-	return false
+	return
 }

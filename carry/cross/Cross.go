@@ -440,7 +440,7 @@ var ClearCross = func() {
 	}
 	syncGridHoldings()
 	for _, market := range model.AppEnvironment.Markets {
-		PostInit(market)
+		go PostInit(market)
 	}
 	customizeFrHours()
 	model.AppEnvironment.CrossEqualing = false

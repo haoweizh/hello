@@ -612,16 +612,16 @@ func Test_GetPrice(t *testing.T) {
 }
 
 func Test_Order(t *testing.T) {
-	market := model.Bybit
+	market := model.Gate
 	model.NewConfig()
 	//model.AppDB, _ = gorm.Open(postgres.Open(model.AppConfig.DBConnection), &gorm.Config{})
 	account := model.GetAccounts(0)[market]
 	api.InitMarketInfos(market)
 	//go api.MaintainConns(market)
 	//time.Sleep(5 * time.Second)
-	symbol := `ETH_USDT`
+	symbol := `SHELL_USDT`
 	order1 := api.PlaceOrder(account, model.OrderSideSell, model.OrderTypeLimit, market, symbol, ``, `test`,
-		2444, 2444, 0.01, false, nil)
+		0.33, 0.33, 20, false, nil)
 	fmt.Println(fmt.Sprintf(`%#v`, order1))
 	//go func() {
 	//	for {
@@ -897,14 +897,19 @@ func Test_GateSols(t *testing.T) {
 }
 
 func Test_SetLeverage(t *testing.T) {
-	market := model.Bybit
+	market := model.Gate
 	model.NewConfig()
 	//api.InitMarketInfos(market)
 	//symbol := `DUCK_PERP`
 	account := model.GetAccounts(0)[market]
-	fmt.Println(api.GetBorrowAbleBybit(account.Key, account.Secret, `USDT`))
+	//fmt.Println(api.GetAvailAbleBybit(account.Key, account.Secret, `USDT`))
 	//api.SetSymbolLeverage(account, market, symbol)
-	//api.GetInterest(account)
+	coins := []string{`TST`, `HEI`, `BROCCOLI`, `SHELL`, `KAITO`, `PI`}
+	rates := api.GetInterest(account, coins)
+	for coin, f := range rates {
+		_, b := api.GetBorrowGate(account, coin)
+		fmt.Println(fmt.Sprintf("%s %s %f %f", market, coin, f, b))
+	}
 }
 
 func Test_C(t *testing.T) {

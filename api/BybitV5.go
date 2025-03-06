@@ -73,7 +73,7 @@ var wsOrdUdtHandlerBybit = func(market, key string, msg []byte) {
 					//	balance.AvailableWithBorrow += balance.Amount
 					//}
 					account := model.AppConfig.GetAccountFromKeyIndex(market, key, -1)
-					_, balance.AvailableWithBorrow = GetBorrowAbleBybit(account.Key, account.Secret, balance.Coin)
+					_, balance.AvailableWithBorrow = GetAvailAbleBybit(account.Key, account.Secret, balance.Coin)
 					balance.BalanceTime = time.UnixMilli(walletResp.CreationTime)
 					balances = append(balances, balance)
 				}
@@ -630,7 +630,7 @@ func getBalanceBybit(key string, secret string) (success bool, balances []*model
 				}
 				balance.UsdValue = usdValue
 				if balance.Coin != `USDT` {
-					_, balance.AvailableWithBorrow = GetBorrowAbleBybit(key, secret, balance.Coin)
+					_, balance.AvailableWithBorrow = GetAvailAbleBybit(key, secret, balance.Coin)
 				}
 				balances = append(balances, balance)
 			}
@@ -1250,7 +1250,7 @@ func getBillsBybit(account *model.Account, begin, end int64, billType string) (b
 	return true, fundingFees
 }
 
-func GetBorrowAbleBybit(key, secret, coin string) (canMargin bool, availableWithBorrow float64) {
+func GetAvailAbleBybit(key, secret, coin string) (canMargin bool, availableWithBorrow float64) {
 	_, _, _, dialectSymbol := model.GetFromStandard(model.Bybit, coin+model.UniStandardTail[model.MarketTypeSpot])
 	param := map[string]interface{}{`category`: `spot`, `symbol`: dialectSymbol, `side`: `Sell`}
 	response, _ := SignedRequestBybit(key, secret, http.MethodGet, bybitRestUrl, `/v5/order/spot-borrow-check`, param)
