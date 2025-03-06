@@ -24,6 +24,7 @@ type Order struct {
 	ClientOrdId       string
 	OrderSide         string
 	OrderType         string
+	Param             string
 	RefreshType       string // 1: near refreshLink 2: far refreshLink
 	Status            string
 	Symbol            string

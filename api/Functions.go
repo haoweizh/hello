@@ -812,12 +812,13 @@ func PlaceOrder(account *model.Account, orderSide, orderType, market, symbol, or
 	if amount == 0 {
 		util.Log(util.LogLevelError, fmt.Sprintf(`can not place order with amount 0 , %s %s %s %s`, orderSide, orderType, market, symbol))
 		return &model.Order{OrderSide: markSide, OrderType: orderType, Market: market, Symbol: symbol, Coin: coin, Price: price,
-			Amount: 0, TriggerPrice: triggerPrice, RefreshType: funcType, Status: model.CarryStatusFail, DealAmount: 0, DealPrice: price, OrderTime: util.GetNow()}
+			Amount: 0, TriggerPrice: triggerPrice, RefreshType: funcType, Status: model.CarryStatusFail, DealAmount: 0,
+			DealPrice: price, OrderTime: util.GetNow(), Param: orderParam}
 	}
 	clientOrdId := strconv.FormatInt(time.Now().UnixMicro(), 10)[3:] + orderSide[0:1]
-	order = &model.Order{OrderId: clientOrdId, ClientOrdId: clientOrdId, RefreshType: funcType,
-		OrderSide: markSide, OrderType: orderType, Market: market, Symbol: symbol, Price: price, Amount: amount, DealAmount: 0, Coin: coin,
-		DealPrice: price, TriggerPrice: triggerPrice, OrderTime: util.GetNow(), UnfilledQuantity: amount, AccountIndex: account.Index, Status: model.CarryStatusWorking}
+	order = &model.Order{OrderId: clientOrdId, ClientOrdId: clientOrdId, RefreshType: funcType, OrderSide: markSide, OrderType: orderType,
+		Market: market, Symbol: symbol, Price: price, Amount: amount, DealAmount: 0, Coin: coin, DealPrice: price, TriggerPrice: triggerPrice,
+		OrderTime: util.GetNow(), UnfilledQuantity: amount, AccountIndex: account.Index, Status: model.CarryStatusWorking, Param: orderParam}
 	//util.Notice(fmt.Sprintf(`...%s %s %s before order %d amount: %f price:%f triggerPrice:%f`,
 	//	orderSide, market, symbol, start, amount, price, triggerPrice))
 	if model.AppConfig.Env == `test` {
