@@ -76,7 +76,7 @@ func handledFRate(status *model.CarryStatus, marketInfo *model.MarketInfo, price
 		if status.Holding*price > model.SmallHolding {
 			return true, false, &model.FundingRate{Rate: 0, UpdateTime: time.Now()}, 0
 		} else {
-			rate := marketInfo.InterestRate / -6
+			rate := marketInfo.InterestRate / -2
 			return true, false, &model.FundingRate{Rate: rate, UpdateTime: time.Now()}, rate
 		}
 	} else {
