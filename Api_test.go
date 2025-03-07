@@ -904,7 +904,7 @@ func Test_SetLeverage(t *testing.T) {
 	account := model.GetAccounts(0)[market]
 	//fmt.Println(api.GetAvailAbleBybit(account.Key, account.Secret, `USDT`))
 	//api.SetSymbolLeverage(account, market, symbol)
-	coins := []string{`TST`, `HEI`, `BROCCOLI`, `SHELL`, `KAITO`, `PI`}
+	coins := []string{`TOSHI`, `RAD`, `RATS`, `PEAQ`, `RAY`, `BONE`, `DOGEGOV`, `GPS`}
 	rates := api.GetInterest(account, coins)
 	for coin, f := range rates {
 		_, b := api.GetBorrowGate(account.Key, account.Secret, coin)

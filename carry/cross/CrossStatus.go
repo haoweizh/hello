@@ -288,7 +288,7 @@ func GetHoldings(accounts map[string]*model.Account) (holding [][]interface{}) {
 				fundingStr = fmt.Sprintf(`%e %dH %d:%d`,
 					100*fr.Rate, marketInfo.FundingRateInterval/3600000, updateTime.Hour(), updateTime.Minute())
 			} else {
-				fundingStr = fmt.Sprintf(`%e`, 100*marketInfo.InterestRate/-6)
+				fundingStr = fmt.Sprintf(`%e`, 100*marketInfo.InterestRate/-2)
 			}
 			fundingFeeValue, _ := util.LoadSyncMap(&model.AppEnvironment.FundingFeeToday, strconv.Itoa(accounts[market].Index), market, symbol)
 			if fundingFeeValue != nil {

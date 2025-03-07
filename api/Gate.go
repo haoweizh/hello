@@ -466,12 +466,13 @@ var wsPriHandlerGateSpot = func(market, key string, msg []byte) {
 				balance.BalanceTime = time.UnixMilli(ts)
 				balance.FrozenAmount, _ = strconv.ParseFloat(value[`freeze`].(string), 64)
 				balance.Amount, _ = strconv.ParseFloat(value[`total`].(string), 64)
-				account := model.AppConfig.GetAccountFromKeyIndex(market, key, -1)
+				//account := model.AppConfig.GetAccountFromKeyIndex(market, key, -1)
 				if balance.Coin == `USDT` {
 					balance.AvailableWithBorrow, _ = strconv.ParseFloat(value[`available`].(string), 64)
 				} else {
-					_, balance.AvailableWithBorrow = GetBorrowGate(account.Key, account.Secret, balance.Coin)
-					balance.AvailableWithBorrow += balance.Amount
+					//_, balance.AvailableWithBorrow = GetBorrowGate(account.Key, account.Secret, balance.Coin)
+					//balance.AvailableWithBorrow += balance.Amount
+					balance.AvailableWithBorrow = math.Max(balance.Amount, 0)
 				}
 				balances = append(balances, balance)
 			}
@@ -993,8 +994,9 @@ func getBalanceGate(key, secret string) (success bool, balances []*model.Balance
 		if balance.Coin == `USDT` {
 			balance.AvailableWithBorrow, _ = strconv.ParseFloat(item.Available, 64)
 		} else {
-			_, balance.AvailableWithBorrow = GetBorrowGate(key, secret, balance.Coin)
-			balance.AvailableWithBorrow += balance.Amount
+			//_, balance.AvailableWithBorrow = GetBorrowGate(key, secret, balance.Coin)
+			//balance.AvailableWithBorrow += balance.Amount
+			balance.AvailableWithBorrow = math.Max(balance.Amount, 0)
 		}
 		_, price := GetPriceForce(model.Gate, balance.Coin+model.UniStandardTail[model.MarketTypeSpot], false)
 		balance.UsdValue = balance.Amount * price
