@@ -109,29 +109,6 @@ func PostInit(market string) {
 	case model.OKEX:
 		// 更新资金费率
 		api.InitMarketInfos(model.OKEX)
-	case model.Gate:
-		accounts := model.AppConfig.GetAccounts(market)
-		value := api.GetSettings(model.FunctionCross, market)
-		coins := make([]string, 0)
-		value.Range(func(symbol, v interface{}) bool {
-			success, marketType, coin, _ := model.GetFromStandard(market, symbol.(string))
-			if success && marketType == model.MarketTypeSpot {
-				coins = append(coins, coin)
-			}
-			return true
-		})
-		interestRates := api.GetInterest(accounts[0], coins)
-		for coin, interestRate := range interestRates {
-			marketInfo := model.GetMarketInfo(market, coin+model.UniStandardTail[model.MarketTypeSpot])
-			if marketInfo != nil {
-				marketInfo.InterestRate = interestRate
-			}
-			for _, account := range accounts {
-				_, borrow := api.GetBorrowGate(account, coin)
-				fmt.Println(fmt.Sprintf("%s %s %f %f", market, coin, borrow, interestRate))
-				time.Sleep(time.Millisecond * 70)
-			}
-		}
 	}
 }
 

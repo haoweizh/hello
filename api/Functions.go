@@ -1165,7 +1165,7 @@ func GetInterest(account *model.Account, symbols []string) (interestRates map[st
 	case model.Bybit:
 		interestRates = getInterestBybit(account.Key, account.Secret)
 	case model.Gate:
-		interestRates = getInterestGate(account, symbols)
+		interestRates = getInterestGate(account.Key, account.Secret, symbols)
 	}
 	return
 }

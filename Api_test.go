@@ -907,7 +907,7 @@ func Test_SetLeverage(t *testing.T) {
 	coins := []string{`TST`, `HEI`, `BROCCOLI`, `SHELL`, `KAITO`, `PI`}
 	rates := api.GetInterest(account, coins)
 	for coin, f := range rates {
-		_, b := api.GetBorrowGate(account, coin)
+		_, b := api.GetBorrowGate(account.Key, account.Secret, coin)
 		fmt.Println(fmt.Sprintf("%s %s %f %f", market, coin, f, b))
 	}
 }

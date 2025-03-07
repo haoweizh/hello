@@ -94,11 +94,13 @@ func appendSpotMarketsGate(key, secret string, marketInfos map[string]*model.Mar
 		appendSpotMarketsGate(key, secret, marketInfos)
 		return
 	}
+	coins := make([]string, 0)
 	for _, spot := range spotCurrencyPairs {
-		success, _, symbol := model.GetFromDialect(model.Gate, model.MarketTypeSpot, spot.Id)
+		success, coin, symbol := model.GetFromDialect(model.Gate, model.MarketTypeSpot, spot.Id)
 		if !success {
 			continue
 		}
+		coins = append(coins, coin)
 		marketInfo := &model.MarketInfo{Market: model.Gate, FundingRateInterval: 8 * 3600000}
 		if spot.TradeStatus != "tradable" {
 			marketInfo.DeListing = true
@@ -115,6 +117,13 @@ func appendSpotMarketsGate(key, secret string, marketInfos map[string]*model.Mar
 			marketInfo.SizeMin, _ = strconv.ParseFloat(spot.MinBaseAmount, 64)
 		}
 		marketInfos[symbol] = marketInfo
+	}
+	interestRates := getInterestGate(key, secret, coins)
+	for coin, interestRate := range interestRates {
+		symbol := coin + model.UniStandardTail[model.MarketTypeSpot]
+		if marketInfos[symbol] != nil {
+			marketInfos[symbol].InterestRate = interestRate
+		}
 	}
 }
 
@@ -458,10 +467,12 @@ var wsPriHandlerGateSpot = func(market, key string, msg []byte) {
 				balance.FrozenAmount, _ = strconv.ParseFloat(value[`freeze`].(string), 64)
 				balance.Amount, _ = strconv.ParseFloat(value[`total`].(string), 64)
 				account := model.AppConfig.GetAccountFromKeyIndex(market, key, -1)
-				_, balance.AvailableWithBorrow = GetBorrowGate(account, balance.Coin)
-				balance.AvailableWithBorrow += balance.Amount
-				// todo remove following line
-				balance.AvailableWithBorrow = math.Max(0, balance.Amount)
+				if balance.Coin == `USDT` {
+					balance.AvailableWithBorrow, _ = strconv.ParseFloat(value[`available`].(string), 64)
+				} else {
+					_, balance.AvailableWithBorrow = GetBorrowGate(account.Key, account.Secret, balance.Coin)
+					balance.AvailableWithBorrow += balance.Amount
+				}
 				balances = append(balances, balance)
 			}
 		}
@@ -978,15 +989,17 @@ func getBalanceGate(key, secret string) (success bool, balances []*model.Balance
 		balance := &model.Balance{AccountId: key, BalanceTime: util.GetNow(), Market: model.Gate, Coin: coin}
 		balance.FrozenAmount, _ = strconv.ParseFloat(item.Freeze, 64)
 		balance.Borrow, _ = strconv.ParseFloat(item.Borrowed, 64)
-		balance.AvailableWithBorrow, _ = strconv.ParseFloat(item.Available, 64)
-		//balance.AvailableWithBorrow = math.Max(0, balance.Amount) + canBorrow
 		balance.Amount, _ = strconv.ParseFloat(item.Equity, 64)
-		if balance.Coin != `USDT` {
-			balance.AvailableWithBorrow = math.Max(0, balance.Amount)
+		if balance.Coin == `USDT` {
+			balance.AvailableWithBorrow, _ = strconv.ParseFloat(item.Available, 64)
+		} else {
+			_, balance.AvailableWithBorrow = GetBorrowGate(key, secret, balance.Coin)
+			balance.AvailableWithBorrow += balance.Amount
 		}
 		_, price := GetPriceForce(model.Gate, balance.Coin+model.UniStandardTail[model.MarketTypeSpot], false)
 		balance.UsdValue = balance.Amount * price
 		balances = append(balances, balance)
+		time.Sleep(time.Millisecond * 70)
 	}
 	if len(balances) == 0 {
 		util.Log(util.LogLevelInfo, "balances is empty gate")
@@ -1314,8 +1327,8 @@ func queryOrderGate(key, secret, symbol, orderId string) (order *model.Order) {
 	return order
 }
 
-func GetBorrowGate(account *model.Account, coin string) (canMargin bool, availableWithBorrow float64) {
-	client, ctx := getClientGate(account.Key, account.Secret)
+func GetBorrowGate(key, secret string, coin string) (canMargin bool, availableWithBorrow float64) {
+	client, ctx := getClientGate(key, secret)
 	BorrowReq, _, err := client.UnifiedApi.GetUnifiedBorrowable(ctx, coin)
 	if err != nil {
 		return false, 0
@@ -1326,8 +1339,8 @@ func GetBorrowGate(account *model.Account, coin string) (canMargin bool, availab
 	return availableWithBorrow > 0, availableWithBorrow
 }
 
-func getInterestGate(account *model.Account, coins []string) (interestRates map[string]float64) {
-	client, ctx := getClientGate(account.Key, account.Secret)
+func getInterestGate(key, secret string, coins []string) (interestRates map[string]float64) {
+	client, ctx := getClientGate(key, secret)
 	step := 10
 	interestRates = make(map[string]float64)
 	for i := 0; i < len(coins); i += step {
