@@ -108,7 +108,7 @@ func Test_ws(t *testing.T) {
 
 func Test_getCommonMarketInfos(t *testing.T) {
 	model.NewConfig()
-	market := model.Gate
+	market := model.Bybit
 	account := model.AppConfig.GetAccounts(market)[0]
 	//api.QueryOrderById(account, account.Market, `COW_PERP`, model.OrderTypeLimit, `0ee81f8d-b2fb-4e88-8b45-2a3b9e25f224`)
 	//api.GetPositions(account, market)
@@ -146,7 +146,7 @@ func TestWs(t *testing.T) {
 }
 
 func Test_WsAndOrderApi(t *testing.T) {
-	market := model.Gate
+	market := model.Bybit
 	coin := `ETH`
 	orderType := model.OrderTypeLimit
 	orderSide := model.OrderSideSell
@@ -154,7 +154,7 @@ func Test_WsAndOrderApi(t *testing.T) {
 	//coin + model.UniStandardTail[model.MarketTypeSpot]}
 	model.NewConfig()
 	//model.AppDB, _ = gorm.Open(postgres.Open(model.AppConfig.DBConnection), &gorm.Config{})
-	api.InitMarketInfos(model.Gate)
+	api.InitMarketInfos(market)
 	account := model.AppConfig.GetAccounts(market)[0]
 	api.CreateWSTick(model.AppEnvironment, market)
 	for _, symbol := range symbols {
