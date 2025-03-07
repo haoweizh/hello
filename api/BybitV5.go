@@ -72,8 +72,8 @@ var wsOrdUdtHandlerBybit = func(market, key string, msg []byte) {
 					//if balance.Amount > 0 {
 					//	balance.AvailableWithBorrow += balance.Amount
 					//}
-					account := model.AppConfig.GetAccountFromKeyIndex(market, key, -1)
-					_, balance.AvailableWithBorrow = GetAvailAbleBybit(account.Key, account.Secret, balance.Coin)
+					//account := model.AppConfig.GetAccountFromKeyIndex(market, key, -1)
+					//_, balance.AvailableWithBorrow = GetAvailAbleBybit(account.Key, account.Secret, balance.Coin)
 					balance.BalanceTime = time.UnixMilli(walletResp.CreationTime)
 					balances = append(balances, balance)
 				}

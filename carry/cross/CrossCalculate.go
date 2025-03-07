@@ -174,13 +174,13 @@ var ProcessCrossBalances = func(market, accountKey string, balances []*model.Bal
 			}
 			status := item.(*model.CarryStatus)
 			if status.Market == balance.Market && status.Symbol == symbol {
-				holding += balance.Amount * setting.GridAmount
 				// 当前某个交易所持仓很小的时候很容易造成买卖都被当作平仓来处理.只用推送的可借币数据来限制可借币数量，
 				//推送的持仓数据只用来和计算的数据比较，差额超过一万u时停止交易防止风险 status.Holding = balance.Amount
+				//status.LimitSell = math.Max(balance.Amount, balance.AvailableWithBorrow) - balance.FrozenAmount
+				//status.AvailableSell = math.Max(balance.Amount, balance.AvailableWithBorrow) - balance.FrozenAmount
+				holding += balance.Amount * setting.GridAmount
 				util.LogLess(util.LogLevelInfo, fmt.Sprintf(`update limit sell %d %s %s %f to %f %#v`,
 					account.Index, status.Market, status.Symbol, status.LimitSell, balance.AvailableWithBorrow-balance.FrozenAmount, balance))
-				status.LimitSell = math.Max(balance.Amount, balance.AvailableWithBorrow) - balance.FrozenAmount
-				status.AvailableSell = math.Max(balance.Amount, balance.AvailableWithBorrow) - balance.FrozenAmount
 			} else {
 				holding += status.Holding * setting.GridAmount
 			}
