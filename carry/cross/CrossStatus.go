@@ -76,7 +76,7 @@ func handledFRate(status *model.CarryStatus, marketInfo *model.MarketInfo, price
 		if status.Holding*price > model.SmallHolding {
 			return true, false, &model.FundingRate{Rate: 0, UpdateTime: time.Now()}, 0
 		} else {
-			rate := marketInfo.InterestRate / -2
+			rate := marketInfo.InterestRate / -4
 			return true, false, &model.FundingRate{Rate: rate, UpdateTime: time.Now()}, rate
 		}
 	} else {
@@ -288,7 +288,7 @@ func GetHoldings(accounts map[string]*model.Account) (holding [][]interface{}) {
 				fundingStr = fmt.Sprintf(`%e %dH %d:%d`,
 					100*fr.Rate, marketInfo.FundingRateInterval/3600000, updateTime.Hour(), updateTime.Minute())
 			} else {
-				fundingStr = fmt.Sprintf(`%e`, 100*marketInfo.InterestRate/-2)
+				fundingStr = fmt.Sprintf(`%e`, 100*marketInfo.InterestRate/-4)
 			}
 			fundingFeeValue, _ := util.LoadSyncMap(&model.AppEnvironment.FundingFeeToday, strconv.Itoa(accounts[market].Index), market, symbol)
 			if fundingFeeValue != nil {
@@ -480,8 +480,8 @@ func liquidateSmallContracts(account *model.Account, market string) {
 				if market == model.Gate {
 					orderParam = model.CloseContract
 				}
-				order := api.PlaceOrder(account, orderSide, model.OrderTypeMarket, market,
-					position.Currency, orderParam, model.FunctionLiq, position.EntryPrice, position.EntryPrice, holding, false, nil)
+				order := api.PlaceOrder(account, orderSide, model.OrderTypeMarket, market, position.Currency, orderParam,
+					model.FunctionLiq, ``, position.EntryPrice, position.EntryPrice, holding, false, nil)
 				if order.HaveId() {
 					saveCross(order, 0, 0, position.Holding)
 				}

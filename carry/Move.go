@@ -96,10 +96,10 @@ var ProcessMove = func(setting *model.Setting, tick *model.BidAsk) {
 	}
 	price := tick.Bids[0].Price/2 + tick.Asks[0].Price/2
 	go api.PlaceOrder(account, orderSideFrom, model.OrderTypeLimit, setting.Market, setting.Symbol, ``, model.FunctionMove,
-		price, price, math.Abs(holding), true, nil)
+		``, price, price, math.Abs(holding), true, nil)
 	accountTo := &model.Account{Index: 1, Market: setting.Market, Key: model.AppConfig.ToKey, Secret: model.AppConfig.ToSecret, OKPhase: model.AppConfig.ToPhase}
 	api.PlaceOrder(accountTo, orderSideTo, model.OrderTypeLimit, setting.Market, setting.Symbol, ``, model.FunctionMove,
-		price, price, math.Abs(holding), true, nil)
+		``, price, price, math.Abs(holding), true, nil)
 	if marketType == model.MarketTypeSpot {
 		bal, _ := balances.Load(setting.Symbol)
 		if bal != nil {

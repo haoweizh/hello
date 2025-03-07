@@ -772,7 +772,7 @@ func MustPlaceOrder(account *model.Account, orderSide, orderType, market, symbol
 			}
 			return orders
 		} else {
-			order := PlaceOrder(account, orderSide, orderType, market, symbol, orderParam, refreshType, price,
+			order := PlaceOrder(account, orderSide, orderType, market, symbol, orderParam, refreshType, ``, price,
 				triggerPrice, amount, false, nil)
 			if order != nil && order.OrderId != `` && order.Status != model.CarryStatusFail {
 				order.RefreshType = refreshType
@@ -798,7 +798,7 @@ func MustPlaceOrder(account *model.Account, orderSide, orderType, market, symbol
 // PlaceOrder orderSide: OrderSideBuy OrderSideSell OrderSideLiquidateLong OrderSideLiquidateShort
 // orderType: OrderTypeLimit OrderTypeMarket
 // amount:如果是限价单或市价卖单，amount是左侧币种的数量，如果是市价买单，amount是右测币种的数量
-func PlaceOrder(account *model.Account, orderSide, orderType, market, symbol, orderParam, funcType string, price, triggerPrice,
+func PlaceOrder(account *model.Account, orderSide, orderType, market, symbol, orderParam, refreshType, funcType string, price, triggerPrice,
 	amount float64, isWs bool, postOrder model.PostOrder) (order *model.Order) {
 	model.AppEnvironment.LastOrderMilli.Store(account.Key, time.Now().UnixMilli())
 	markSide := model.OrderSideBuy
@@ -812,13 +812,14 @@ func PlaceOrder(account *model.Account, orderSide, orderType, market, symbol, or
 	if amount == 0 {
 		util.Log(util.LogLevelError, fmt.Sprintf(`can not place order with amount 0 , %s %s %s %s`, orderSide, orderType, market, symbol))
 		return &model.Order{OrderSide: markSide, OrderType: orderType, Market: market, Symbol: symbol, Coin: coin, Price: price,
-			Amount: 0, TriggerPrice: triggerPrice, RefreshType: funcType, Status: model.CarryStatusFail, DealAmount: 0,
-			DealPrice: price, OrderTime: util.GetNow(), Param: orderParam}
+			Amount: 0, TriggerPrice: triggerPrice, RefreshType: refreshType, Status: model.CarryStatusFail, DealAmount: 0,
+			DealPrice: price, OrderTime: util.GetNow(), Param: orderParam, Function: funcType}
 	}
 	clientOrdId := strconv.FormatInt(time.Now().UnixMicro(), 10)[3:] + orderSide[0:1]
-	order = &model.Order{OrderId: clientOrdId, ClientOrdId: clientOrdId, RefreshType: funcType, OrderSide: markSide, OrderType: orderType,
-		Market: market, Symbol: symbol, Price: price, Amount: amount, DealAmount: 0, Coin: coin, DealPrice: price, TriggerPrice: triggerPrice,
-		OrderTime: util.GetNow(), UnfilledQuantity: amount, AccountIndex: account.Index, Status: model.CarryStatusWorking, Param: orderParam}
+	order = &model.Order{OrderId: clientOrdId, ClientOrdId: clientOrdId, RefreshType: refreshType, OrderSide: markSide,
+		OrderType: orderType, Market: market, Symbol: symbol, Price: price, Amount: amount, DealAmount: 0, Coin: coin,
+		DealPrice: price, TriggerPrice: triggerPrice, OrderTime: util.GetNow(), UnfilledQuantity: amount,
+		AccountIndex: account.Index, Status: model.CarryStatusWorking, Param: orderParam, Function: funcType}
 	//util.Notice(fmt.Sprintf(`...%s %s %s before order %d amount: %f price:%f triggerPrice:%f`,
 	//	orderSide, market, symbol, start, amount, price, triggerPrice))
 	if model.AppConfig.Env == `test` {

@@ -117,9 +117,11 @@ var ProcessCrossPositions = func(market, accountKey string, positions []*model.P
 			if status.Market == position.Market && status.Symbol == position.Currency {
 				util.LogLess(util.LogLevelInfo, fmt.Sprintf(`update position holding %d %s-%s %s-%s %f to %f %#v`,
 					account.Index, status.Market, position.Market, status.Symbol, position.Currency, status.Holding, position.Holding, position))
-				status.Holding = position.Holding
+				// 当前某个交易所持仓很小的时候很容易造成买卖都被当作平仓来处理.只用推送的可借币数据来限制可借币数量，
+				//推送的持仓数据只用来和计算的数据比较，差额超过一万u时停止交易防止风险 status.Holding = position.Holding
+			} else {
+				holding += status.Holding * setting.GridAmount
 			}
-			holding += status.Holding * setting.GridAmount
 			if price == 0 {
 				_, price = api.GetPriceForce(setting.Market, setting.Symbol, false)
 				price = price / setting.PriceX
@@ -171,15 +173,16 @@ var ProcessCrossBalances = func(market, accountKey string, balances []*model.Bal
 			}
 			status := item.(*model.CarryStatus)
 			if status.Market == balance.Market && status.Symbol == symbol {
-				status.Holding = balance.Amount
-				if account.Index == 0 && account.Market != model.OKEX {
-					util.LogLess(util.LogLevelInfo, fmt.Sprintf(`update limit sell %d %s %s %f to %f %#v`,
-						account.Index, status.Market, status.Symbol, status.LimitSell, balance.AvailableWithBorrow-balance.FrozenAmount, balance))
-				}
+				holding += balance.Amount
+				// 当前某个交易所持仓很小的时候很容易造成买卖都被当作平仓来处理.只用推送的可借币数据来限制可借币数量，
+				//推送的持仓数据只用来和计算的数据比较，差额超过一万u时停止交易防止风险 status.Holding = balance.Amount
+				util.LogLess(util.LogLevelInfo, fmt.Sprintf(`update limit sell %d %s %s %f to %f %#v`,
+					account.Index, status.Market, status.Symbol, status.LimitSell, balance.AvailableWithBorrow-balance.FrozenAmount, balance))
 				status.LimitSell = math.Max(balance.Amount, balance.AvailableWithBorrow) - balance.FrozenAmount
 				status.AvailableSell = math.Max(balance.Amount, balance.AvailableWithBorrow) - balance.FrozenAmount
+			} else {
+				holding += status.Holding * setting.GridAmount
 			}
-			holding += status.Holding * setting.GridAmount
 			if price == 0 {
 				_, price = api.GetPriceForce(setting.Market, setting.Symbol, false)
 				price = price / setting.PriceX
@@ -317,7 +320,7 @@ func checkTradeLine(statusBuy, statusSell *model.CarryStatus, carryCoin *model.C
 	if statusBuy.Holding*priceBuy >= -1*model.SmallHolding && statusSell.Holding*priceSell <= model.SmallHolding { // 开仓
 		if buyCrossStyle == crossGrid {
 			if carryCoin.CurrentStep < 0 || carryCoin.CurrentStep >= len(stepScores)-GridGap {
-				return false, 0, scoreOpen, `开`
+				return false, 0, scoreOpen, `open`
 			}
 			currentStep := carryCoin.CurrentStep
 			leftCurStep := carryCoin.MoneyPerStep - carryCoin.MoneyCurStep
@@ -328,9 +331,9 @@ func checkTradeLine(statusBuy, statusSell *model.CarryStatus, carryCoin *model.C
 			coinLimit := math.Min(leftCurStep, openValueLimit) / priceBuy * statusBuy.Setting.GridAmount
 			statusBuy.TradeLineBuy = stepScores[currentStep+GridGap]
 			statusSell.TradeLineSell = stepScores[currentStep+GridGap]
-			return scoreOpen > stepScores[currentStep+GridGap], coinLimit, scoreOpen, `开`
+			return scoreOpen > stepScores[currentStep+GridGap], coinLimit, scoreOpen, `open`
 		} else {
-			return scoreOpen > statusBuy.TradeLineBuy && scoreOpen > statusSell.TradeLineSell, crossLimit, scoreOpen, `开`
+			return scoreOpen > statusBuy.TradeLineBuy && scoreOpen > statusSell.TradeLineSell, crossLimit, scoreOpen, `open`
 		}
 	} else if statusBuy.Holding*priceBuy < -1*model.SmallHolding && statusSell.Holding*priceSell > model.SmallHolding { // 平仓
 		if buyCrossStyle == crossGrid {
@@ -349,19 +352,19 @@ func checkTradeLine(statusBuy, statusSell *model.CarryStatus, carryCoin *model.C
 			//	return scoreClose >= 0.0, limit, scoreClose, `平`
 			//}
 			if currentStep < 0 || currentStep > len(stepScores)-GridGap {
-				return false, 0, scoreClose, `平`
+				return false, 0, scoreClose, `close`
 			}
 			statusBuy.TradeLineBuy = -1 * stepScores[currentStep]
 			statusSell.TradeLineSell = -1 * stepScores[currentStep]
-			return scoreClose > -1*stepScores[currentStep], math.Min(limit, closeLimit), scoreClose, `平`
+			return scoreClose > -1*stepScores[currentStep], math.Min(limit, closeLimit), scoreClose, `close`
 		} else {
 			if scoreClose > statusBuy.TradeLineBuy {
-				return true, math.Min(math.Abs(statusBuy.Holding)*statusBuy.Setting.GridAmount, crossLimit), scoreClose, `平`
+				return true, math.Min(math.Abs(statusBuy.Holding)*statusBuy.Setting.GridAmount, crossLimit), scoreClose, `close`
 			}
 			if scoreClose > statusSell.TradeLineSell {
-				return true, math.Min(statusSell.Holding*statusSell.Setting.GridAmount, crossLimit), scoreClose, `平`
+				return true, math.Min(statusSell.Holding*statusSell.Setting.GridAmount, crossLimit), scoreClose, `close`
 			}
-			return false, 0, scoreClose, `平`
+			return false, 0, scoreClose, `close`
 		}
 	} else { // 换仓
 		if statusBuy.Holding*priceBuy < -1*model.SmallHolding {
@@ -372,10 +375,10 @@ func checkTradeLine(statusBuy, statusSell *model.CarryStatus, carryCoin *model.C
 		if buyCrossStyle == crossGrid {
 			statusBuy.TradeLineBuy = swapScore
 			statusSell.TradeLineSell = swapScore
-			return scoreSwitch > swapScore, math.Min(limit, crossLimit), scoreSwitch, `换`
+			return scoreSwitch > swapScore, math.Min(limit, crossLimit), scoreSwitch, `switch`
 		} else {
 			marketDis := (statusBuy.TradeLineBuy + statusSell.TradeLineSell) / 2
-			return scoreSwitch > marketDis, math.Min(limit, crossLimit), scoreSwitch, `换`
+			return scoreSwitch > marketDis, math.Min(limit, crossLimit), scoreSwitch, `switch`
 		}
 	}
 }
@@ -385,17 +388,17 @@ func checkTradeLine(statusBuy, statusSell *model.CarryStatus, carryCoin *model.C
 // ChanceLimit开仓、换仓资金费率倍数
 // ChanceLimitCombine平仓资金费率倍数
 func calcAmount(index int, coin string, carryStatus, carryStatusRelate *model.CarryStatus, carryCoin *model.CarryCoin, tick, tickRelate *model.BidAsk) (
-	delay bool, statusBuy, statusSell *model.CarryStatus, amount, priceBuy, priceSell float64) {
+	delay bool, statusBuy, statusSell *model.CarryStatus, amount, priceBuy, priceSell float64, closeType string) {
 	var bidAmount, askAmount float64
 	marketInfo := model.GetMarketInfo(carryStatus.Market, carryStatus.Symbol)
 	marketInfoRelate := model.GetMarketInfo(carryStatusRelate.Market, carryStatusRelate.Symbol)
 	if marketInfo == nil || marketInfoRelate == nil {
-		return false, nil, nil, 0, 0, 0
+		return false, nil, nil, 0, 0, 0, ``
 	}
 	gotFr, useRest, fundingRate, handledRate := handledFRate(carryStatus, marketInfo, tick.Bids[0].Price)
 	gotFrRelate, useRestRelate, fundingRateRelate, handledRateRelate := handledFRate(carryStatusRelate, marketInfoRelate, tickRelate.Bids[0].Price)
 	if !gotFr || !gotFrRelate || useRest || useRestRelate {
-		return useRest || useRestRelate, nil, nil, 0, 0, 0
+		return useRest || useRestRelate, nil, nil, 0, 0, 0, ``
 	}
 	priceAskRelate := tickRelate.Asks[0].Price * (1 + handledRateRelate)
 	priceBidRelate := tickRelate.Bids[0].Price * (1 + handledRateRelate)
@@ -449,6 +452,7 @@ func calcAmount(index int, coin string, carryStatus, carryStatusRelate *model.Ca
 		if statusBuy.TradeLineBuy == 0.001 {
 			doLog = true
 		}
+		closeType = scoreType
 		logMsg += fmt.Sprintf(`score %s %s at %f %f use score %f %s line %f`,
 			statusBuy.Market, statusBuy.Symbol, priceBuy, priceSell, scoreUse, scoreType, statusBuy.TradeLineBuy)
 		_, _, scoreUseR, scoreTypeR = checkTradeLine(carryStatus, carryStatusRelate, carryCoin, tick.Asks[0].Price, tickRelate.Bids[0].Price, scoreOpenR, scoreCloseR, scoreSwitchR)
@@ -464,17 +468,18 @@ func calcAmount(index int, coin string, carryStatus, carryStatusRelate *model.Ca
 			if statusBuy.TradeLineBuy == 0.001 {
 				doLog = true
 			}
+			closeType = scoreTypeR
 			logMsg += fmt.Sprintf(`score %s %s at %f %f use score %f %s line %f`,
 				statusBuy.Market, statusBuy.Symbol, priceBuy, priceSell, scoreUseR, scoreTypeR, statusBuy.TradeLineBuy)
 		}
 	}
 	generateMonitorMsg(index, coin, scoreType, scoreTypeR, scoreUse, scoreUseR, carryStatus, carryStatusRelate, marketInfo, marketInfoRelate, fundingRate, fundingRateRelate, valid)
 	if !valid {
-		return false, nil, nil, 0, 0, 0
+		return false, nil, nil, 0, 0, 0, ``
 	}
 	if breakMarkPrice(statusBuy.Account, statusBuy.Setting, priceBuy, model.OrderSideBuy) ||
 		breakMarkPrice(statusSell.Account, statusSell.Setting, priceSell, model.OrderSideSell) {
-		return false, nil, nil, 0, 0, 0
+		return false, nil, nil, 0, 0, 0, ``
 	}
 	amount = FormatCrossPair(statusBuy, statusSell, bidAmount, askAmount, amountLimit, priceBuy, priceSell)
 	if score > 0.1 || scoreR > 0.1 {
@@ -487,11 +492,11 @@ func calcAmount(index int, coin string, carryStatus, carryStatusRelate *model.Ca
 				carryStatus.Market, carryStatus.Symbol, int(1000*scoreR), int(1000*score), time.Now().Format("2006-01-02 15:04:05"))
 		}
 		if statusBuy.Holding*priceBuy > -model.SmallHolding && statusSell.Holding*priceSell < model.SmallHolding {
-			return false, nil, nil, 0, 0, 0
+			return false, nil, nil, 0, 0, 0, ``
 		}
 	}
 	if amount > 0 && index == 0 && doLog {
 		util.Log(util.LogLevelInfo, fmt.Sprintf(`%s amt %f`, logMsg, amount))
 	}
-	return false, statusBuy, statusSell, amount, priceBuy, priceSell
+	return false, statusBuy, statusSell, amount, priceBuy, priceSell, closeType
 }

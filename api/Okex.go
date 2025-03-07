@@ -873,7 +873,6 @@ func getMarketsOKEX(account *model.Account) (marketInfos map[string]*model.Marke
 					}
 					if marketType == model.MarketTypeSpot && amountLimits != nil && interestDay != nil {
 						marketInfo.InterestRate = interestDay[coin]
-						util.Log(util.LogLevelInfo, fmt.Sprintf(`init interest %s %f`, marketInfo.Symbol, marketInfo.InterestRate))
 						marketInfo.BorrowAvailable = amountLimits[coin]
 					}
 					marketInfos[marketInfo.Symbol] = marketInfo
