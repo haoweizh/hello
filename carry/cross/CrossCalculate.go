@@ -418,9 +418,9 @@ func calcAmount(index int, coin string, carryStatus, carryStatusRelate *model.Ca
 	scoreR = scoreOpenR
 	scoreSwitchR = scoreOpenR
 	scoreCloseR = scoreOpenR
-	doLog := false
-	logMsg := fmt.Sprintf(`score check1 %s %s %f %f rate %f score %f %s %s %f %f rate %f score %f`,
-		carryStatus.Market, carryStatus.Symbol, priceBid, priceAsk, handledRate, score, carryStatusRelate.Market, carryStatusRelate.Symbol, priceBidRelate, priceAskRelate, handledRateRelate, scoreR)
+	//doLog := false
+	//logMsg := fmt.Sprintf(`score check1 %s %s %f %f rate %f score %f %s %s %f %f rate %f score %f`,
+	//	carryStatus.Market, carryStatus.Symbol, priceBid, priceAsk, handledRate, score, carryStatusRelate.Market, carryStatusRelate.Symbol, priceBidRelate, priceAskRelate, handledRateRelate, scoreR)
 	if handledRateRelate > handledRate { // R为买方＞0
 		priceBid = tick.Bids[0].Price * (1 + carryStatus.Setting.AmountRate*handledRate)
 		priceAskRelate = tickRelate.Asks[0].Price * (1 + carryStatus.Setting.AmountRate*handledRateRelate)
@@ -438,7 +438,7 @@ func calcAmount(index int, coin string, carryStatus, carryStatusRelate *model.Ca
 		priceAsk = tick.Asks[0].Price * (1 + carryStatus.Setting.AmountRateCombine*handledRate)
 		scoreCloseR = (priceBidRelate/priceXRelate - priceAsk/priceX) / math.Max(priceAsk/priceX, priceBidRelate/priceXRelate)
 	}
-	logMsg += fmt.Sprintf(`after handled open %f close %f openR %f closeR %f`, scoreOpen, scoreClose, scoreOpenR, scoreCloseR)
+	//logMsg += fmt.Sprintf(`after handled open %f close %f openR %f closeR %f`, scoreOpen, scoreClose, scoreOpenR, scoreCloseR)
 	var valid bool
 	var amountLimit, scoreUse, scoreUseR float64
 	var scoreType, scoreTypeR string
@@ -450,12 +450,12 @@ func calcAmount(index int, coin string, carryStatus, carryStatusRelate *model.Ca
 		priceBuy = tickRelate.Asks[0].Price
 		askAmount = tick.Bids[0].Amount
 		bidAmount = tickRelate.Asks[0].Amount
-		if statusBuy.TradeLineBuy == 0.001 {
-			doLog = true
-		}
+		//if statusBuy.TradeLineBuy == 0.001 {
+		//	doLog = true
+		//}
 		closeType = scoreType
-		logMsg += fmt.Sprintf(`score %s %s at %f %f use score %f %s line %f`,
-			statusBuy.Market, statusBuy.Symbol, priceBuy, priceSell, scoreUse, scoreType, statusBuy.TradeLineBuy)
+		//logMsg += fmt.Sprintf(`score %s %s at %f %f use score %f %s line %f`,
+		//	statusBuy.Market, statusBuy.Symbol, priceBuy, priceSell, scoreUse, scoreType, statusBuy.TradeLineBuy)
 		_, _, scoreUseR, scoreTypeR = checkTradeLine(carryStatus, carryStatusRelate, carryCoin, tick.Asks[0].Price, tickRelate.Bids[0].Price, scoreOpenR, scoreCloseR, scoreSwitchR)
 	} else {
 		valid, amountLimit, scoreUseR, scoreTypeR = checkTradeLine(carryStatus, carryStatusRelate, carryCoin, tick.Asks[0].Price, tickRelate.Bids[0].Price, scoreOpenR, scoreCloseR, scoreSwitchR)
@@ -466,12 +466,12 @@ func calcAmount(index int, coin string, carryStatus, carryStatusRelate *model.Ca
 			priceBuy = tick.Asks[0].Price
 			askAmount = tickRelate.Bids[0].Amount
 			bidAmount = tick.Asks[0].Amount
-			if statusBuy.TradeLineBuy == 0.001 {
-				doLog = true
-			}
+			//if statusBuy.TradeLineBuy == 0.001 {
+			//	doLog = true
+			//}
 			closeType = scoreTypeR
-			logMsg += fmt.Sprintf(`score %s %s at %f %f use score %f %s line %f`,
-				statusBuy.Market, statusBuy.Symbol, priceBuy, priceSell, scoreUseR, scoreTypeR, statusBuy.TradeLineBuy)
+			//logMsg += fmt.Sprintf(`score %s %s at %f %f use score %f %s line %f`,
+			//	statusBuy.Market, statusBuy.Symbol, priceBuy, priceSell, scoreUseR, scoreTypeR, statusBuy.TradeLineBuy)
 		}
 	}
 	generateMonitorMsg(index, coin, scoreType, scoreTypeR, scoreUse, scoreUseR, carryStatus, carryStatusRelate, marketInfo, marketInfoRelate, fundingRate, fundingRateRelate, valid)
@@ -496,8 +496,8 @@ func calcAmount(index int, coin string, carryStatus, carryStatusRelate *model.Ca
 			return false, nil, nil, 0, 0, 0, ``
 		}
 	}
-	if amount > 0 && index == 0 && doLog {
-		util.Log(util.LogLevelInfo, fmt.Sprintf(`%s amt %f`, logMsg, amount))
-	}
+	//if amount > 0 && index == 0 && doLog {
+	//	util.Log(util.LogLevelInfo, fmt.Sprintf(`%s amt %f`, logMsg, amount))
+	//}
 	return false, statusBuy, statusSell, amount, priceBuy, priceSell, closeType
 }
