@@ -1342,6 +1342,7 @@ func GetBorrowGate(key, secret string, coin string) (canMargin bool, availableWi
 }
 
 func getInterestGate(key, secret string, coins []string) (interestRates map[string]float64) {
+	util.Log(util.LogLevelInfo, fmt.Sprintf(`getInterestGate key %d`, len(coins)))
 	client, ctx := getClientGate(key, secret)
 	step := 10
 	interestRates = make(map[string]float64)
@@ -1363,5 +1364,6 @@ func getInterestGate(key, secret string, coins []string) (interestRates map[stri
 		}
 		time.Sleep(time.Millisecond * 70)
 	}
+	util.Log(util.LogLevelInfo, fmt.Sprintf(`getInterestGate key done %d`, len(coins)))
 	return
 }

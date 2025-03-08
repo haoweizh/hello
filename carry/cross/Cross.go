@@ -1432,8 +1432,8 @@ func FormatCrossPair(statusBuy, statusSell *model.CarryStatus, bidAmount, askAmo
 	_, amountSell = model.ParseRealAmount(statusSell.Market, statusSell.Symbol, amountSell)
 	formattedAmount = math.Min(amountBuy*statusBuy.Setting.GridAmount, amountSell*statusSell.Setting.GridAmount)
 	if formattedAmount < math.Max(minBuy, minSell) {
-		util.LogLess(util.LogLevelError, fmt.Sprintf(`format amt 0 amt %f %s %s limit buy %f bid amount %f min buy %f price %f %s %s limit sell %f ask amount %f min sell %f`,
-			amountLimit, statusBuy.Market, statusBuy.Symbol, statusBuy.LimitBuy, bidAmount, minBuy, priceBuy, statusSell.Market, statusSell.Symbol, statusSell.LimitSell, askAmount, minSell))
+		//util.LogLess(util.LogLevelError, fmt.Sprintf(`format amt 0 amt %f %s %s limit buy %f bid amount %f min buy %f price %f %s %s limit sell %f ask amount %f min sell %f`,
+		//	amountLimit, statusBuy.Market, statusBuy.Symbol, statusBuy.LimitBuy, bidAmount, minBuy, priceBuy, statusSell.Market, statusSell.Symbol, statusSell.LimitSell, askAmount, minSell))
 		return 0
 	}
 	return formattedAmount

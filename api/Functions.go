@@ -921,8 +921,26 @@ func InitCrossMarketInfos(markets []string) {
 	infoPool := make(map[string][]*model.MarketInfo) // coin - []marketInfos
 	util.Log(util.LogLevelInfo, fmt.Sprintf(`begin to init cross market infos %#v`, markets))
 	model.MarketInfos.Clear()
+	marketInits := sync.Map{} // market - bool
 	for _, market := range markets {
-		InitMarketInfos(market)
+		go func() {
+			InitMarketInfos(market)
+			marketInits.Store(market, true)
+		}()
+	}
+	for {
+		done := true
+		for _, market := range markets {
+			value, _ := marketInits.Load(market)
+			if value == nil || !value.(bool) {
+				done = false
+				break
+			}
+		}
+		if done {
+			break
+		}
+		time.Sleep(time.Second)
 	}
 	model.MarketInfos.Range(func(key, value any) bool {
 		if value == nil {
