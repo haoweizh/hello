@@ -924,6 +924,7 @@ func InitCrossMarketInfos(markets []string) {
 	for _, market := range markets {
 		go func() {
 			InitMarketInfos(market)
+			util.Log(util.LogLevelInfo, fmt.Sprintf("finish init cross market infos %#v", market))
 			doneNum++
 		}()
 	}
