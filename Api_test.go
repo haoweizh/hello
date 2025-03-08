@@ -136,6 +136,23 @@ func Test_getCommonMarketInfos(t *testing.T) {
 }
 
 func TestWs(t *testing.T) {
+	markets := []string{`a`, `b`, `c`, `d`, `e`, `f`, `g`, `h`, `i`, `j`}
+	for {
+		done := true
+		for _, market := range markets {
+			if market == `f` {
+				done = false
+				break
+			}
+			fmt.Println(market)
+		}
+		if done {
+			break
+		}
+		fmt.Println(`done`)
+		time.Sleep(time.Second)
+	}
+	fmt.Println(markets)
 	market := model.Bybit
 	model.NewConfig()
 	//api.MaintainConns(market)

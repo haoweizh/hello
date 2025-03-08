@@ -919,30 +919,18 @@ func FilterCross(market, symbol string) bool {
 // InitCrossMarketInfos 用以初始化cross carry的各个币种市场，调用前需要truncate settings数据库表，本方法会从新插入
 func InitCrossMarketInfos(markets []string) {
 	infoPool := make(map[string][]*model.MarketInfo) // coin - []marketInfos
-	util.Log(util.LogLevelInfo, fmt.Sprintf(`begin to init cross market infos %#v`, markets))
 	model.MarketInfos.Clear()
-	marketInits := sync.Map{} // market - bool
+	doneNum := 0
 	for _, market := range markets {
 		go func() {
 			InitMarketInfos(market)
-			marketInits.Store(market, true)
+			doneNum++
 		}()
 	}
-	for {
-		done := true
-		for _, market := range markets {
-			value, _ := marketInits.Load(market)
-			if value == nil || !value.(bool) {
-				util.Log(util.LogLevelInfo, fmt.Sprintf(`init cross market infos fail %s`, market))
-				done = false
-			}
-		}
-		if done {
-			util.Log(util.LogLevelInfo, fmt.Sprintf(`init cross market infos done`))
-			break
-		}
+	for doneNum < len(markets) {
 		time.Sleep(time.Second)
 	}
+	util.Log(util.LogLevelInfo, fmt.Sprintf("finish init cross market infos %#v", markets))
 	model.MarketInfos.Range(func(key, value any) bool {
 		if value == nil {
 			return true
