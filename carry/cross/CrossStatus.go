@@ -70,7 +70,7 @@ type spotMarket struct {
 	reduceOnly      bool // 只减仓模式
 }
 
-// 2/周期+(1-剩余/周期）^2/2
+// (1+(1-剩余/周期）^2)*2/周期
 func handledFRate(status *model.CarryStatus, marketInfo *model.MarketInfo, price float64) (got, delayed bool, fundingRate *model.FundingRate, handledFr float64) {
 	if status.IsSpot {
 		if status.Holding*price > model.SmallHolding {
@@ -93,7 +93,8 @@ func handledFRate(status *model.CarryStatus, marketInfo *model.MarketInfo, price
 		if leftHours > hours {
 			leftHours = hours
 		}
-		handledFr = fundingRate.Rate * (2/hours + (1.0-leftHours/hours)*(1.0-leftHours/hours)/2)
+		//handledFr = fundingRate.Rate * (2/hours + (1.0-leftHours/hours)*(1.0-leftHours/hours)/2)
+		handledFr = fundingRate.Rate * (1 + (1.0-leftHours/hours)*(1.0-leftHours/hours)) * 2 / hours
 		if handledFr > 0.1 || handledFr < -0.1 {
 			got = false
 			util.Log(util.LogLevelError, fmt.Sprintf(`fatal error funding rate break %s %s %f %#v %d`,
