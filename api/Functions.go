@@ -935,7 +935,6 @@ func InitCrossMarketInfos(markets []string) {
 			if value == nil || !value.(bool) {
 				util.Log(util.LogLevelInfo, fmt.Sprintf(`init cross market infos fail %s`, market))
 				done = false
-				break
 			}
 		}
 		if done {
