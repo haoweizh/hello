@@ -933,11 +933,13 @@ func InitCrossMarketInfos(markets []string) {
 		for _, market := range markets {
 			value, _ := marketInits.Load(market)
 			if value == nil || !value.(bool) {
+				util.Log(util.LogLevelInfo, fmt.Sprintf(`init cross market infos fail %s`, market))
 				done = false
 				break
 			}
 		}
 		if done {
+			util.Log(util.LogLevelInfo, fmt.Sprintf(`init cross market infos done`))
 			break
 		}
 		time.Sleep(time.Second)
