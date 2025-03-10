@@ -490,7 +490,11 @@ func calcAmount(index int, coin string, carryStatus, carryStatusRelate *model.Ca
 			if sm != nil {
 				balance := sm.(*spotMarket).balances[statusSell.Symbol]
 				if balance != nil && balance.Amount <= askAmount { //gate借币
-					askAmount = askAmount * (0.55 + 0.4*rand.Float64())
+					oldAmt := askAmount
+					randRate := 0.55 + 0.4*rand.Float64()
+					askAmount = askAmount * randRate
+					util.Log(util.LogLevelInfo, fmt.Sprintf(`rand gate borrow sell amt %s %f to rand %f %f`,
+						statusSell.Symbol, oldAmt, randRate, askAmount))
 				}
 			}
 		}
