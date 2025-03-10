@@ -6,6 +6,7 @@ import (
 	"hello/model"
 	"hello/util"
 	"math"
+	"math/rand"
 	"strconv"
 	"strings"
 	"time"
@@ -481,6 +482,18 @@ func calcAmount(index int, coin string, carryStatus, carryStatusRelate *model.Ca
 	if breakMarkPrice(statusBuy.Account, statusBuy.Setting, priceBuy, model.OrderSideBuy) ||
 		breakMarkPrice(statusSell.Account, statusSell.Setting, priceSell, model.OrderSideSell) {
 		return false, nil, nil, 0, 0, 0, ``
+	}
+	if statusSell.Market == model.Gate {
+		_, marketType, _, _ := model.GetFromStandard(statusSell.Market, statusSell.Symbol)
+		if marketType == model.MarketTypeSpot {
+			sm, _ := spotMarkets.Load(statusSell.Account.Key)
+			if sm != nil {
+				balance := sm.(*spotMarket).balances[statusSell.Symbol]
+				if balance != nil && balance.Amount <= askAmount { //gate借币
+					askAmount = askAmount * (0.55 + 0.4*rand.Float64())
+				}
+			}
+		}
 	}
 	amount = FormatCrossPair(statusBuy, statusSell, bidAmount, askAmount, amountLimit, priceBuy, priceSell)
 	if score > 0.1 || scoreR > 0.1 {

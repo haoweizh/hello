@@ -1019,18 +1019,6 @@ var ProcessCross = func(setting *model.Setting, tick *model.BidAsk) {
 				//util.Log(util.LogLevelInfo, fmt.Sprintf(`time mark coin %s %s %s <- %s %s amt %f ts %d %d %d %d`,
 				//	setting.Coin, statusBuy.Symbol, statusBuy.Market, statusSell.Symbol, statusSell.Market, amount, tsMark, tsDis1, tsDis2, time.Now().UnixMicro()-tsMark))
 				time.Sleep(time.Duration(100) * time.Millisecond)
-				if statusSell.Market == model.Gate {
-					_, marketType, _, _ := model.GetFromStandard(statusSell.Market, statusSell.Symbol)
-					if marketType == model.MarketTypeSpot {
-						sm, _ := spotMarkets.Load(statusSell.Account.Key)
-						if sm != nil {
-							balance := sm.(*spotMarket).balances[statusSell.Symbol]
-							if balance != nil && balance.Amount <= amount/statusSell.Setting.GridAmount { //gate借币
-								time.Sleep(time.Duration(900) * time.Millisecond)
-							}
-						}
-					}
-				}
 				return
 			}
 		}
