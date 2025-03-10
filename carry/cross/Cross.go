@@ -439,9 +439,9 @@ var ClearCross = func() {
 		equalAccounts(doEqual, traceId)
 	}
 	syncGridHoldings()
-	for _, market := range model.AppEnvironment.Markets {
-		go PostInit(market)
-	}
+	//for _, market := range model.AppEnvironment.Markets {
+	//	go PostInit(market)
+	//}
 	customizeFrHours()
 	model.AppEnvironment.CrossEqualing = false
 	util.Log(util.LogLevelInfo, fmt.Sprintf("end to clearing cross get set %v %d", model.AppEnvironment.CrossEqualing, traceId))
