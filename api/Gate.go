@@ -994,9 +994,9 @@ func getBalanceGate(key, secret string) (success bool, balances []*model.Balance
 		if balance.Coin == `USDT` {
 			balance.AvailableWithBorrow, _ = strconv.ParseFloat(item.Available, 64)
 		} else {
-			_, balance.AvailableWithBorrow = GetBorrowGate(key, secret, balance.Coin)
-			balance.AvailableWithBorrow += balance.Amount
-			//balance.AvailableWithBorrow = math.Max(balance.Amount, 0)
+			//_, balance.AvailableWithBorrow = GetBorrowGate(key, secret, balance.Coin)
+			//balance.AvailableWithBorrow += balance.Amount
+			balance.AvailableWithBorrow = math.Max(balance.Amount, 0)
 		}
 		_, price := GetPriceForce(model.Gate, balance.Coin+model.UniStandardTail[model.MarketTypeSpot], false)
 		balance.UsdValue = balance.Amount * price
