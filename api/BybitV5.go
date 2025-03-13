@@ -10,6 +10,7 @@ import (
 	"hello/api/dtos"
 	"hello/model"
 	"hello/util"
+	"math"
 	"math/rand"
 	"net/http"
 	"strconv"
@@ -1262,6 +1263,12 @@ func GetAvailAbleBybit(key, secret, coin string) (canMargin bool, availableWithB
 	data := loanJson.Get(`result`).MustMap()
 	if data[`maxTradeQty`] != nil {
 		availableWithBorrow, _ = strconv.ParseFloat(data[`maxTradeQty`].(string), 64)
+		_, price := GetPriceForce(model.Bybit, coin+model.UniStandardTail[model.MarketTypeSpot], false)
+		if price > 0 {
+			availableWithBorrow = math.Max(0, availableWithBorrow-100/price)
+		} else {
+			availableWithBorrow *= 0.9
+		}
 	}
 	if data[`spotMaxTradeQty`] != nil {
 		spotAmt, _ := strconv.ParseFloat(data[`spotMaxTradeQty`].(string), 64)
