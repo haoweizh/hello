@@ -10,6 +10,7 @@ import (
 	"hash/crc32"
 	"hello/model"
 	"hello/util"
+	"math"
 	"net/http"
 	"net/url"
 	"strconv"
@@ -1388,6 +1389,12 @@ func parseBalanceOKEX(value map[string]interface{}) (balance *model.Balance) {
 	}
 	if value[`maxLoan`] != nil && len(strings.TrimSpace(value[`maxLoan`].(string))) > 0 {
 		balance.AvailableWithBorrow, _ = strconv.ParseFloat(value[`maxLoan`].(string), 64)
+		_, price := GetPriceForce(model.OKEX, balance.Coin+model.UniStandardTail[model.MarketTypeSpot], false)
+		if price > 0 {
+			balance.AvailableWithBorrow = math.Max(0, balance.AvailableWithBorrow-100/price)
+		} else {
+			balance.AvailableWithBorrow *= 0.9
+		}
 	}
 	if value[`frozenBal`] != nil && len(strings.TrimSpace(value[`frozenBal`].(string))) > 0 {
 		balance.FrozenAmount, _ = strconv.ParseFloat(value[`frozenBal`].(string), 64)

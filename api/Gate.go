@@ -1337,6 +1337,12 @@ func GetBorrowGate(key, secret string, coin string) (canMargin bool, availableWi
 	}
 	if BorrowReq.Amount != "" {
 		availableWithBorrow, _ = strconv.ParseFloat(BorrowReq.Amount, 64)
+		_, price := GetPriceForce(model.Gate, coin+model.UniStandardTail[model.MarketTypeSpot], false)
+		if price > 0 {
+			availableWithBorrow = math.Max(0, availableWithBorrow-100/price)
+		} else {
+			availableWithBorrow *= 0.9
+		}
 	}
 	return availableWithBorrow > 0, availableWithBorrow
 }
