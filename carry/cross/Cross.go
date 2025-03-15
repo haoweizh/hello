@@ -285,8 +285,9 @@ func initStatus(account *model.Account, setting *model.Setting) (status *model.C
 	if v != nil {
 		marketInfo = v.(*model.MarketInfo)
 	} else {
-		util.Log(util.LogLevelError, fmt.Sprintf(`fail to create status get marketInfo %s %s`, setting.Market, setting.Symbol))
-		return nil
+		status.DoRevert = true
+		//util.Log(util.LogLevelError, fmt.Sprintf(`fail to create status get marketInfo %s %s`, setting.Market, setting.Symbol))
+		//return nil
 	}
 	if marketInfo != nil && marketInfo.SizeMax > 0 {
 		status.AvailableBuy = math.Min(status.AvailableBuy, marketInfo.SizeMax)
@@ -307,9 +308,9 @@ func initStatus(account *model.Account, setting *model.Setting) (status *model.C
 	status.LimitBuy = math.Min(status.LimitBuy, status.AvailableBuy)
 	status.LimitSell = math.Min(status.LimitSell, status.AvailableSell)
 	initTradeLine(account, setting, status)
-	if status.Account.Index == 0 {
-		util.Log(util.LogLevelInfo, fmt.Sprintf(`init status %s %s %#v`, setting.Market, setting.Symbol, status))
-	}
+	//if status.Account.Index == 0 {
+	//	util.Log(util.LogLevelInfo, fmt.Sprintf(`init status %s %s %#v`, setting.Market, setting.Symbol, status))
+	//}
 	util.StoreSyncMap(carryStatusMap, status, setting.Coin, setting.Market, setting.Symbol, account.Key)
 	return
 }
@@ -708,14 +709,16 @@ func equalAccount(i int, equalChan chan int, accounts map[string]*model.Account,
 //
 //		1.获取到的是经过gridAmount 和priceX调整过后的price和amount
 //	 2.获得到的价格是经过funding rate加权后的价格，实际下单时要进行还原
-func getHolding(statuses []*model.CarryStatus) (bids, asks model.Ticks, statusMap map[string]*model.CarryStatus,
+func getHolding(statuses []*model.CarryStatus) (success bool, bids, asks model.Ticks, statusMap map[string]*model.CarryStatus,
 	holding, bidHolding, price float64, holdStr string) {
 	bids = model.Ticks{}
 	asks = model.Ticks{}
 	statusMap = make(map[string]*model.CarryStatus)
+	success = true
 	for _, status := range statuses {
 		if status == nil {
 			util.Log(util.LogLevelError, fmt.Sprintf(`warning fail to get one status %#v`, bids))
+			success = false
 			return
 		}
 		if status.Holding > 0 {
@@ -755,13 +758,16 @@ func getHolding(statuses []*model.CarryStatus) (bids, asks model.Ticks, statusMa
 			status.Setting.Valid = true
 		}
 	}
-	return bids, asks, statusMap, holding, bidHolding, price, holdStr
+	return success, bids, asks, statusMap, holding, bidHolding, price, holdStr
 }
 
 // settings []*model.Setting, coinStatus map[string]map[string]map[string]*CarryStatus
 func equalCoin(index int, coin string, statuses []*model.CarryStatus) (isEqual bool, holding float64, errMsg string) {
-	bids, asks, statusMap, holdingValue, _, holdingPrice, holdStr := getHolding(statuses)
-	util.Log(util.LogLevelInfo, fmt.Sprintf(`compare holding %s status num index %d %d %s`, coin, index, len(statuses), holdStr))
+	success, bids, asks, statusMap, holdingValue, _, holdingPrice, holdStr := getHolding(statuses)
+	util.Log(util.LogLevelInfo, fmt.Sprintf(`compare holding %s status num index %d %d %s %v`, coin, index, len(statuses), holdStr, success))
+	if !success {
+		return false, holdingValue, "status has nil value"
+	}
 	if math.IsNaN(holdingValue) {
 		util.Log(util.LogLevelError, `hold value is NaN `)
 		for _, status := range statusMap {
