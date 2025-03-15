@@ -418,7 +418,7 @@ var ClearCross = func() {
 	}
 	model.AppEnvironment.CrossEqualing = true
 	doEqual := false
-	if time.Now().Minute() == 35 {
+	if time.Now().Minute() == 15 {
 		doEqual = true
 	} else {
 		model.AppEnvironment.FundingFeeToday.Clear()
