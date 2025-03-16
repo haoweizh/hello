@@ -632,7 +632,6 @@ func getBalanceBybit(key string, secret string) (success bool, balances []*model
 				balance.UsdValue = usdValue
 				if balance.Coin != `USDT` {
 					_, balance.AvailableWithBorrow = GetAvailAbleBybit(key, secret, balance.Coin)
-					balance.AvailableWithBorrow = math.Max(balance.AvailableWithBorrow, balance.Amount)
 				}
 				balances = append(balances, balance)
 			}
@@ -1275,6 +1274,8 @@ func GetAvailAbleBybit(key, secret, coin string) (canMargin bool, availableWithB
 		spotAmt, _ := strconv.ParseFloat(data[`spotMaxTradeQty`].(string), 64)
 		if availableWithBorrow > spotAmt {
 			canMargin = true
+		} else {
+			availableWithBorrow = spotAmt
 		}
 	}
 	time.Sleep(time.Millisecond * 20)
