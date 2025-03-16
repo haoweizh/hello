@@ -632,6 +632,7 @@ func getBalanceBybit(key string, secret string) (success bool, balances []*model
 				balance.UsdValue = usdValue
 				if balance.Coin != `USDT` {
 					_, balance.AvailableWithBorrow = GetAvailAbleBybit(key, secret, balance.Coin)
+					balance.AvailableWithBorrow = math.Max(balance.AvailableWithBorrow, balance.Amount)
 				}
 				balances = append(balances, balance)
 			}
