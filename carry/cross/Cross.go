@@ -1149,9 +1149,7 @@ func placeCross(carryCoin *model.CarryCoin, statusBuy, statusSell *model.CarrySt
 	if carryCoin != nil && model.AppConfig.GetCrossStyles()[statusBuy.Account.Index] == crossGrid {
 		carryCoin.AddTrade(statusBuy, statusSell, priceBuy, priceSell, amountSell)
 	}
-	if !statusBuy.IsSpot {
-		placeStatus(statusBuy, priceBuy, amountBuy)
-	}
+	placeStatus(statusBuy, priceBuy, amountBuy)
 	placeStatus(statusSell, priceSell, -1*amountSell)
 	// 把ts改成0后，此tick不会再被使用
 	tick.Ts = 0
