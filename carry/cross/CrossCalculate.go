@@ -387,103 +387,81 @@ func checkTradeLine(statusBuy, statusSell *model.CarryStatus, carryCoin *model.C
 
 // 如果（卖方加权资金费率-买方加权资金费率）小于0，则开仓和换仓交易用4倍加权资金费率,平仓交易用2倍
 // 如果（卖方加权资金费率-买方加权资金费率）大于等于0，则开仓换仓和平仓都用加权资金费率
-//func calcScores(statusBuy, statusSell *model.CarryStatus, tickBuy, tickSell *model.BidAsk, rateBuy, rateSell float64) (scoreOpen, scoreSwitch, scoreClose float64, scoreMsg string) {
-//	priceBuy := tickBuy.Asks[0].Price * (1 + rateBuy)
-//	priceSell := tickSell.Bids[0].Price * (1 + rateSell)
-//	priceXBuy := statusBuy.Setting.PriceX
-//	priceXSell := statusSell.Setting.PriceX
-//	scoreOpen = (priceSell/priceXSell - priceBuy/priceXBuy) / (priceBuy / priceXBuy)
-//	scoreSwitch = scoreOpen
-//	scoreClose = scoreOpen
-//	scoreMsg = fmt.Sprintf(`score check1 %s %s %f rate %f score %f holding %f %s %s %f rate %f holding %f`,
-//		statusBuy.Market, statusBuy.Symbol, priceBuy, rateBuy, scoreOpen, statusBuy.Holding, statusSell.Market,
-//		statusSell.Symbol, priceSell, rateSell, statusSell.Holding)
-//}
+func calcScores(statusBuy, statusSell *model.CarryStatus, marketInfoBuy, marketInfoSell *model.MarketInfo, tickBuy, tickSell *model.BidAsk) (
+	success bool, scoreOpen, scoreSwitch, scoreClose float64, rBuy, rSell *model.FundingRate, scoreMsg string) {
+	gotFrBuy, useRestBuy, rateBuy, handledRateBuy := handledFRate(statusBuy, marketInfoBuy, tickBuy.Bids[0].Price, model.OrderSideBuy)
+	gotFrSell, useRestSell, rateSell, handledRateSell := handledFRate(statusSell, marketInfoSell, tickSell.Bids[0].Price, model.OrderSideSell)
+	if !gotFrBuy || !gotFrSell || useRestBuy || useRestSell {
+		return false, 0, 0, 0, nil, nil, ``
+	}
+	priceBuy := tickBuy.Asks[0].Price * (1 + handledRateBuy)
+	priceSell := tickSell.Bids[0].Price * (1 + handledRateSell)
+	priceXBuy := statusBuy.Setting.PriceX
+	priceXSell := statusSell.Setting.PriceX
+	scoreOpen = (priceSell/priceXSell - priceBuy/priceXBuy) / (priceBuy / priceXBuy)
+	scoreSwitch = scoreOpen
+	scoreClose = scoreOpen
+	scoreMsg = fmt.Sprintf(`score check1 %s %s %f rate %f score %f holding %f %s %s %f rate %f holding %f`,
+		statusBuy.Market, statusBuy.Symbol, priceBuy, handledRateBuy, scoreOpen, statusBuy.Holding, statusSell.Market,
+		statusSell.Symbol, priceSell, handledRateSell, statusSell.Holding)
+	if handledRateSell < handledRateBuy { // R为卖方<0
+		priceSell = tickSell.Bids[0].Price * (1 + statusSell.Setting.AmountRate*handledRateSell)
+		priceBuy = tickBuy.Asks[0].Price * (1 + statusBuy.Setting.AmountRate*handledRateBuy)
+		scoreOpen = (priceSell/priceXSell - priceBuy/priceXBuy) / (priceBuy / priceXBuy)
+		scoreSwitch = scoreOpen
+		priceSell = tickSell.Bids[0].Price * (1 + statusSell.Setting.AmountRateCombine*handledRateSell)
+		priceBuy = tickBuy.Asks[0].Price * (1 + statusBuy.Setting.AmountRateCombine*handledRateBuy)
+		scoreClose = (priceSell/priceXSell - priceBuy/priceXBuy) / (priceBuy / priceXBuy)
+	}
+	scoreMsg += fmt.Sprintf(`after handled open %f close %f`, scoreOpen, scoreClose)
+	return true, scoreOpen, scoreSwitch, scoreClose, rateBuy, rateSell, scoreMsg
+}
 
 // calcAmount
 // 返回amount是经过gridAmount乘数计算之后的数量，用以针对1000PEPE与PEPE这类币种的对冲交易.priceX与gridAmount相对应
 // ChanceLimit开仓、换仓资金费率倍数
 // ChanceLimitCombine平仓资金费率倍数
 func calcAmount(index int, coin string, carryStatus, carryStatusRelate *model.CarryStatus, carryCoin *model.CarryCoin, tick, tickRelate *model.BidAsk) (
-	delay bool, statusBuy, statusSell *model.CarryStatus, amount, priceBuy, priceSell float64, closeType, scoreMsg string) {
-	var bidAmount, askAmount float64
+	delay bool, statusBuy, statusSell *model.CarryStatus, amount, priceBuy, priceSell float64, closeType, logMsg string) {
 	marketInfo := model.GetMarketInfo(carryStatus.Market, carryStatus.Symbol)
-	marketInfoRelate := model.GetMarketInfo(carryStatusRelate.Market, carryStatusRelate.Symbol)
-	if marketInfo == nil || marketInfoRelate == nil {
+	marketInfoR := model.GetMarketInfo(carryStatusRelate.Market, carryStatusRelate.Symbol)
+	if marketInfo == nil || marketInfoR == nil {
 		return false, nil, nil, 0, 0, 0, ``, ``
 	}
-	gotFr, useRest, fundingRate, handledRate := handledFRate(carryStatus, marketInfo, tick.Bids[0].Price)
-	gotFrRelate, useRestRelate, fundingRateRelate, handledRateRelate := handledFRate(carryStatusRelate, marketInfoRelate, tickRelate.Bids[0].Price)
-	if !gotFr || !gotFrRelate || useRest || useRestRelate {
-		return useRest || useRestRelate, nil, nil, 0, 0, 0, ``, ``
+	scoreSuccess, scoreOpen, scoreSwitch, scoreClose, rate, rateR, scoreMsg := calcScores(carryStatus, carryStatusRelate, marketInfo, marketInfoR, tick, tickRelate)
+	scoreSuccessR, scoreOpenR, scoreSwitchR, scoreCloseR, _, _, scoreMsgR := calcScores(carryStatusRelate, carryStatus, marketInfoR, marketInfo, tickRelate, tick)
+	if !scoreSuccess || !scoreSuccessR {
+		return true, nil, nil, 0, 0, 0, ``, ``
 	}
-	priceAskRelate := tickRelate.Asks[0].Price * (1 + handledRateRelate)
-	priceBidRelate := tickRelate.Bids[0].Price * (1 + handledRateRelate)
-	priceAsk := tick.Asks[0].Price * (1 + handledRate)
-	priceBid := tick.Bids[0].Price * (1 + handledRate)
-	priceX := carryStatus.Setting.PriceX
-	priceXRelate := carryStatusRelate.Setting.PriceX
-	var score, scoreR, scoreOpen, scoreClose, scoreSwitch, scoreOpenR, scoreCloseR, scoreSwitchR float64
-	scoreOpen = (priceBid/priceX - priceAskRelate/priceXRelate) / math.Max(priceBid/priceX, priceAskRelate/priceXRelate)
-	score = scoreOpen
-	scoreSwitch = scoreOpen
-	scoreClose = scoreOpen
-	scoreOpenR = (priceBidRelate/priceXRelate - priceAsk/priceX) / math.Max(priceAsk/priceX, priceBidRelate/priceXRelate)
-	scoreR = scoreOpenR
-	scoreSwitchR = scoreOpenR
-	scoreCloseR = scoreOpenR
-	scoreMsg = fmt.Sprintf(`score check1 %s %s %f %f rate %f score %f holding %f %s %s %f %f rate %f score %f holding %f`,
-		carryStatus.Market, carryStatus.Symbol, priceBid, priceAsk, handledRate, score, carryStatus.Holding, carryStatusRelate.Market,
-		carryStatusRelate.Symbol, priceBidRelate, priceAskRelate, handledRateRelate, scoreR, carryStatusRelate.Holding)
-	if handledRateRelate > handledRate { // R为买方＞0
-		priceBid = tick.Bids[0].Price * (1 + carryStatus.Setting.AmountRate*handledRate)
-		priceAskRelate = tickRelate.Asks[0].Price * (1 + carryStatus.Setting.AmountRate*handledRateRelate)
-		scoreOpen = (priceBid/priceX - priceAskRelate/priceXRelate) / math.Max(priceBid/priceX, priceAskRelate/priceXRelate)
-		scoreSwitch = scoreOpen
-		priceBid = tick.Bids[0].Price * (1 + carryStatus.Setting.AmountRateCombine*handledRate)
-		priceAskRelate = tickRelate.Asks[0].Price * (1 + carryStatusRelate.Setting.AmountRateCombine*handledRateRelate)
-		scoreClose = (priceBid/priceX - priceAskRelate/priceXRelate) / math.Max(priceBid/priceX, priceAskRelate/priceXRelate)
-	} else if handledRateRelate < handledRate { // R为卖方<0
-		priceBidRelate = tickRelate.Bids[0].Price * (1 + carryStatusRelate.Setting.AmountRate*handledRateRelate)
-		priceAsk = tick.Asks[0].Price * (1 + carryStatusRelate.Setting.AmountRate*handledRate)
-		scoreOpenR = (priceBidRelate/priceXRelate - priceAsk/priceX) / math.Max(priceAsk/priceX, priceBidRelate/priceXRelate)
-		scoreSwitchR = scoreOpenR
-		priceBidRelate = tickRelate.Bids[0].Price * (1 + carryStatusRelate.Setting.AmountRateCombine*handledRateRelate)
-		priceAsk = tick.Asks[0].Price * (1 + carryStatus.Setting.AmountRateCombine*handledRate)
-		scoreCloseR = (priceBidRelate/priceXRelate - priceAsk/priceX) / math.Max(priceAsk/priceX, priceBidRelate/priceXRelate)
-	}
-	scoreMsg += fmt.Sprintf(`after handled open %f close %f openR %f closeR %f`, scoreOpen, scoreClose, scoreOpenR, scoreCloseR)
-	var valid bool
-	var amountLimit, scoreUse, scoreUseR float64
-	var scoreType, scoreTypeR string
-	valid, amountLimit, scoreUse, scoreType = checkTradeLine(carryStatusRelate, carryStatus, carryCoin, tickRelate.Asks[0].Price, tick.Bids[0].Price, scoreOpen, scoreClose, scoreSwitch)
+	var bidAmount, askAmount, tradeLimit float64
+	valid, amountLimit, scoreUse, scoreType := checkTradeLine(carryStatus, carryStatusRelate, carryCoin, tick.Asks[0].Price, tickRelate.Bids[0].Price, scoreOpen, scoreClose, scoreSwitch)
+	validR, amountLimitR, scoreUseR, scoreTypeR := checkTradeLine(carryStatusRelate, carryStatus, carryCoin, tickRelate.Asks[0].Price, tick.Bids[0].Price, scoreOpenR, scoreCloseR, scoreSwitchR)
 	if valid {
-		statusSell = carryStatus
-		statusBuy = carryStatusRelate
-		priceSell = tick.Bids[0].Price
-		priceBuy = tickRelate.Asks[0].Price
-		askAmount = tick.Bids[0].Amount
-		bidAmount = tickRelate.Asks[0].Amount
-		closeType = scoreType
+		tradeLimit = amountLimit
+		statusBuy = carryStatus
+		statusSell = carryStatusRelate
+		priceBuy = tick.Asks[0].Price
+		priceSell = tickRelate.Bids[0].Price
+		bidAmount = tick.Asks[0].Amount
+		askAmount = tickRelate.Bids[0].Amount
+		closeType = scoreTypeR
 		scoreMsg += fmt.Sprintf(`score valid %s %s at %f %f use score %f %s line %f carry coin %#v`,
 			statusBuy.Market, statusBuy.Symbol, priceBuy, priceSell, scoreUse, scoreType, statusBuy.TradeLineBuy, carryCoin)
-		_, _, scoreUseR, scoreTypeR = checkTradeLine(carryStatus, carryStatusRelate, carryCoin, tick.Asks[0].Price, tickRelate.Bids[0].Price, scoreOpenR, scoreCloseR, scoreSwitchR)
-	} else {
-		valid, amountLimit, scoreUseR, scoreTypeR = checkTradeLine(carryStatus, carryStatusRelate, carryCoin, tick.Asks[0].Price, tickRelate.Bids[0].Price, scoreOpenR, scoreCloseR, scoreSwitchR)
-		if valid {
-			statusSell = carryStatusRelate
-			statusBuy = carryStatus
-			priceSell = tickRelate.Bids[0].Price
-			priceBuy = tick.Asks[0].Price
-			askAmount = tickRelate.Bids[0].Amount
-			bidAmount = tick.Asks[0].Amount
-			closeType = scoreTypeR
-			scoreMsg += fmt.Sprintf(`score valid %s %s at %f %f use score %f %s line %f carry coin %#v`,
-				statusBuy.Market, statusBuy.Symbol, priceBuy, priceSell, scoreUseR, scoreTypeR, statusBuy.TradeLineBuy, carryCoin)
-		}
 	}
-	generateMonitorMsg(index, coin, scoreType, scoreTypeR, scoreUse, scoreUseR, carryStatus, carryStatusRelate, marketInfo, marketInfoRelate, fundingRate, fundingRateRelate, valid)
-	if !valid {
+	if validR {
+		tradeLimit = amountLimitR
+		statusBuy = carryStatusRelate
+		statusSell = carryStatus
+		priceBuy = tickRelate.Asks[0].Price
+		priceSell = tick.Bids[0].Price
+		bidAmount = tickRelate.Asks[0].Amount
+		askAmount = tick.Bids[0].Amount
+		closeType = scoreType
+		scoreMsgR += fmt.Sprintf(`score valid %s %s at %f %f use score %f %s line %f carry coin %#v`,
+			statusBuy.Market, statusBuy.Symbol, priceBuy, priceSell, scoreUseR, scoreTypeR, statusBuy.TradeLineBuy, carryCoin)
+	}
+	generateMonitorMsg(index, coin, scoreType, scoreTypeR, scoreUse, scoreUseR, carryStatus, carryStatusRelate, marketInfo, marketInfoR, rate, rateR, valid || validR)
+	if !valid && !validR {
 		return false, nil, nil, 0, 0, 0, ``, ``
 	}
 	if breakMarkPrice(statusBuy.Account, statusBuy.Setting, priceBuy, model.OrderSideBuy) ||
@@ -506,19 +484,23 @@ func calcAmount(index int, coin string, carryStatus, carryStatusRelate *model.Ca
 			}
 		}
 	}
-	amount = FormatCrossPair(statusBuy, statusSell, bidAmount, askAmount, amountLimit, priceBuy, priceSell)
-	if score > 0.1 || scoreR > 0.1 {
-		if (carryStatus.Setting.Valid || carryStatusRelate.Setting.Valid) && (score > 0.4 || scoreR > 0.4) {
+	amount = FormatCrossPair(statusBuy, statusSell, bidAmount, askAmount, tradeLimit, priceBuy, priceSell)
+	if scoreOpen > 0.1 || scoreOpenR > 0.1 {
+		if (carryStatus.Setting.Valid || carryStatusRelate.Setting.Valid) && (scoreOpen > 0.4 || scoreOpenR > 0.4) {
 			util.LogLess(util.LogLevelError, fmt.Sprintf(`possible mismatch coin %s %s %s %s score %f %f`,
-				carryStatus.Market, carryStatus.Symbol, carryStatusRelate.Market, carryStatusRelate.Symbol, score, scoreR))
+				carryStatus.Market, carryStatus.Symbol, carryStatusRelate.Market, carryStatusRelate.Symbol, scoreOpen, scoreOpenR))
 			carryStatus.Setting.MarketRelated = fmt.Sprintf(`price distance too big %s %s %d‰ %d‰ %s`,
-				carryStatusRelate.Market, carryStatusRelate.Symbol, int(1000*score), int(1000*scoreR), time.Now().Format("2006-01-02 15:04:05"))
+				carryStatusRelate.Market, carryStatusRelate.Symbol, int(1000*scoreOpen), int(1000*scoreOpenR), time.Now().Format("2006-01-02 15:04:05"))
 			carryStatusRelate.Setting.MarketRelated = fmt.Sprintf(`price distance too big %s %s %d‰ %d‰ %s`,
-				carryStatus.Market, carryStatus.Symbol, int(1000*scoreR), int(1000*score), time.Now().Format("2006-01-02 15:04:05"))
+				carryStatus.Market, carryStatus.Symbol, int(1000*scoreOpenR), int(1000*scoreOpen), time.Now().Format("2006-01-02 15:04:05"))
 		}
 		if statusBuy.Holding*priceBuy > -model.SmallHolding && statusSell.Holding*priceSell < model.SmallHolding {
 			return false, nil, nil, 0, 0, 0, ``, ``
 		}
 	}
-	return false, statusBuy, statusSell, amount, priceBuy, priceSell, closeType, scoreMsg
+	if valid {
+		return false, statusBuy, statusSell, amount, priceBuy, priceSell, closeType, scoreMsg
+	} else {
+		return false, statusBuy, statusSell, amount, priceBuy, priceSell, closeType, scoreMsgR
+	}
 }

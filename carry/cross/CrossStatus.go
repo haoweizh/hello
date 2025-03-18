@@ -71,10 +71,16 @@ type spotMarket struct {
 }
 
 // (1+(1-剩余/周期）^2)*2/周期
-func handledFRate(status *model.CarryStatus, marketInfo *model.MarketInfo, price float64) (got, delayed bool, fundingRate *model.FundingRate, handledFr float64) {
-	if status.IsSpot {
-		rate := marketInfo.InterestRate / -4
-		return true, false, &model.FundingRate{Rate: rate, UpdateTime: time.Now()}, rate
+func handledFRate(status *model.CarryStatus, marketInfo *model.MarketInfo, price float64, orderSide string) (
+	got, delayed bool, fundingRate *model.FundingRate, handledFr float64) {
+	if status.IsSpot { // [-50和50之间时，买入没利息，卖出有利息][<-50都有，>50都没有]
+		if (orderSide == model.OrderSideBuy && status.Holding*price > -model.SmallHolding) ||
+			(orderSide == model.OrderSideSell && status.Holding*price > model.SmallHolding) {
+			return true, false, &model.FundingRate{Rate: 0, UpdateTime: time.Now()}, 0
+		} else {
+			rate := marketInfo.InterestRate / -4
+			return true, false, &model.FundingRate{Rate: rate, UpdateTime: time.Now()}, rate
+		}
 	} else {
 		got, delayed, fundingRate = api.GetFundingRate(status.Account, status.Market, status.Symbol, false)
 		if !got {
