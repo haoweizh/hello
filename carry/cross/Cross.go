@@ -735,6 +735,14 @@ func getHolding(statuses []*model.CarryStatus) (success bool, bids, asks model.T
 		}
 		priceBid := tick.Bids[0].Price * (1 + handledRate)
 		priceAsk := tick.Asks[0].Price * (1 + handledRate)
+		if status.IsSpot { // 买入且是增仓和卖出且是减仓，不计利息
+			if status.Holding*price > -model.SmallHolding {
+				priceAsk = tick.Asks[0].Price
+			}
+			if status.Holding*price > model.SmallHolding {
+				priceBid = tick.Bids[0].Price
+			}
+		}
 		bids = append(bids, model.Tick{Ts: int64(tick.Ts), Market: tick.Bids[0].Market, Symbol: tick.Bids[0].Symbol,
 			Amount: tick.Bids[0].Amount, Price: priceBid})
 		asks = append(asks, model.Tick{Ts: int64(tick.Ts), Market: tick.Asks[0].Market, Symbol: tick.Asks[0].Symbol,
@@ -1005,7 +1013,7 @@ var ProcessCross = func(setting *model.Setting, tick *model.BidAsk) {
 			if status == nil || statusRelate == nil || status == statusRelate || carryCoin == nil || !getStatus || !getRelate || !getCoin {
 				continue
 			}
-			delay, statusBuy, statusSell, amount, priceBuy, priceSell, closeType :=
+			delay, statusBuy, statusSell, amount, priceBuy, priceSell, closeType, scoreMsg :=
 				calcAmount(i, setting.Coin, status.(*model.CarryStatus), statusRelate.(*model.CarryStatus), carryCoin.(*model.CarryCoin), tick, tickRelate)
 			if delay {
 				return
@@ -1015,6 +1023,9 @@ var ProcessCross = func(setting *model.Setting, tick *model.BidAsk) {
 				placeCross(carryCoin.(*model.CarryCoin), statusBuy, statusSell, priceBuy, priceSell, amount, tick, tickRelate, closeType)
 				//util.Log(util.LogLevelInfo, fmt.Sprintf(`time mark coin %s %s %s <- %s %s amt %f ts %d %d %d %d`,
 				//	setting.Coin, statusBuy.Symbol, statusBuy.Market, statusSell.Symbol, statusSell.Market, amount, tsMark, tsDis1, tsDis2, time.Now().UnixMicro()-tsMark))
+				if account.Index == 0 {
+					fmt.Println(scoreMsg)
+				}
 				time.Sleep(time.Duration(100) * time.Millisecond)
 				return
 			}

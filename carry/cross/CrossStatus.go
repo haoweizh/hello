@@ -73,12 +73,8 @@ type spotMarket struct {
 // (1+(1-剩余/周期）^2)*2/周期
 func handledFRate(status *model.CarryStatus, marketInfo *model.MarketInfo, price float64) (got, delayed bool, fundingRate *model.FundingRate, handledFr float64) {
 	if status.IsSpot {
-		if status.Holding*price > model.SmallHolding {
-			return true, false, &model.FundingRate{Rate: 0, UpdateTime: time.Now()}, 0
-		} else {
-			rate := marketInfo.InterestRate / -4
-			return true, false, &model.FundingRate{Rate: rate, UpdateTime: time.Now()}, rate
-		}
+		rate := marketInfo.InterestRate / -4
+		return true, false, &model.FundingRate{Rate: rate, UpdateTime: time.Now()}, rate
 	} else {
 		got, delayed, fundingRate = api.GetFundingRate(status.Account, status.Market, status.Symbol, false)
 		if !got {
