@@ -723,7 +723,8 @@ func getHolding(statuses []*model.CarryStatus) (success bool, bids, asks model.T
 			status.TradeLineSell = 1
 		}
 		holding += status.Holding * status.Setting.GridAmount
-		holdStr += fmt.Sprintf(`[%s %s %f]`, status.Market, status.Symbol, status.Holding)
+		holdStr += fmt.Sprintf(`[%s %s %f %f-%f %f %f]`,
+			status.Market, status.Symbol, status.Holding, bids[0].Price, asks[0].Price, bids[0].Amount, asks[0].Amount)
 		marketInfo := model.GetMarketInfo(status.Market, status.Symbol)
 		getTick, tick := model.AppEnvironment.GetBidAsk(status.Market, status.Symbol)
 		if !getTick || marketInfo == nil {
@@ -763,7 +764,8 @@ func getHolding(statuses []*model.CarryStatus) (success bool, bids, asks model.T
 // settings []*model.Setting, coinStatus map[string]map[string]map[string]*CarryStatus
 func equalCoin(index int, coin string, statuses []*model.CarryStatus) (isEqual bool, holding float64, errMsg string) {
 	success, bids, asks, statusMap, holdingValue, _, holdingPrice, holdStr := getHolding(statuses)
-	util.Log(util.LogLevelInfo, fmt.Sprintf(`compare holding %s status num index %d %d %s %v`, coin, index, len(statuses), holdStr, success))
+	util.Log(util.LogLevelInfo, fmt.Sprintf(`compare holding %s status num index %d %d holding %e %s %v`,
+		coin, index, len(statuses), holdingValue, holdStr, success))
 	if !success {
 		return false, holdingValue, "status has nil value"
 	}
@@ -798,13 +800,14 @@ func equalCoin(index int, coin string, statuses []*model.CarryStatus) (isEqual b
 	for i := 0; i < len(bids); i++ {
 		getBid, bidAsk := model.AppEnvironment.GetBidAsk(bids[i].Market, bids[i].Symbol)
 		if !getBid || time.Now().UnixMilli()-int64(bidAsk.Ts) > 10000 {
+			errMsg += fmt.Sprintf(`delay when equal %s %s bid %d`, bids[i].Market, bids[i].Symbol, time.Now().UnixMilli()-int64(bidAsk.Ts))
 			continue
 		}
 		price := bidAsk.Bids[0].Price * (1 - compSlide)
 		if holding > CompLineInMoney/holdingPrice {
 			status := statusMap[fmt.Sprintf(`%s_%s`, bids[i].Market, bids[i].Symbol)]
 			if status == nil {
-				util.Log(util.LogLevelError, fmt.Sprintf(`no status when holding: %f %s %s`, holding, bids[i].Market, bids[i].Symbol))
+				errMsg += fmt.Sprintf(`no status when holding: %f %s %s`, holding, bids[i].Market, bids[i].Symbol)
 				continue
 			}
 			checkAmount, _ := model.GetAmountInMarket(status.Market, status.Symbol, math.Abs(holding/status.Setting.GridAmount), price, status.ReduceOnlySell)
@@ -823,7 +826,7 @@ func equalCoin(index int, coin string, statuses []*model.CarryStatus) (isEqual b
 					//holding = status.AvailableSell
 					amount = status.AvailableSell
 				} else {
-					util.Log(util.LogLevelError, fmt.Sprintf(`check 0 amount in %#v`, status))
+					errMsg += fmt.Sprintf(`check 0 amount in %#v`, status)
 					continue
 				}
 			}
@@ -838,13 +841,14 @@ func equalCoin(index int, coin string, statuses []*model.CarryStatus) (isEqual b
 	for i := 0; i < len(asks); i++ {
 		getAsk, bidAsk := model.AppEnvironment.GetBidAsk(asks[i].Market, asks[i].Symbol)
 		if !getAsk || time.Now().UnixMilli()-int64(bidAsk.Ts) > 10000 {
+			errMsg += fmt.Sprintf(`delay when equal %s %s ask %d`, bids[i].Market, bids[i].Symbol, time.Now().UnixMilli()-int64(bidAsk.Ts))
 			continue
 		}
 		price := bidAsk.Asks[0].Price * (1 + compSlide)
 		if holding < -CompLineInMoney/holdingPrice {
 			status := statusMap[fmt.Sprintf(`%s_%s`, asks[i].Market, asks[i].Symbol)]
 			if status == nil {
-				util.Log(util.LogLevelError, fmt.Sprintf(`no status when holding: %f %s %s`, holding, asks[i].Market, asks[i].Symbol))
+				errMsg += fmt.Sprintf(`no status when holding: %f %s %s`, holding, asks[i].Market, asks[i].Symbol)
 				continue
 			}
 			checkAmount, _ := model.GetAmountInMarket(status.Market, status.Symbol, math.Abs(holding)/status.Setting.GridAmount, price, status.ReduceOnlyBuy)
@@ -863,7 +867,7 @@ func equalCoin(index int, coin string, statuses []*model.CarryStatus) (isEqual b
 					//holding = status.AvailableBuy
 					amount = status.AvailableBuy
 				} else {
-					util.Log(util.LogLevelError, fmt.Sprintf(`check 0 amount in %#v`, status))
+					errMsg += fmt.Sprintf(`check 0 amount in %#v`, status)
 					continue
 				}
 			} else {
@@ -880,6 +884,9 @@ func equalCoin(index int, coin string, statuses []*model.CarryStatus) (isEqual b
 		isEqual = false
 	} else {
 		isEqual = true
+	}
+	if errMsg != `` {
+		util.Log(util.LogLevelError, errMsg)
 	}
 	return isEqual, holding, errMsg
 }
