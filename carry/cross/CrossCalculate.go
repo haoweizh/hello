@@ -420,8 +420,8 @@ func calcScores(statusBuy, statusSell *model.CarryStatus, marketInfoBuy, marketI
 	scoreSwitch = scoreOpen
 	scoreClose = scoreOpen
 	scoreMsg = fmt.Sprintf(`score check1 %s %s %f rate %f score %f holding %f %s %s %f rate %f holding %f`,
-		statusBuy.Market, statusBuy.Symbol, priceBuy, handledRateBuy, scoreOpen, statusBuy.Holding, statusSell.Market,
-		statusSell.Symbol, priceSell, handledRateSell, statusSell.Holding)
+		statusBuy.Market, statusBuy.Symbol, priceBuy, handledRateBuy, scoreOpen, statusBuy.Holding,
+		statusSell.Market, statusSell.Symbol, priceSell, handledRateSell, statusSell.Holding)
 	if handledRateSell < handledRateBuy { // R为卖方<0
 		priceSell = tickSell.Bids[0].Price * (1 + statusSell.Setting.AmountRate*handledRateSell)
 		priceBuy = tickBuy.Asks[0].Price * (1 + statusBuy.Setting.AmountRate*handledRateBuy)
@@ -467,9 +467,9 @@ func calcAmount(index int, coin string, carryStatus, carryStatusRelate *model.Ca
 		priceSell = tickRelate.Bids[0].Price
 		bidAmount = tick.Asks[0].Amount
 		askAmount = tickRelate.Bids[0].Amount
-		closeType = scoreTypeR
-		scoreMsg += fmt.Sprintf(`score valid %s %s at %f %f use score %f %s line %f carry coin %#v`,
-			statusBuy.Market, statusBuy.Symbol, priceBuy, priceSell, scoreUse, scoreType, statusBuy.TradeLineBuy, carryCoin)
+		closeType = scoreType
+		scoreMsg += fmt.Sprintf(`score valid %s %s at %f %f use score %f %s line %f carry coin %f %f %f %#v`,
+			statusBuy.Market, statusBuy.Symbol, priceBuy, priceSell, scoreUse, scoreType, statusBuy.TradeLineBuy, tradeLimit, bidAmount, askAmount, carryCoin)
 	}
 	if validR {
 		tradeLimit = amountLimitR
@@ -479,9 +479,9 @@ func calcAmount(index int, coin string, carryStatus, carryStatusRelate *model.Ca
 		priceSell = tick.Bids[0].Price
 		bidAmount = tickRelate.Asks[0].Amount
 		askAmount = tick.Bids[0].Amount
-		closeType = scoreType
-		scoreMsgR += fmt.Sprintf(`score valid %s %s at %f %f use score %f %s line %f carry coin %#v`,
-			statusBuy.Market, statusBuy.Symbol, priceBuy, priceSell, scoreUseR, scoreTypeR, statusBuy.TradeLineBuy, carryCoin)
+		closeType = scoreTypeR
+		scoreMsgR += fmt.Sprintf(`score valid %s %s at %f %f use score %f %s line %f carry coin %f %f %f %#v`,
+			statusBuy.Market, statusBuy.Symbol, priceBuy, priceSell, scoreUseR, scoreTypeR, statusBuy.TradeLineBuy, tradeLimit, bidAmount, askAmount, carryCoin)
 	}
 	generateMonitorMsg(index, coin, scoreType, scoreTypeR, scoreUse, scoreUseR, carryStatus, carryStatusRelate, marketInfo, marketInfoR, rate, rateR, valid || validR)
 	if !valid && !validR {

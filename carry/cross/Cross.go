@@ -1031,7 +1031,7 @@ var ProcessCross = func(setting *model.Setting, tick *model.BidAsk) {
 				//util.Log(util.LogLevelInfo, fmt.Sprintf(`time mark coin %s %s %s <- %s %s amt %f ts %d %d %d %d`,
 				//	setting.Coin, statusBuy.Symbol, statusBuy.Market, statusSell.Symbol, statusSell.Market, amount, tsMark, tsDis1, tsDis2, time.Now().UnixMicro()-tsMark))
 				if account.Index == 0 {
-					fmt.Println(scoreMsg)
+					fmt.Println(fmt.Sprintf(`%s %s %f buy at %f sell at %f`, time.Now().String(), scoreMsg, amount, priceBuy, priceSell))
 				}
 				time.Sleep(time.Duration(100) * time.Millisecond)
 				return
@@ -1153,9 +1153,8 @@ func placeCross(carryCoin *model.CarryCoin, statusBuy, statusSell *model.CarrySt
 		statusBuy.Symbol, orderParamBuy, model.FunctionCross, closeType, priceBuy, priceBuy, amountBuy, true, PostOrderCross)
 	go api.PlaceOrder(statusSell.Account, model.OrderSideSell, model.OrderTypeLimit, statusSell.Market,
 		statusSell.Symbol, orderParamSell, model.FunctionCross, closeType, priceSell, priceSell, amountSell, true, PostOrderCross)
-	util.Log(util.LogLevelInfo, fmt.Sprintf(
-		`place cross %s %s -> %s %s at %f %f amount %f %f %f score %f hold %f buy %f limit %f hold %f sell %f limit %f %f-%f ts %d %f-%f ts %d`,
-		statusSell.Market, statusSell.Symbol, statusBuy.Market, statusBuy.Symbol, priceSell, priceBuy, amount, amountBuy, amountSell,
+	fmt.Println(fmt.Sprintf(`%s place cross %s %s -> %s %s at %f %f amount %f %f %f score %f hold %f buy %f limit %f hold %f sell %f limit %f %f-%f ts %d %f-%f ts %d`,
+		time.Now().String(), statusSell.Market, statusSell.Symbol, statusBuy.Market, statusBuy.Symbol, priceSell, priceBuy, amount, amountBuy, amountSell,
 		score, statusBuy.Holding, statusBuy.TradeLineBuy, statusBuy.LimitBuy, statusSell.Holding, statusSell.TradeLineSell, statusSell.LimitSell,
 		tick.Bids[0].Price, tick.Asks[0].Price, tick.Ts, tickRelate.Bids[0].Price, tickRelate.Asks[0].Price, tickRelate.Ts))
 	// 买入现货时要交手续费，故而实际到手少于下单量，校准以免未来买单时数量不足
