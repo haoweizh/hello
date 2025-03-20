@@ -886,7 +886,7 @@ func equalCoin(index int, coin string, statuses []*model.CarryStatus) (isEqual b
 		isEqual = true
 	}
 	if errMsg != `` {
-		util.Log(util.LogLevelError, errMsg)
+		util.Log(util.LogLevelError, fmt.Sprintf(`issue when equal %s %s`, coin, errMsg))
 	}
 	return isEqual, holding, errMsg
 }
