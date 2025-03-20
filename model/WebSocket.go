@@ -165,8 +165,8 @@ func initChannel(account *Account, url, market string, wsType ChannelType, noSpe
 				return newTsChannel(url, "gs", wsType)
 			}
 			return newWsGorillaChannel(url)
-		case OKEX:
-			return newTsChannel(url, "ok", wsType)
+		//case OKEX:
+		//	return newTsChannel(url, "ok", wsType)
 		default:
 			return newWsGorillaChannel(url)
 		}
