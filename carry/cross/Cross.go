@@ -723,8 +723,8 @@ func getHolding(statuses []*model.CarryStatus) (success bool, bids, asks model.T
 			status.TradeLineSell = 1
 		}
 		holding += status.Holding * status.Setting.GridAmount
-		holdStr += fmt.Sprintf(`[%s %s %f %f-%f %f %f]`,
-			status.Market, status.Symbol, status.Holding, bids[0].Price, asks[0].Price, bids[0].Amount, asks[0].Amount)
+		holdStr += fmt.Sprintf(`[%s %s %f %v %v]`,
+			status.Market, status.Symbol, status.Holding, bids, asks)
 		marketInfo := model.GetMarketInfo(status.Market, status.Symbol)
 		getTick, tick := model.AppEnvironment.GetBidAsk(status.Market, status.Symbol)
 		if !getTick || marketInfo == nil {
