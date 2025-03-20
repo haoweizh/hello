@@ -799,7 +799,7 @@ func equalCoin(index int, coin string, statuses []*model.CarryStatus) (isEqual b
 	sort.Sort(sort.Reverse(bids))
 	for i := 0; i < len(bids); i++ {
 		getBid, bidAsk := model.AppEnvironment.GetBidAsk(bids[i].Market, bids[i].Symbol)
-		if !getBid || time.Now().UnixMilli()-int64(bidAsk.Ts) > 10000 {
+		if !getBid || time.Now().UnixMilli()-int64(bidAsk.Ts) > 60000 {
 			errMsg += fmt.Sprintf(`delay when equal %s %s bid %d`, bids[i].Market, bids[i].Symbol, time.Now().UnixMilli()-int64(bidAsk.Ts))
 			continue
 		}
@@ -840,7 +840,7 @@ func equalCoin(index int, coin string, statuses []*model.CarryStatus) (isEqual b
 	sort.Sort(asks)
 	for i := 0; i < len(asks); i++ {
 		getAsk, bidAsk := model.AppEnvironment.GetBidAsk(asks[i].Market, asks[i].Symbol)
-		if !getAsk || time.Now().UnixMilli()-int64(bidAsk.Ts) > 10000 {
+		if !getAsk || time.Now().UnixMilli()-int64(bidAsk.Ts) > 60000 {
 			errMsg += fmt.Sprintf(`delay when equal %s %s ask %d`, bids[i].Market, bids[i].Symbol, time.Now().UnixMilli()-int64(bidAsk.Ts))
 			continue
 		}
