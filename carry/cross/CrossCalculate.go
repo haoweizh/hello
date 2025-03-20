@@ -462,7 +462,7 @@ func calcAmount(index int, coin string, carryStatus, carryStatusRelate *model.Ca
 		priceSell = tickRelate.Bids[0].Price
 		bidAmount = tick.Asks[0].Amount
 		askAmount = tickRelate.Bids[0].Amount
-		closeType = scoreTypeR
+		closeType = scoreType
 		scoreMsg += fmt.Sprintf(`score valid %s %s at %f %f use score %f %s line %f carry coin %f %f %f %#v`,
 			statusBuy.Market, statusBuy.Symbol, priceBuy, priceSell, scoreUse, scoreType, statusBuy.TradeLineBuy, tradeLimit, bidAmount, askAmount, carryCoin)
 	}
@@ -474,7 +474,7 @@ func calcAmount(index int, coin string, carryStatus, carryStatusRelate *model.Ca
 		priceSell = tick.Bids[0].Price
 		bidAmount = tickRelate.Asks[0].Amount
 		askAmount = tick.Bids[0].Amount
-		closeType = scoreType
+		closeType = scoreTypeR
 		scoreMsgR += fmt.Sprintf(`score valid %s %s at %f %f use score %f %s line %f carry coin %f %f %f %#v`,
 			statusBuy.Market, statusBuy.Symbol, priceBuy, priceSell, scoreUseR, scoreTypeR, statusBuy.TradeLineBuy, tradeLimit, bidAmount, askAmount, carryCoin)
 	}
