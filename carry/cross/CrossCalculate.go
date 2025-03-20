@@ -430,6 +430,11 @@ func calcScores(statusBuy, statusSell *model.CarryStatus, marketInfoBuy, marketI
 		priceSell = tickSell.Bids[0].Price * (1 + statusSell.Setting.AmountRateCombine*handledRateSell)
 		priceBuy = tickBuy.Asks[0].Price * (1 + statusBuy.Setting.AmountRateCombine*handledRateBuy)
 		scoreClose = (priceSell/priceXSell - priceBuy/priceXBuy) / (priceBuy / priceXBuy)
+	} else if handledRateSell > handledRateBuy {
+		priceSell = tickSell.Bids[0].Price * (1 + handledRateSell/2)
+		priceBuy = tickBuy.Asks[0].Price * (1 + handledRateBuy/2)
+		scoreOpen = (priceSell/priceXSell - priceBuy/priceXBuy) / (priceBuy / priceXBuy)
+		scoreSwitch = scoreOpen
 	}
 	scoreMsg += fmt.Sprintf(`after handled open %f close %f`, scoreOpen, scoreClose)
 	return true, scoreOpen, scoreSwitch, scoreClose, rateBuy, rateSell, scoreMsg
