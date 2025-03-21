@@ -146,27 +146,32 @@ func (wsConn *WSConn) WriteJson(body map[string]interface{}) (err error) {
 //	*WSConn - 成功时返回一个WebSocket连接指针。
 //	error - 如果初始化过程中遇到任何问题，则返回错误。
 func initChannel(account *Account, url, market string, wsType ChannelType, noSpecialChan bool) (newCreate bool, wsConn *WSConn, err error) {
-	if AppConfig.SpecialChan == "1" && (account == nil || account.Index == 0) {
+	if account == nil || account.Index == 0 {
 		switch market {
 		case BinancePerp:
-			if noSpecialChan {
+			if noSpecialChan || AppConfig.Binancechan == 0 {
 				return newWsGorillaChannel(url)
 			}
 			return newTsChannel(url, "bf", wsType)
 		case BinanceSpot:
-			if noSpecialChan {
+			if noSpecialChan || AppConfig.Binancechan == 0 {
 				return newWsGorillaChannel(url)
 			}
 			return newTsChannel(url, "bs", wsType)
 		case Gate:
-			if url == gateWs.FuturesUsdtUrl {
+			if noSpecialChan || AppConfig.Gatechan == 0 {
+				return newWsGorillaChannel(url)
+			} else if url == gateWs.FuturesUsdtUrl {
 				return newTsChannel(url, "gf", wsType)
 			} else if url == gateWs.BaseUrl {
 				return newTsChannel(url, "gs", wsType)
 			}
 			return newWsGorillaChannel(url)
-		//case OKEX:
-		//	return newTsChannel(url, "ok", wsType)
+		case OKEX:
+			if noSpecialChan || AppConfig.Okchan == 0 {
+				return newWsGorillaChannel(url)
+			}
+			return newTsChannel(url, "ok", wsType)
 		default:
 			return newWsGorillaChannel(url)
 		}
