@@ -116,8 +116,8 @@ var wsPriHandlerGatePerp = func(market, key string, msg []byte) {
 			orderId := value["id"].(json.Number).String()
 			// //判定为自动减仓，停止开单 value[`tif`].(string) == `ioc`
 			if value[`text`].(string) == `auto_deleveraging` || strings.Contains(strings.ToLower(value[`text`].(string)), `auto`) {
-				util.Log(util.LogLevelInfo, fmt.Sprintf(`auto_deleveraging %v %s %s %s %s %s %s`,
-					value[`text`], coin, market, symbol, key, orderSide, string(msg)))
+				util.Log(util.LogLevelInfo, fmt.Sprintf(`auto_deleveraging %v %s %s %s %s %s %f %f %f %s`,
+					value[`text`], coin, market, symbol, key, orderSide, size, left, dealAmount, string(msg)))
 				if orderSide == model.OrderSideSell {
 					util.StoreSyncMap(&model.AppEnvironment.PauseTrade, true, coin, market, symbol, key, model.OrderSideBuy)
 				} else {

@@ -81,7 +81,9 @@ var ProcessADL = func(accountKey, market, symbol, adlSide string, amount float64
 			util.StoreSyncMap(&model.AppEnvironment.ADLSymbol, true, status.Market, status.Symbol, status.Account.Key)
 		}
 		statuses = append(statuses, status)
+		util.Log(util.LogLevelError, fmt.Sprintf(`adl init status %#v`, status))
 	}
+	util.Log(util.LogLevelError, fmt.Sprintf(`adl init status to equal %s %#v %d`, adlSetting, len(statuses)))
 	equalCoin(triggerAccount.Index, adlSetting.Coin, statuses)
 }
 
