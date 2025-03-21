@@ -143,7 +143,7 @@ var ProcessCrossPositions = func(market, accountKey string, positions []*model.P
 				if status.Holding >= 0 {
 					util.StoreSyncMap(&model.AppEnvironment.PauseTrade, true, setting.Coin, setting.Market, setting.Symbol, account.Key, model.OrderSideBuy)
 				}
-				if status.LimitSell >= 0 {
+				if status.Holding <= 0 {
 					util.StoreSyncMap(&model.AppEnvironment.PauseTrade, true, setting.Coin, setting.Market, setting.Symbol, account.Key, model.OrderSideSell)
 				}
 				util.Log(util.LogLevelError, fmt.Sprintf(`pause trade when update position %s %d %s %f setting %s %s holding %e value %e`,
