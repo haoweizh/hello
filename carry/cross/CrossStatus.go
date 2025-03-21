@@ -107,14 +107,6 @@ func handledFRate(status *model.CarryStatus, marketInfo *model.MarketInfo, price
 	return
 }
 
-func PostInit(market string) {
-	switch market {
-	case model.OKEX:
-		// 更新资金费率
-		api.InitMarketInfos(model.OKEX)
-	}
-}
-
 func GetHoldings(accounts map[string]*model.Account) (holding [][]interface{}) {
 	holding = make([][]interface{}, 0)
 	coinHold := make(map[string]float64)

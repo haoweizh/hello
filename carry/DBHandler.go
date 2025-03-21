@@ -195,6 +195,12 @@ func Maintain() {
 		} else {
 			c.Start()
 		}
+		_, errMarketInfo := c.AddFunc("2,50 * * * ?", cross.RefreshMarkets)
+		if errMarketInfo != nil {
+			util.Log(util.LogLevelError, `fail to cron refresh market info `+errMarketInfo.Error())
+		} else {
+			c.Start()
+		}
 	}
 	// 监听信号的 goroutine
 	go func() {

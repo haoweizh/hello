@@ -414,6 +414,10 @@ func FailOrdersReconnect() {
 	}
 }
 
+var RefreshMarkets = func() {
+	api.InitCrossMarketInfos(model.AppEnvironment.Markets)
+}
+
 var ClearCross = func() {
 	if model.AppEnvironment.CrossEqualing {
 		return
@@ -1422,6 +1426,8 @@ func FormatCrossPair(statusBuy, statusSell *model.CarryStatus, bidAmount, askAmo
 			`format %s %s %s %s %#v %#v`, statusBuy.Market, statusSell.Market, statusBuy.Symbol, statusSell.Symbol, marketInfoBuy, marketInfoSell))
 		return
 	}
+	logMsg := fmt.Sprintf(`format amt 0 amt %f %s %s limit buy %f bid amount %f price %f %s %s limit sell %f ask amount %f`,
+		amountLimit, statusBuy.Market, statusBuy.Symbol, statusBuy.LimitBuy, bidAmount, priceBuy, statusSell.Market, statusSell.Symbol, statusSell.LimitSell, askAmount)
 	formattedAmount = math.Min(math.Min(statusBuy.LimitBuy, bidAmount)*statusBuy.Setting.GridAmount,
 		math.Min(statusSell.LimitSell, askAmount)*statusSell.Setting.GridAmount)
 	formattedAmount = math.Min(formattedAmount, statusBuy.Setting.GridAmount*openValueLimit/priceBuy)
@@ -1444,9 +1450,9 @@ func FormatCrossPair(statusBuy, statusSell *model.CarryStatus, bidAmount, askAmo
 	amountSell, _ := model.GetAmountInMarket(statusSell.Market, statusSell.Symbol, formattedAmount/statusSell.Setting.GridAmount, priceSell, false)
 	_, amountSell = model.ParseRealAmount(statusSell.Market, statusSell.Symbol, amountSell)
 	formattedAmount = math.Min(amountBuy*statusBuy.Setting.GridAmount, amountSell*statusSell.Setting.GridAmount)
+	util.LogLess(util.LogLevelError, fmt.Sprintf(` %s min buy %f %f min sell %f %f = %f`,
+		logMsg, minBuy, amountBuy, minSell, amountSell, formattedAmount))
 	if formattedAmount < math.Max(minBuy, minSell) {
-		//util.LogLess(util.LogLevelError, fmt.Sprintf(`format amt 0 amt %f %s %s limit buy %f bid amount %f min buy %f price %f %s %s limit sell %f ask amount %f min sell %f`,
-		//	amountLimit, statusBuy.Market, statusBuy.Symbol, statusBuy.LimitBuy, bidAmount, minBuy, priceBuy, statusSell.Market, statusSell.Symbol, statusSell.LimitSell, askAmount, minSell))
 		return 0
 	}
 	return formattedAmount
