@@ -130,7 +130,7 @@ var ProcessCrossPositions = func(market, accountKey string, positions []*model.P
 				price = price / setting.PriceX
 			}
 		}
-		if math.Abs(price*holding) >= openValueLimit*5 {
+		if math.Abs(price*holding) >= 50000 {
 			for _, setting := range settings.([]*model.Setting) {
 				account := accounts[setting.Market]
 				if account == nil {
@@ -200,7 +200,7 @@ var ProcessCrossBalances = func(market, accountKey string, balances []*model.Bal
 				price = price / setting.PriceX
 			}
 		}
-		if math.Abs(price*holding) >= openValueLimit*5 {
+		if math.Abs(price*holding) >= 50000 {
 			for _, setting := range settings.([]*model.Setting) {
 				account := accounts[setting.Market]
 				if account == nil {
