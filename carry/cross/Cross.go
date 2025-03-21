@@ -415,6 +415,7 @@ func FailOrdersReconnect() {
 }
 
 var RefreshMarkets = func() {
+	util.Log(util.LogLevelInfo, fmt.Sprintf(`begin to refresh markets %s`, model.FunctionCross))
 	api.InitCrossMarketInfos(model.AppEnvironment.Markets)
 }
 
