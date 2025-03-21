@@ -2,6 +2,7 @@ package model
 
 import (
 	"fmt"
+	"hello/util"
 	"os"
 	"strconv"
 	"strings"
@@ -9,28 +10,18 @@ import (
 )
 
 type Config struct {
-	Mode                          string
-	TimeThreshold                 int
-	FundingTimeThreshold          int
-	PriceThreshold                float64
-	Delay                         float64
-	Debug, KucoinSpot, MetricTick bool
-	ToKey, ToSecret, ToPhase      string
-	// SpecialChan 1 代表使用特殊通道
-	SpecialChan, CrossStyle, MoneyPerStep                                                            string
-	KucoinRelatedKey, KucoinRelatedSecret, KucoinFutureKey, KucoinFutureSecret                       string
-	KucoinCarryClose, KucoinCarryRate, Simulation, Equal, Log                                        string
-	GateKey, GateSecret, GateCarryClose, GateCarryRate, GateLeverMax, GateLeverMin, GateRiskLimit    string
-	HuobiKey, HuobiSecret, HuobiCarryClose, HuobiCarryRate                                           string
-	OkexKey, OkexSecret, OkexCarryClose, OkexCarryRate                                               string
-	FtxKey, FtxSecret, FtxCarryClose, FtxCarryRate, RedisAddr, RedisPassword                         string
-	BybitKey, BybitSecret, BybitCarryClose, BybitCarryRate                                           string
-	BinanceKey, BinanceSecret, BinanceCarryClose, BinanceCarryRate                                   string
-	CoinparkKey, CoinparkSecret, CoinparkCarryClose, CoinparkCarryRate                               string
-	BitgetKey, BitgetSecret, BitgetCarryClose, BitgetCarryRate                                       string
-	MexcKey, MexcSecret, MexcCarryClose, MexcCarryRate                                               string
-	BitmexKey, BitmexSecret, BitmexCarryClose, BitmexCarryRate, FtxSubAccount                        string
-	OKPhase, Handle, Mail, FromMail, FromMailAuth, Port, WalletKey, DBConnection, Env, FutureAddress string
+	TimeThreshold, FundingTimeThreshold, Okchan, Bybitchan, Binancechan, Gatechan int
+	PriceThreshold, Delay                                                         float64
+	Debug, KucoinSpot, MetricTick                                                 bool
+	ToKey, ToSecret, ToPhase, CrossStyle, MoneyPerStep, Mode, Env                 string
+	Simulation, Equal, Log, FutureAddress, DBConnection                           string
+	GateKey, GateSecret, GateCarryClose, GateCarryRate, GateLeverMax              string
+	GateLeverMin, GateRiskLimit, RedisAddr, RedisPassword                         string
+	HuobiKey, HuobiSecret, HuobiCarryClose, HuobiCarryRate                        string
+	OkexKey, OkexSecret, OkexCarryClose, OkexCarryRate                            string
+	BybitKey, BybitSecret, BybitCarryClose, BybitCarryRate                        string
+	BinanceKey, BinanceSecret, BinanceCarryClose, BinanceCarryRate                string
+	OKPhase, Handle, Mail, FromMail, FromMailAuth, Port, WalletKey                string
 }
 
 type Account struct {
@@ -133,10 +124,10 @@ func (config *Config) GetAccounts(market string) []*Account {
 		//if market == Ftx {
 		//	account.FtxSubAccount = ftxSubAccounts[i]
 		//}
-		if market == OKEX {
+		switch market {
+		case OKEX:
 			account.OKPhase = config.OKPhase
-		}
-		if market == Gate {
+		case Gate:
 			account.GateLeverMax, _ = strconv.ParseFloat(gateLeverMax[i], 64)
 			account.GateLeverMin, _ = strconv.ParseFloat(gateLeverMin[i], 64)
 			account.GateRiskLimit, _ = strconv.ParseFloat(gateRiskLimit[i], 64)
@@ -149,6 +140,7 @@ func (config *Config) GetAccounts(market string) []*Account {
 			accounts[i] = nil
 		}
 	}
+	util.Log(util.LogLevelInfo, fmt.Sprintf(`get account0 %#v`, accounts[0]))
 	marketAccounts.Store(market, accounts)
 	return accounts
 }

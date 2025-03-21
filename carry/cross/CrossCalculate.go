@@ -13,13 +13,12 @@ import (
 )
 
 // step(n) = step(n-1) + 0.0012 + 0.0001*(n-1)
-var stepScores = []float64{-0.001, 0, 0.001, 0.00215, 0.00345, 0.00490, 0.00650, 0.00825, 0.01015, 0.01220, 0.01440, 0.01675,
-	0.01925, 0.02190, 0.02470, 0.02765, 0.03075, 0.03400, 0.03740, 0.04095, 0.04465, 0.04850, 0.05250, 0.05665, 0.06095, 0.06540,
-	0.07000, 0.07475, 0.07965, 0.08470, 0.08990, 0.09525, 0.10075, 0.10640, 0.11220, 0.11815, 0.12425, 0.13050, 0.13690, 0.14345,
-	0.15015, 0.15700, 0.16400, 0.17115, 0.17845, 0.18590, 0.19350, 0.20125, 0.20915, 0.21720, 0.22540, 0.23375, 0.24225, 0.25090,
-	0.25970, 0.26865, 0.27775, 0.28700, 0.29640, 0.30595}
+var stepScores = []float64{-0.001, 0, 0.0012, 0.0026, 0.0042, 0.0060, 0.0080, 0.0102, 0.0126, 0.0152, 0.0180, 0.0210, 0.0242, 0.0276,
+	0.0312, 0.0350, 0.0390, 0.0432, 0.0476, 0.0522, 0.0570, 0.0620, 0.0672, 0.0726, 0.0782, 0.0840, 0.0900, 0.0962, 0.1026, 0.1092, 0.1160,
+	0.1230, 0.1302, 0.1376, 0.1452, 0.1530, 0.1610, 0.1692, 0.1776, 0.1862, 0.1950, 0.2040, 0.2132, 0.2226, 0.2322, 0.2420, 0.2520, 0.2622,
+	0.2726, 0.2832, 0.2940, 0.3050}
 
-const GridGap = 4
+const GridGap = 3
 
 const swapScore = 0.002 // 换仓要求的利润金额
 const crossGrid = `grid`
@@ -34,8 +33,8 @@ func CalcGridLine(base float64) {
 		if n == 1 {
 			p[n] = base
 		} else {
-			p[n] = p[n-1] + base + 0.00015*float64(n-1)
-			fmt.Print(fmt.Sprintf(`%.5f,`, p[n]))
+			p[n] = p[n-1] + base + 0.0002*float64(n-1)
+			fmt.Print(fmt.Sprintf(`%.4f,`, p[n]))
 		}
 		if p[n] > 0.3 {
 			break
@@ -430,6 +429,11 @@ func calcScores(statusBuy, statusSell *model.CarryStatus, marketInfoBuy, marketI
 		priceSell = tickSell.Bids[0].Price * (1 + statusSell.Setting.AmountRateCombine*handledRateSell)
 		priceBuy = tickBuy.Asks[0].Price * (1 + statusBuy.Setting.AmountRateCombine*handledRateBuy)
 		scoreClose = (priceSell/priceXSell - priceBuy/priceXBuy) / (priceBuy / priceXBuy)
+	} else if handledRateSell > handledRateBuy {
+		priceSell = tickSell.Bids[0].Price * (1 + handledRateSell/2)
+		priceBuy = tickBuy.Asks[0].Price * (1 + handledRateBuy/2)
+		scoreOpen = (priceSell/priceXSell - priceBuy/priceXBuy) / (priceBuy / priceXBuy)
+		scoreSwitch = scoreOpen
 	}
 	scoreMsg += fmt.Sprintf(`after handled open %f close %f`, scoreOpen, scoreClose)
 	return true, scoreOpen, scoreSwitch, scoreClose, rateBuy, rateSell, scoreMsg

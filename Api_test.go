@@ -775,7 +775,7 @@ func remove(value *sync.Map) {
 
 // step(n) = step(n-1) + base + 0.0001*(n-1)
 func Test_CalcGridLine(t *testing.T) {
-	cross.CalcGridLine(0.001)
+	cross.CalcGridLine(0.0012)
 }
 
 func Test_map(t *testing.T) {

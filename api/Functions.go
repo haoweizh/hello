@@ -55,6 +55,20 @@ func _(environment *model.Environment, market string, symbols map[string]bool) (
 	return reset
 }
 
+func GetSpecialChan(market string) (specialChan int) {
+	switch market {
+	case model.OKEX:
+		return model.AppConfig.Okchan
+	case model.Gate:
+		return model.AppConfig.Gatechan
+	case model.BinanceSpot, model.BinancePerp:
+		return model.AppConfig.Binancechan
+	case model.Bybit:
+		return model.AppConfig.Bybitchan
+	}
+	return 0
+}
+
 func RequireConnTickReset(environment *model.Environment, market string) bool {
 	needReset, ok := environment.PubChanNeedReset.Load(market)
 	if ok && needReset != nil && needReset.(bool) {
@@ -62,7 +76,7 @@ func RequireConnTickReset(environment *model.Environment, market string) bool {
 		util.Log(util.LogLevelInfo, `clear need reset for market: `+market)
 		return true
 	}
-	if model.AppConfig.SpecialChan == `1` && (market == model.BinancePerp || market == model.BinanceSpot || market == model.OKEX || market == model.Gate) {
+	if GetSpecialChan(market) == 1 {
 		return false
 	}
 	initTime, _ := model.AppEnvironment.WsInitTime.Load(market)
