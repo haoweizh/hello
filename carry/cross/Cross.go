@@ -1026,7 +1026,7 @@ var ProcessCross = func(setting *model.Setting, tick *model.BidAsk) {
 			if status == nil || statusRelate == nil || status == statusRelate || carryCoin == nil || !getStatus || !getRelate || !getCoin {
 				continue
 			}
-			delay, statusBuy, statusSell, amount, priceBuy, priceSell, closeType, scoreMsg :=
+			delay, statusBuy, statusSell, amount, priceBuy, priceSell, closeType, _ :=
 				calcAmount(i, setting.Coin, status.(*model.CarryStatus), statusRelate.(*model.CarryStatus), carryCoin.(*model.CarryCoin), tick, tickRelate)
 			if delay {
 				return
@@ -1036,9 +1036,9 @@ var ProcessCross = func(setting *model.Setting, tick *model.BidAsk) {
 				placeCross(carryCoin.(*model.CarryCoin), statusBuy, statusSell, priceBuy, priceSell, amount, tick, tickRelate, closeType)
 				//util.Log(util.LogLevelInfo, fmt.Sprintf(`time mark coin %s %s %s <- %s %s amt %f ts %d %d %d %d`,
 				//	setting.Coin, statusBuy.Symbol, statusBuy.Market, statusSell.Symbol, statusSell.Market, amount, tsMark, tsDis1, tsDis2, time.Now().UnixMicro()-tsMark))
-				if account.Index == 0 {
-					fmt.Println(fmt.Sprintf(`%s %s %f buy at %f sell at %f`, time.Now().String(), scoreMsg, amount, priceBuy, priceSell))
-				}
+				//if account.Index == 0 {
+				//	fmt.Println(fmt.Sprintf(`%s %s %f buy at %f sell at %f`, time.Now().String(), scoreMsg, amount, priceBuy, priceSell))
+				//}
 				time.Sleep(time.Duration(100) * time.Millisecond)
 				return
 			}
@@ -1135,7 +1135,7 @@ func placeCross(carryCoin *model.CarryCoin, statusBuy, statusSell *model.CarrySt
 	} else {
 		priceSell = priceSell * (1 - crossSlidePerp)
 	}
-	score := (priceSell - priceBuy) / math.Max(priceBuy, priceSell)
+	//score := (priceSell - priceBuy) / math.Max(priceBuy, priceSell)
 	amountBuy := amount / statusBuy.Setting.GridAmount
 	amountSell := amount / statusSell.Setting.GridAmount
 	lastOrderBuy, _ := model.AppEnvironment.LastOrderMilli.Load(statusBuy.Account.Key)
@@ -1159,10 +1159,10 @@ func placeCross(carryCoin *model.CarryCoin, statusBuy, statusSell *model.CarrySt
 		statusBuy.Symbol, orderParamBuy, model.FunctionCross, closeType, priceBuy, priceBuy, amountBuy, true, PostOrderCross)
 	go api.PlaceOrder(statusSell.Account, model.OrderSideSell, model.OrderTypeLimit, statusSell.Market,
 		statusSell.Symbol, orderParamSell, model.FunctionCross, closeType, priceSell, priceSell, amountSell, true, PostOrderCross)
-	fmt.Println(fmt.Sprintf(`%s place cross %s %s -> %s %s at %f %f amount %f %f %f score %f hold %f buy %f limit %f hold %f sell %f limit %f %f-%f ts %d %f-%f ts %d`,
-		time.Now().String(), statusSell.Market, statusSell.Symbol, statusBuy.Market, statusBuy.Symbol, priceSell, priceBuy, amount, amountBuy, amountSell,
-		score, statusBuy.Holding, statusBuy.TradeLineBuy, statusBuy.LimitBuy, statusSell.Holding, statusSell.TradeLineSell, statusSell.LimitSell,
-		tick.Bids[0].Price, tick.Asks[0].Price, tick.Ts, tickRelate.Bids[0].Price, tickRelate.Asks[0].Price, tickRelate.Ts))
+	//fmt.Println(fmt.Sprintf(`%s place cross %s %s -> %s %s at %f %f amount %f %f %f score %f hold %f buy %f limit %f hold %f sell %f limit %f %f-%f ts %d %f-%f ts %d`,
+	//	time.Now().String(), statusSell.Market, statusSell.Symbol, statusBuy.Market, statusBuy.Symbol, priceSell, priceBuy, amount, amountBuy, amountSell,
+	//	score, statusBuy.Holding, statusBuy.TradeLineBuy, statusBuy.LimitBuy, statusSell.Holding, statusSell.TradeLineSell, statusSell.LimitSell,
+	//	tick.Bids[0].Price, tick.Asks[0].Price, tick.Ts, tickRelate.Bids[0].Price, tickRelate.Asks[0].Price, tickRelate.Ts))
 	// 买入现货时要交手续费，故而实际到手少于下单量，校准以免未来买单时数量不足
 	if marketTypeBuy == model.MarketTypeSpot {
 		amountBuy = amountBuy * 0.9992
