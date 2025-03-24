@@ -371,7 +371,7 @@ func GetRankTurtleData(account *model.Account, symbol string, setting *model.Set
 	nowPeriod, nowStr := model.GetNowPeriod(setting.Market, setting.Seconds, now)
 	data = &model.TurtleData{TurtleTime: nowPeriod, Expire: nowPeriod.Add(time.Second * time.Duration(setting.Seconds)),
 		IsBig: true, Symbol: symbol, DaysFar: int(setting.Far), DaysNear: int(setting.Near), DaysAdjust: 5,
-		OrderAdjust: make(map[string]*model.Order), CallBackRatio: 0.03, ActivationRate: 0.5}
+		OrderAdjust: make(map[string]*model.Order), CallBackRatio: 0.03, ActivationRate: 0.43}
 	util.Log(util.LogLevelInfo, fmt.Sprintf(
 		`need to create turtle data rank %s %s %s %s %d`, setting.Function, setting.Market, symbol, nowStr, setting.Far))
 	candles := getTurtleCandles(account, setting.Market, symbol, int(setting.Far), int(setting.Seconds), nowPeriod)
@@ -452,7 +452,7 @@ func GetTurtleData(account *model.Account, setting *model.Setting, removed bool)
 			removed = false
 		}
 	}
-	activationRate := 0.5
+	activationRate := 0.43
 	if strings.ToLower(setting.Symbol) == `btc_perp` {
 		activationRate = 0.23
 	} else if strings.ToLower(setting.Symbol) == `eth_perp` || strings.ToLower(setting.Symbol) == `sol_perp` {
@@ -514,6 +514,12 @@ func GetTurtleData(account *model.Account, setting *model.Setting, removed bool)
 func CalcTurtleData(account *model.Account, data *model.TurtleData, candles []*model.Candle, seconds int, market, function string, chanceLimit, amountRate float64) (
 	getOne, getAll bool) {
 	priceClose := 0.0
+	trailDays := 1
+	if strings.ToLower(data.Symbol) == `btc_perp` {
+		trailDays = 2
+	} else if strings.ToLower(data.Symbol) == `eth_perp` || strings.ToLower(data.Symbol) == `sol_perp` {
+		trailDays = 2
+	}
 	for i := 1; i <= data.DaysFar; i++ {
 		currentPeriod := data.TurtleTime.Add(time.Second * time.Duration(seconds*-i))
 		candle := findCandle(candles, currentPeriod)
@@ -523,10 +529,10 @@ func CalcTurtleData(account *model.Account, data *model.TurtleData, candles []*m
 			return
 		}
 		getOne = true
-		if candle.PriceHigh > data.HighActTrail && i <= 2 {
+		if candle.PriceHigh > data.HighActTrail && i <= trailDays {
 			data.HighActTrail = candle.PriceHigh
 		}
-		if (data.LowActTrail == 0 || candle.PriceLow < data.HighActTrail) && i <= 2 {
+		if (data.LowActTrail == 0 || candle.PriceLow < data.HighActTrail) && i <= trailDays {
 			data.LowActTrail = candle.PriceLow
 		}
 		if candle.PriceHigh > data.HighFar && i <= data.DaysFar {
