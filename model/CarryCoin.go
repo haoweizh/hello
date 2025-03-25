@@ -34,22 +34,22 @@ type CarryCoin struct {
 	UpdatedAt    time.Time
 }
 
-func (carryCoin *CarryCoin) AddTrade(statusBuy, statusSell *CarryStatus, priceBuy, priceSell, amountSell float64) {
+func (carryCoin *CarryCoin) AddTrade(statusBuy, statusSell *CarryStatus, priceBuy, priceSell, amountBuy float64) {
 	change := false
 	if statusBuy.Holding*priceBuy >= -SmallHolding && statusSell.Holding*priceSell <= SmallHolding { // 加仓
 		change = true
-		carryCoin.Holding += amountSell * statusSell.Setting.GridAmount
-		carryCoin.MoneyCurStep += amountSell * priceSell
+		carryCoin.Holding += amountBuy * statusBuy.Setting.GridAmount
+		carryCoin.MoneyCurStep += amountBuy * priceBuy
 		if carryCoin.MoneyCurStep > carryCoin.MoneyPerStep {
 			carryCoin.CurrentStep++
 			carryCoin.MoneyCurStep -= carryCoin.MoneyPerStep
 		}
 		util.Log(util.LogLevelInfo, fmt.Sprintf(`add trade deal open money %s +%f %#v amount %f price %f`,
-			carryCoin.Coin, amountSell*priceSell, carryCoin, amountSell, priceSell))
+			carryCoin.Coin, amountBuy*priceBuy, carryCoin, amountBuy, priceBuy))
 	} else if statusBuy.Holding*priceBuy < -SmallHolding && statusSell.Holding*priceSell > SmallHolding { // 平仓
 		change = true
-		carryCoin.Holding -= amountSell * statusSell.Setting.GridAmount
-		carryCoin.MoneyCurStep -= amountSell * priceSell
+		carryCoin.Holding -= amountBuy * statusBuy.Setting.GridAmount
+		carryCoin.MoneyCurStep -= amountBuy * priceBuy
 		//if carryCoin.Holding*priceBuy/statusBuy.Setting.GridAmount < carryCoin.MoneyPerStep {
 		//	carryCoin.CurrentStep = 0
 		//}
@@ -63,15 +63,15 @@ func (carryCoin *CarryCoin) AddTrade(statusBuy, statusSell *CarryStatus, priceBu
 				}
 			}
 			util.Log(util.LogLevelInfo, fmt.Sprintf(`add trade deal close %s -%f %#v amount %f price %f`,
-				carryCoin.Coin, amountSell*priceSell, carryCoin, amountSell, priceSell))
+				carryCoin.Coin, amountBuy*priceBuy, carryCoin, amountBuy, priceSell))
 		} else {
 			carryCoin.MoneyCurStep = 0
 			carryCoin.CurrentStep = 0
 			util.Log(util.LogLevelInfo, fmt.Sprintf(`add trade deal close no holding %s %f %#v amount %f price %f`,
-				carryCoin.Coin, amountSell*priceSell, carryCoin, amountSell, priceSell))
+				carryCoin.Coin, amountBuy*priceBuy, carryCoin, amountBuy, priceSell))
 			if carryCoin.Holding < 0 {
 				util.Log(util.LogLevelInfo, fmt.Sprintf(`add trade holding %s %f %f liquidate %f`,
-					carryCoin.Coin, amountSell*priceSell, carryCoin.Holding, amountSell*statusSell.Setting.GridAmount))
+					carryCoin.Coin, amountBuy*priceBuy, carryCoin.Holding, amountBuy*statusBuy.Setting.GridAmount))
 				carryCoin.Holding = 0
 			}
 		}
