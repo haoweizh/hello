@@ -2,7 +2,6 @@ package model
 
 import (
 	"fmt"
-	"hello/util"
 	"time"
 )
 
@@ -44,8 +43,8 @@ func (carryCoin *CarryCoin) AddTrade(statusBuy, statusSell *CarryStatus, priceBu
 			carryCoin.CurrentStep++
 			carryCoin.MoneyCurStep -= carryCoin.MoneyPerStep
 		}
-		util.Log(util.LogLevelError, fmt.Sprintf(`add trade deal money %s +%f %f %#v amount %f price %f`,
-			carryCoin.Coin, amountBuy*priceBuy, carryCoin.MoneyCurStep, carryCoin, amountBuy, priceBuy))
+		fmt.Println(fmt.Sprintf(`add trade deal money %s +%f=%f +%f=%f %d %#v price %f`,
+			carryCoin.Coin, amountBuy, carryCoin.Holding, amountBuy*priceBuy, carryCoin.MoneyCurStep, carryCoin.CurrentStep, carryCoin, priceBuy))
 	} else if statusBuy.Holding*priceBuy < -SmallHolding && statusSell.Holding*priceSell > SmallHolding { // 平仓
 		change = true
 		carryCoin.Holding -= amountBuy * statusBuy.Setting.GridAmount
@@ -62,19 +61,16 @@ func (carryCoin *CarryCoin) AddTrade(statusBuy, statusSell *CarryStatus, priceBu
 					carryCoin.MoneyCurStep = 0
 				}
 			}
-			util.Log(util.LogLevelError, fmt.Sprintf(`add trade deal money %s -%f %f %#v amount %f price %f`,
-				carryCoin.Coin, amountBuy*priceBuy, carryCoin.MoneyCurStep, carryCoin, amountBuy, priceSell))
 		} else {
 			carryCoin.MoneyCurStep = 0
 			carryCoin.CurrentStep = 0
-			util.Log(util.LogLevelInfo, fmt.Sprintf(`add trade deal money no holding %s %f %f %#v amount %f price %f`,
-				carryCoin.Coin, amountBuy*priceBuy, carryCoin.MoneyPerStep, carryCoin, amountBuy, priceSell))
 			if carryCoin.Holding < 0 {
-				util.Log(util.LogLevelInfo, fmt.Sprintf(`add trade holding liquidate %s %f %f %f %f`,
-					carryCoin.Coin, amountBuy*priceBuy, carryCoin.MoneyPerStep, carryCoin.Holding, amountBuy*statusBuy.Setting.GridAmount))
 				carryCoin.Holding = 0
 			}
+			fmt.Println(fmt.Sprintf(`add trade deal money less than 50`))
 		}
+		fmt.Println(fmt.Sprintf(`add trade deal money %s -%f=%f -%f=%f %d %#v price %f`,
+			carryCoin.Coin, amountBuy, carryCoin.Holding, amountBuy*priceBuy, carryCoin.MoneyCurStep, carryCoin.CurrentStep, carryCoin, priceBuy))
 	}
 	if change {
 		AppDB.Model(carryCoin).Where(`coin=? and account_index=?`, carryCoin.Coin, carryCoin.AccountIndex).Updates(
