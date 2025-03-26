@@ -44,8 +44,8 @@ func (carryCoin *CarryCoin) AddTrade(statusBuy, statusSell *CarryStatus, priceBu
 			carryCoin.CurrentStep++
 			carryCoin.MoneyCurStep -= carryCoin.MoneyPerStep
 		}
-		util.Log(util.LogLevelInfo, fmt.Sprintf(`add trade deal open money %s +%f %#v amount %f price %f`,
-			carryCoin.Coin, amountBuy*priceBuy, carryCoin, amountBuy, priceBuy))
+		util.Log(util.LogLevelError, fmt.Sprintf(`add trade deal money %s +%f %f %#v amount %f price %f`,
+			carryCoin.Coin, amountBuy*priceBuy, carryCoin.MoneyCurStep, carryCoin, amountBuy, priceBuy))
 	} else if statusBuy.Holding*priceBuy < -SmallHolding && statusSell.Holding*priceSell > SmallHolding { // 平仓
 		change = true
 		carryCoin.Holding -= amountBuy * statusBuy.Setting.GridAmount
@@ -62,16 +62,16 @@ func (carryCoin *CarryCoin) AddTrade(statusBuy, statusSell *CarryStatus, priceBu
 					carryCoin.MoneyCurStep = 0
 				}
 			}
-			util.Log(util.LogLevelInfo, fmt.Sprintf(`add trade deal close %s -%f %#v amount %f price %f`,
-				carryCoin.Coin, amountBuy*priceBuy, carryCoin, amountBuy, priceSell))
+			util.Log(util.LogLevelError, fmt.Sprintf(`add trade deal money %s -%f %f %#v amount %f price %f`,
+				carryCoin.Coin, amountBuy*priceBuy, carryCoin.MoneyCurStep, carryCoin, amountBuy, priceSell))
 		} else {
 			carryCoin.MoneyCurStep = 0
 			carryCoin.CurrentStep = 0
-			util.Log(util.LogLevelInfo, fmt.Sprintf(`add trade deal close no holding %s %f %#v amount %f price %f`,
-				carryCoin.Coin, amountBuy*priceBuy, carryCoin, amountBuy, priceSell))
+			util.Log(util.LogLevelInfo, fmt.Sprintf(`add trade deal money no holding %s %f %f %#v amount %f price %f`,
+				carryCoin.Coin, amountBuy*priceBuy, carryCoin.MoneyPerStep, carryCoin, amountBuy, priceSell))
 			if carryCoin.Holding < 0 {
-				util.Log(util.LogLevelInfo, fmt.Sprintf(`add trade holding %s %f %f liquidate %f`,
-					carryCoin.Coin, amountBuy*priceBuy, carryCoin.Holding, amountBuy*statusBuy.Setting.GridAmount))
+				util.Log(util.LogLevelInfo, fmt.Sprintf(`add trade holding liquidate %s %f %f %f %f`,
+					carryCoin.Coin, amountBuy*priceBuy, carryCoin.MoneyPerStep, carryCoin.Holding, amountBuy*statusBuy.Setting.GridAmount))
 				carryCoin.Holding = 0
 			}
 		}

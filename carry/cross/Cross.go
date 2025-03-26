@@ -179,6 +179,9 @@ func createFromPosition(account *model.Account, setting *model.Setting) (carrySt
 		}
 	}
 	usdLowLine := math.Min(MarginULowLimit, 0.1*cm.accountValueInU)
+	if setting.Market == model.Gate {
+		usdLowLine = math.Min(MarginULowLimit, 0.07*cm.accountValueInU)
+	}
 	if cm.contractValueInU/handledActValueInU > rateLimitPosition || valueInUsd/handledActValueInU > rateLimitHolding ||
 		(cm.collateralsAvailable < usdLowLine && cm.collateralsAvailable/handledActValueInU < 0.05) ||
 		(setting.Market == model.BitgetPerp && (len(cm.positions) > model.BitgetPosLimit && carryStatus.Holding == 0)) {
