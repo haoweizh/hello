@@ -67,7 +67,7 @@ func (carryCoin *CarryCoin) AddTrade(statusBuy, statusSell *CarryStatus, priceBu
 			if carryCoin.Holding < 0 {
 				carryCoin.Holding = 0
 			}
-			fmt.Println(fmt.Sprintf(`add trade deal money less than 50`))
+			fmt.Println(fmt.Sprintf(`add trade deal money less than 50 %s`, carryCoin.Coin))
 		}
 		fmt.Println(fmt.Sprintf(`%s add trade deal money %s -%f=%f -%f=%f %d %#v price %f`,
 			time.Now().String(), carryCoin.Coin, amountBuy, carryCoin.Holding, amountBuy*priceBuy, carryCoin.MoneyCurStep, carryCoin.CurrentStep, carryCoin, priceBuy))

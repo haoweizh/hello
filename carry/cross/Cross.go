@@ -621,10 +621,12 @@ func syncGridHoldings() {
 		if moneyInAll < carryCoin.MoneyPerStep {
 			carryCoin.CurrentStep = 0
 			carryCoin.MoneyCurStep = moneyInAll
+			fmt.Println(fmt.Sprintf("add trade deal money set to moneyInAll %f", moneyInAll))
 			change = true
 		}
 		if carryCoin.CurrentStep == 0 && carryCoin.MoneyCurStep < model.SmallHolding {
 			carryCoin.MoneyCurStep = math.Min(moneyInAll, carryCoin.MoneyPerStep)
+			fmt.Println(fmt.Sprintf("add trade deal money when current step 0 %f %f", moneyInAll, carryCoin.MoneyPerStep))
 			change = true
 		}
 		carryCoin.Holding = coinHolding
@@ -1029,7 +1031,7 @@ var ProcessCross = func(setting *model.Setting, tick *model.BidAsk) {
 			if status == nil || statusRelate == nil || status == statusRelate || carryCoin == nil || !getStatus || !getRelate || !getCoin {
 				continue
 			}
-			delay, statusBuy, statusSell, amount, priceBuy, priceSell, closeType, _ :=
+			delay, statusBuy, statusSell, amount, priceBuy, priceSell, closeType, scoreMsg :=
 				calcAmount(i, setting.Coin, status.(*model.CarryStatus), statusRelate.(*model.CarryStatus), carryCoin.(*model.CarryCoin), tick, tickRelate)
 			if delay {
 				return
@@ -1039,9 +1041,9 @@ var ProcessCross = func(setting *model.Setting, tick *model.BidAsk) {
 				placeCross(carryCoin.(*model.CarryCoin), statusBuy, statusSell, priceBuy, priceSell, amount, tick, tickRelate, closeType)
 				//util.Log(util.LogLevelInfo, fmt.Sprintf(`time mark coin %s %s %s <- %s %s amt %f ts %d %d %d %d`,
 				//	setting.Coin, statusBuy.Symbol, statusBuy.Market, statusSell.Symbol, statusSell.Market, amount, tsMark, tsDis1, tsDis2, time.Now().UnixMicro()-tsMark))
-				//if account.Index == 0 {
-				//	fmt.Println(fmt.Sprintf(`%s %s %f buy at %f sell at %f`, time.Now().String(), scoreMsg, amount, priceBuy, priceSell))
-				//}
+				if account.Index == 0 {
+					fmt.Println(fmt.Sprintf(`%s %s %f buy at %f sell at %f`, time.Now().String(), scoreMsg, amount, priceBuy, priceSell))
+				}
 				time.Sleep(time.Duration(100) * time.Millisecond)
 				return
 			}
