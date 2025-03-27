@@ -420,9 +420,9 @@ func calcScores(statusBuy, statusSell *model.CarryStatus, marketInfoBuy, marketI
 	scoreOpen = (priceSell/priceXSell - priceBuy/priceXBuy) / (priceBuy / priceXBuy)
 	scoreSwitch = scoreOpen
 	scoreClose = scoreOpen
-	scoreMsg = fmt.Sprintf(`score check1 %s %s %f rate %f score %f holding %f %s %s %f rate %f holding %f`,
-		statusBuy.Market, statusBuy.Symbol, priceBuy, handledRateBuy, scoreOpen, statusBuy.Holding,
-		statusSell.Market, statusSell.Symbol, priceSell, handledRateSell, statusSell.Holding)
+	scoreMsg = fmt.Sprintf(`score check1 %s %s %f rate %f score %f holding %f %s %s %f rate %f holding %f buyAsk0 %f sellBid0 %f`,
+		statusBuy.Market, statusBuy.Symbol, priceBuy, handledRateBuy, scoreOpen, statusBuy.Holding, statusSell.Market, statusSell.Symbol,
+		priceSell, handledRateSell, statusSell.Holding, tickBuy.Asks[0].Price, tickSell.Bids[0].Price)
 	if handledRateSell < handledRateBuy { // R为卖方<0
 		priceSell = tickSell.Bids[0].Price * (1 + statusSell.Setting.AmountRate*handledRateSell)
 		priceBuy = tickBuy.Asks[0].Price * (1 + statusBuy.Setting.AmountRate*handledRateBuy)
@@ -431,6 +431,7 @@ func calcScores(statusBuy, statusSell *model.CarryStatus, marketInfoBuy, marketI
 		priceSell = tickSell.Bids[0].Price * (1 + statusSell.Setting.AmountRateCombine*handledRateSell)
 		priceBuy = tickBuy.Asks[0].Price * (1 + statusBuy.Setting.AmountRateCombine*handledRateBuy)
 		scoreClose = (priceSell/priceXSell - priceBuy/priceXBuy) / (priceBuy / priceXBuy)
+		scoreMsg += fmt.Sprintf(` x %f %f`, statusSell.Setting.AmountRate, statusBuy.Setting.AmountRate)
 	} else if handledRateSell > handledRateBuy {
 		priceSell = tickSell.Bids[0].Price * (1 + handledRateSell/2)
 		priceBuy = tickBuy.Asks[0].Price * (1 + handledRateBuy/2)
