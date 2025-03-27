@@ -478,7 +478,7 @@ func cancelOrdersBinancePerp(key, secret string, symbol string) bool {
 func GetTradingStatusBinancePerp(account *model.Account) {
 	responseBody := signedRequestBinance(account.Key, account.Secret, model.BinancePerp, http.MethodGet,
 		restBinancePerp+"/fapi/v1/apiTradingStatus", true, nil)
-	fmt.Println(string(responseBody))
+	util.Log(util.LogLevelLocal, string(responseBody))
 }
 
 // sdk暂不支持该接口

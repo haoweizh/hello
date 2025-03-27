@@ -2,6 +2,7 @@ package model
 
 import (
 	"fmt"
+	"hello/util"
 	"time"
 )
 
@@ -43,8 +44,8 @@ func (carryCoin *CarryCoin) AddTrade(statusBuy, statusSell *CarryStatus, priceBu
 			carryCoin.CurrentStep++
 			carryCoin.MoneyCurStep -= carryCoin.MoneyPerStep
 		}
-		fmt.Println(fmt.Sprintf(`%s add trade deal money %s +%f=%f +%f=%f %d %#v price %f`,
-			time.Now().String(), carryCoin.Coin, amountBuy, carryCoin.Holding, amountBuy*priceBuy, carryCoin.MoneyCurStep, carryCoin.CurrentStep, carryCoin, priceBuy))
+		util.Log(util.LogLevelLocal, fmt.Sprintf(`add trade deal money %s +%f=%f +%f=%f %d %#v price %f`,
+			carryCoin.Coin, amountBuy, carryCoin.Holding, amountBuy*priceBuy, carryCoin.MoneyCurStep, carryCoin.CurrentStep, carryCoin, priceBuy))
 	} else if statusBuy.Holding*priceBuy < -SmallHolding && statusSell.Holding*priceSell > SmallHolding { // 平仓
 		change = true
 		carryCoin.Holding -= amountBuy * statusBuy.Setting.GridAmount
@@ -67,10 +68,10 @@ func (carryCoin *CarryCoin) AddTrade(statusBuy, statusSell *CarryStatus, priceBu
 			if carryCoin.Holding < 0 {
 				carryCoin.Holding = 0
 			}
-			fmt.Println(fmt.Sprintf(`add trade deal money less than 50 %s`, carryCoin.Coin))
+			util.Log(util.LogLevelLocal, fmt.Sprintf(`add trade deal money less than 50 %s`, carryCoin.Coin))
 		}
-		fmt.Println(fmt.Sprintf(`%s add trade deal money %s -%f=%f -%f=%f %d %#v price %f`,
-			time.Now().String(), carryCoin.Coin, amountBuy, carryCoin.Holding, amountBuy*priceBuy, carryCoin.MoneyCurStep, carryCoin.CurrentStep, carryCoin, priceBuy))
+		util.Log(util.LogLevelLocal, fmt.Sprintf(`add trade deal money %s -%f=%f -%f=%f %d %#v price %f`,
+			carryCoin.Coin, amountBuy, carryCoin.Holding, amountBuy*priceBuy, carryCoin.MoneyCurStep, carryCoin.CurrentStep, carryCoin, priceBuy))
 	}
 	if change {
 		AppDB.Model(carryCoin).Where(`coin=? and account_index=?`, carryCoin.Coin, carryCoin.AccountIndex).Updates(

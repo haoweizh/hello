@@ -621,12 +621,12 @@ func syncGridHoldings() {
 		if moneyInAll < carryCoin.MoneyPerStep {
 			carryCoin.CurrentStep = 0
 			carryCoin.MoneyCurStep = moneyInAll
-			fmt.Println(fmt.Sprintf("add trade deal money set to moneyInAll %f", moneyInAll))
+			util.Log(util.LogLevelLocal, fmt.Sprintf("add trade deal money set to moneyInAll %f holding %f", moneyInAll, coinHolding))
 			change = true
 		}
 		if carryCoin.CurrentStep == 0 && carryCoin.MoneyCurStep < model.SmallHolding {
 			carryCoin.MoneyCurStep = math.Min(moneyInAll, carryCoin.MoneyPerStep)
-			fmt.Println(fmt.Sprintf("add trade deal money when current step 0 %f %f", moneyInAll, carryCoin.MoneyPerStep))
+			util.Log(util.LogLevelLocal, fmt.Sprintf("add trade deal money when current step 0 %f %f %f", moneyInAll, carryCoin.MoneyPerStep, coinHolding))
 			change = true
 		}
 		carryCoin.Holding = coinHolding
@@ -685,17 +685,18 @@ func equalAccount(i int, equalChan chan int, accounts map[string]*model.Account,
 				//if price == 0 {
 				//	return true
 				//}
-				valueCarryCoin, ok := util.LoadSyncMap(carryCoinMap, coin.(string), `0`)
-				if !ok || valueCarryCoin == nil {
+				valueCarryCoin, _ := util.LoadSyncMap(carryCoinMap, coin.(string), `0`)
+				if valueCarryCoin == nil {
 					carryCoin := api.GetCarryCoin(coin.(string))
 					if carryCoin == nil {
 						moneyPerStep, _ := strconv.ParseFloat(model.AppConfig.GetMoneyPerStep()[i], 64)
 						carryCoin = &model.CarryCoin{Coin: coin.(string), MoneyPerStep: moneyPerStep}
 						util.StoreSyncMap(carryCoinMap, carryCoin, coin.(string), `0`)
+						util.Log(util.LogLevelLocal, fmt.Sprintf(`get a carry coin from init %d %v`, i, coin))
 						go model.AppDB.Save(carryCoin)
 					} else {
 						util.StoreSyncMap(carryCoinMap, carryCoin, coin.(string), `0`)
-						util.Log(util.LogLevelInfo, fmt.Sprintf(`get a carry coin from db %d %v`, i, coin))
+						util.Log(util.LogLevelLocal, fmt.Sprintf(`get a carry coin from db %d %v`, i, coin))
 					}
 				}
 			}
@@ -1042,7 +1043,7 @@ var ProcessCross = func(setting *model.Setting, tick *model.BidAsk) {
 				//util.Log(util.LogLevelInfo, fmt.Sprintf(`time mark coin %s %s %s <- %s %s amt %f ts %d %d %d %d`,
 				//	setting.Coin, statusBuy.Symbol, statusBuy.Market, statusSell.Symbol, statusSell.Market, amount, tsMark, tsDis1, tsDis2, time.Now().UnixMicro()-tsMark))
 				if account.Index == 0 {
-					fmt.Println(fmt.Sprintf(`%s %s %f buy at %f sell at %f`, time.Now().String(), scoreMsg, amount, priceBuy, priceSell))
+					util.Log(util.LogLevelLocal, fmt.Sprintf(`%s %f buy at %f sell at %f`, scoreMsg, amount, priceBuy, priceSell))
 				}
 				time.Sleep(time.Duration(100) * time.Millisecond)
 				return

@@ -23,6 +23,7 @@ var localLogger *log.Logger
 
 const logRoot = "./log/"
 const LogLevelError = "error"
+const LogLevelLocal = "local"
 const LogLevelInfo = "info"
 const LogLevelDebug = "debug"
 
@@ -58,7 +59,7 @@ func LogChanHandler(apiUrl, serverName string) {
 	for !Terminal {
 		glcData := <-logChan
 		//glcData.ServerName = serverName
-		if apiUrl == `local` {
+		if apiUrl == `local` || glcData.LogLevel == LogLevelLocal {
 			if localCount%10000 == 0 {
 				if localFile != nil {
 					_ = localFile.Close()
