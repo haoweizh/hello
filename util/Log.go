@@ -15,7 +15,7 @@ import (
 // var DebugCount int
 
 var DoDebug = false
-var logChan = make(chan cmn.GlcData, 10000)
+var logChan = make(chan cmn.GlcData, 100000)
 
 var localCount = 0
 var localFile *os.File

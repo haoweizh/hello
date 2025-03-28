@@ -618,15 +618,16 @@ func syncGridHoldings() {
 		change := false
 		moneyInAll := coinHolding * price
 		carryCoin := valueCarryCoin.(*model.CarryCoin)
+		logMsg := fmt.Sprintf(`add trade deal money price %f sync %v`, price, carryCoin)
 		if moneyInAll < carryCoin.MoneyPerStep {
 			carryCoin.CurrentStep = 0
 			carryCoin.MoneyCurStep = moneyInAll
-			util.Log(util.LogLevelLocal, fmt.Sprintf("add trade deal money set to moneyInAll %f holding %f", moneyInAll, coinHolding))
+			logMsg += fmt.Sprintf(`moneyInAll %f coinHolding %f`, moneyInAll, coinHolding)
 			change = true
 		}
 		if carryCoin.CurrentStep == 0 && carryCoin.MoneyCurStep < model.SmallHolding {
 			carryCoin.MoneyCurStep = math.Min(moneyInAll, carryCoin.MoneyPerStep)
-			util.Log(util.LogLevelLocal, fmt.Sprintf("add trade deal money when current step 0 %f %f %f", moneyInAll, carryCoin.MoneyPerStep, coinHolding))
+			logMsg += fmt.Sprintf(`curStep %d`, carryCoin.CurrentStep)
 			change = true
 		}
 		carryCoin.Holding = coinHolding
@@ -634,7 +635,7 @@ func syncGridHoldings() {
 			model.AppDB.Model(&model.CarryCoin{}).Where(`coin=? and account_index=?`, valueCarryCoin.(*model.CarryCoin).Coin,
 				valueCarryCoin.(*model.CarryCoin).AccountIndex).Updates(map[string]interface{}{
 				`holding`: valueCarryCoin.(*model.CarryCoin).Holding, `current_step`: carryCoin.CurrentStep, `money_cur_step`: carryCoin.MoneyCurStep})
-			util.Log(util.LogLevelInfo, fmt.Sprintf(`sync carry coin holding %v price %f money %f %#v`, coin, price, moneyInAll, carryCoin))
+			util.Log(util.LogLevelLocal, logMsg)
 		}
 		return true
 	})
@@ -1175,7 +1176,7 @@ func placeCross(carryCoin *model.CarryCoin, statusBuy, statusSell *model.CarrySt
 		//util.Log(util.LogLevelInfo, fmt.Sprintf(`spot buy amount before %d %s %s now %f %f buy %f sell %f`,
 		//	statusBuy.Account.Index, statusBuy.Market, statusBuy.Symbol, statusBuy.LimitSell, statusBuy.AvailableSell, amountBuy, amountSell))
 	}
-	if carryCoin != nil && model.AppConfig.GetCrossStyles()[statusBuy.Account.Index] == crossGrid {
+	if carryCoin != nil && model.AppConfig.GetCrossStyles()[statusBuy.Account.Index] == crossGrid && priceBuy > 0 {
 		carryCoin.AddTrade(statusBuy, statusSell, priceBuy, priceSell, amountBuy)
 	}
 	placeStatus(statusBuy, priceBuy, amountBuy)
