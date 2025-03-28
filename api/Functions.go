@@ -1044,18 +1044,18 @@ func InitCrossMarketInfos(markets []string) {
 	util.Log(util.LogLevelInfo, fmt.Sprintf(`end to init cross market infos`))
 }
 
-//var marketInfoInitializing = false
+var marketInfoInitializing = false
 
 // InitMarketInfos 只支持现货SPOT和永续PERP SWAP
 func InitMarketInfos(market string) (success bool) {
-	//if marketInfoInitializing {
-	//	return
-	//}
-	//util.Log(util.LogLevelInfo, fmt.Sprintf(`begin to init market infos %s`, market))
-	//marketInfoInitializing = true
-	//defer func() {
-	//	marketInfoInitializing = false
-	//}()
+	if marketInfoInitializing {
+		return
+	}
+	util.Log(util.LogLevelInfo, fmt.Sprintf(`begin to init market infos %s`, market))
+	marketInfoInitializing = true
+	defer func() {
+		marketInfoInitializing = false
+	}()
 	success = true
 	accounts := model.AppConfig.GetAccounts(market)
 	var marketInfos map[string]*model.MarketInfo
@@ -1093,7 +1093,7 @@ func InitMarketInfos(market string) (success bool) {
 		}
 	}
 	model.MarketInfos.Range(func(key, value any) bool {
-		if strings.Index(key.(string), market) == 0 {
+		if strings.Index(key.(string), market) == 0 && marketInfos != nil && len(marketInfos) > 0 {
 			model.MarketInfos.Delete(key)
 		}
 		return true

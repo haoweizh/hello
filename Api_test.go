@@ -826,7 +826,7 @@ func Test_wallet(t *testing.T) {
 	set.GridAmount += 100
 	fmt.Println(set.GridAmount)
 	model.NewConfig()
-	market := model.BitgetPerp
+	market := model.BinancePerp
 	symbol := `BTC_PERP`
 	account := model.GetAccounts(0)[market]
 	_, _, rate := api.GetFundingRate(account, market, symbol, false)
