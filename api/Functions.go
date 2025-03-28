@@ -1044,17 +1044,18 @@ func InitCrossMarketInfos(markets []string) {
 	util.Log(util.LogLevelInfo, fmt.Sprintf(`end to init cross market infos`))
 }
 
-var marketInfoInitializing = false
+var marketInfoInit = sync.Map{}
 
 // InitMarketInfos 只支持现货SPOT和永续PERP SWAP
 func InitMarketInfos(market string) (success bool) {
-	if marketInfoInitializing {
+	initializing, _ := marketInfoInit.Load(market)
+	if initializing != nil && initializing.(bool) {
 		return
 	}
 	util.Log(util.LogLevelInfo, fmt.Sprintf(`begin to init market infos %s`, market))
-	marketInfoInitializing = true
+	marketInfoInit.Store(market, true)
 	defer func() {
-		marketInfoInitializing = false
+		marketInfoInit.Delete(market)
 	}()
 	success = true
 	accounts := model.AppConfig.GetAccounts(market)
