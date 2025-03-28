@@ -294,6 +294,7 @@ func GetHoldings(accounts map[string]*model.Account) (holding [][]interface{}) {
 			}
 			holding[i] = append(holding[i], fundingStr)
 		} else {
+			util.Log(util.LogLevelError, fmt.Sprintf(`fail to get funding info %s %s %v %v`, market, symbol, marketInfo, fr))
 			holding[i] = append(holding[i], ``)
 		}
 	}

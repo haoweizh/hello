@@ -619,7 +619,7 @@ func GetFundingRate(account *model.Account, market, symbol string, cacheOnly boo
 		time.Sleep(time.Minute)
 		return false, true, nil
 	}
-	//util.Log(util.LogLevelInfo, fmt.Sprintf(`get funding rate from rest %s %s %#v`, market, symbol, fundingRate))
+	util.LogLess(util.LogLevelInfo, fmt.Sprintf(`get funding rate from rest %s %s %#v`, market, symbol, fundingRate))
 	time.Sleep(time.Millisecond * 80)
 	SetFundingRate(market, symbol, fundingRate)
 	return true, true, fundingRate
