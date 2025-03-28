@@ -59,7 +59,7 @@ func LogChanHandler(apiUrl, serverName string) {
 	for !Terminal {
 		glcData := <-logChan
 		//glcData.ServerName = serverName
-		if apiUrl == `local` || glcData.LogLevel == LogLevelLocal {
+		if apiUrl == `local` {
 			if localCount%10000 == 0 {
 				if localFile != nil {
 					_ = localFile.Close()
@@ -88,8 +88,19 @@ func LogChanHandler(apiUrl, serverName string) {
 }
 
 func Log(logLevel, content string) {
-	glcData := cmn.GlcData{Text: content, LogLevel: logLevel}
-	logChan <- glcData
+	if logLevel == LogLevelLocal {
+		if localCount%10000 == 0 {
+			if localFile != nil {
+				_ = localFile.Close()
+			}
+			localLogger, localFile, _ = initLog(getPath("local"))
+		}
+		localCount++
+		localLogger.Println(content)
+	} else {
+		glcData := cmn.GlcData{Text: content, LogLevel: logLevel}
+		logChan <- glcData
+	}
 }
 
 func InfoSync(msg string) {
