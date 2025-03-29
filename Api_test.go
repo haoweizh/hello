@@ -188,7 +188,7 @@ func Test_WsAndOrderApi(t *testing.T) {
 		price := tick.Bids[len(tick.Bids)-1].Price * 1.05
 		amount := 20 / price
 		order := api.PlaceOrder(account, orderSide, orderType, market,
-			symbol, ``, `test`, ``, price, price, amount, false, nil)
+			symbol, ``, ``, `test`, ``, price, price, amount, false, nil)
 		fmt.Println(fmt.Sprintf(`1. place order return %#v`, order))
 		if order != nil && order.OrderId != `` {
 			queryOrder := api.QueryOrderById(account, market, symbol, orderType, order.OrderId)
@@ -637,7 +637,7 @@ func Test_Order(t *testing.T) {
 	//go api.MaintainConns(market)
 	//time.Sleep(5 * time.Second)
 	symbol := `SHELL_USDT`
-	order1 := api.PlaceOrder(account, model.OrderSideSell, model.OrderTypeLimit, market, symbol, ``, `test`, ``,
+	order1 := api.PlaceOrder(account, model.OrderSideSell, model.OrderTypeLimit, market, symbol, ``, ``, `test`, ``,
 		0.33, 0.33, 20, false, nil)
 	fmt.Println(fmt.Sprintf(`%#v`, order1))
 	//go func() {
