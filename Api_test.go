@@ -629,17 +629,18 @@ func Test_GetPrice(t *testing.T) {
 }
 
 func Test_Order(t *testing.T) {
-	market := model.Gate
+	//market := model.Gate
 	model.NewConfig()
-	//model.AppDB, _ = gorm.Open(postgres.Open(model.AppConfig.DBConnection), &gorm.Config{})
-	account := model.GetAccounts(0)[market]
-	api.InitMarketInfos(market)
+	model.AppDB, _ = gorm.Open(postgres.Open(model.AppConfig.DBConnection), &gorm.Config{})
+	cross.GetCoinTraded(0)
+	//account := model.GetAccounts(0)[market]
+	//api.InitMarketInfos(market)
 	//go api.MaintainConns(market)
 	//time.Sleep(5 * time.Second)
-	symbol := `SHELL_USDT`
-	order1 := api.PlaceOrder(account, model.OrderSideSell, model.OrderTypeLimit, market, symbol, ``, ``, `test`, ``,
-		0.33, 0.33, 20, false, nil)
-	fmt.Println(fmt.Sprintf(`%#v`, order1))
+	//symbol := `SHELL_USDT`
+	//order1 := api.PlaceOrder(account, model.OrderSideSell, model.OrderTypeLimit, market, symbol, ``, ``, `test`, ``,
+	//	0.33, 0.33, 20, false, nil)
+	//fmt.Println(fmt.Sprintf(`%#v`, order1))
 	//go func() {
 	//	for {
 	//		for _, mk := range markets {

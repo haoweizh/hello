@@ -575,7 +575,7 @@ func holdPage(c *gin.Context) {
 			util.Log(util.LogLevelInfo, fmt.Sprintf(`fail to close DB for funding rows`))
 		}
 	}
-	c.HTML(http.StatusOK, `hold.gohtml`, gin.H{`marketValue`: marketValues, `trade`: tradeInfo, `orders`: orders,
+	c.HTML(http.StatusOK, `hold.gohtml`, gin.H{`marketValue`: marketValues, `coins`: cross.GetCoinTraded(index), `trade`: tradeInfo, `orders`: orders,
 		`holdings`: cross.GetHoldings(queryAccounts), `fundingFee`: fmt.Sprintf(`资费%.2f+利息%.2f=%.2f`,
 			fundingFee, interestFee, fundingFee+interestFee)})
 }

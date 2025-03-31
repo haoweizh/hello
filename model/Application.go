@@ -81,6 +81,7 @@ const FunctionLiq = `liquidate`
 const WSTypeTicker = `ticker`
 const Open = `open`
 const Close = `close`
+const Switch = `switch`
 const ReduceOnly = `reduceOnly`
 const SpotLeverage = `leverage`
 const CloseContract = `closeContract`

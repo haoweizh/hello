@@ -107,6 +107,81 @@ func handledFRate(status *model.CarryStatus, marketInfo *model.MarketInfo, price
 	return
 }
 
+// GetCoinTraded 当日买入和卖出的open close switch分别的总数量，均价（包含滑点的价格），总金额，按总金额大小排序各个币种
+func GetCoinTraded(accountIndex int) (tradeInfos [][]interface{}) {
+	coinRows, _ := model.AppDB.Model(&model.Order{}).Select(`coin`).Where(`order_time>? and refresh_type=? and account_index=?`,
+		util.GetToday().Format("2006-01-02"), model.FunctionCross, accountIndex).Group("coin").Having(`sum(price*abs(amount))>10000`).Order(
+		"sum(price*abs(amount)) desc").Rows()
+	tradeRows, _ := model.AppDB.Model(&model.Order{}).Select(`coin,function,order_side,sum(abs(amount)),avg(price)`).Where(
+		`order_time>? and refresh_type=? and account_index=?`, util.GetToday().Format("2006-01-02"), model.FunctionCross, accountIndex).Group(
+		`coin,function,order_side`).Rows()
+	if coinRows == nil || tradeRows == nil {
+		return
+	}
+	var coin, function, orderSide string
+	var amount, price float64
+	tradeAmount := make(map[string]float64)
+	tradePrice := make(map[string]float64)
+	tradeValue := make(map[string]float64)
+	for tradeRows.Next() {
+		err := tradeRows.Scan(&coin, &function, &orderSide, &amount, &price)
+		if err == nil {
+			tradeAmount[fmt.Sprintf(`%s|%s|%s`, coin, function, orderSide)] = amount
+			tradePrice[fmt.Sprintf(`%s|%s|%s`, coin, function, orderSide)] = price
+			tradeValue[fmt.Sprintf(`%s|%s|%s`, coin, function, orderSide)] = amount * price
+		}
+	}
+	//  0     1         2      3     4        5         6         7          8          0         10             11         12         13
+	// coin orderSide price amount value openAmount openPrice openValue closeAmount closePrice closeValue switchAmount switchPrice switchValue
+	tradeInfos = make([][]interface{}, 0)
+	for coinRows.Next() {
+		err := coinRows.Scan(&coin)
+		if err != nil {
+			continue
+		}
+		valueBuy := tradeValue[fmt.Sprintf(`%s|%s|%s`, coin, model.Open, model.OrderSideBuy)] +
+			tradeValue[fmt.Sprintf(`%s|%s|%s`, coin, model.Close, model.OrderSideBuy)] +
+			tradeValue[fmt.Sprintf(`%s|%s|%s`, coin, model.Switch, model.OrderSideBuy)]
+		valueSell := tradeValue[fmt.Sprintf(`%s|%s|%s`, coin, model.Open, model.OrderSideSell)] +
+			tradeValue[fmt.Sprintf(`%s|%s|%s`, coin, model.Close, model.OrderSideSell)] +
+			tradeValue[fmt.Sprintf(`%s|%s|%s`, coin, model.Switch, model.OrderSideSell)]
+		amountBuy := tradeAmount[fmt.Sprintf(`%s|%s|%s`, coin, model.Open, model.OrderSideBuy)] +
+			tradeAmount[fmt.Sprintf(`%s|%s|%s`, coin, model.Close, model.OrderSideBuy)] +
+			tradeAmount[fmt.Sprintf(`%s|%s|%s`, coin, model.Switch, model.OrderSideBuy)]
+		amountSell := tradeAmount[fmt.Sprintf(`%s|%s|%s`, coin, model.Open, model.OrderSideSell)] +
+			tradeAmount[fmt.Sprintf(`%s|%s|%s`, coin, model.Close, model.OrderSideSell)] +
+			tradeAmount[fmt.Sprintf(`%s|%s|%s`, coin, model.Switch, model.OrderSideSell)]
+		priceBuy, priceSell := 0.0, 0.0
+		if amountBuy > 0 {
+			priceBuy = valueBuy / amountBuy
+		}
+		if amountSell > 0 {
+			priceSell = valueSell / amountSell
+		}
+		tradeInfos = append(tradeInfos, []interface{}{coin, model.OrderSideBuy, priceBuy, amountBuy, valueBuy,
+			tradeAmount[fmt.Sprintf(`%s|%s|%s`, coin, model.Open, model.OrderSideBuy)],
+			tradePrice[fmt.Sprintf(`%s|%s|%s`, coin, model.Open, model.OrderSideBuy)],
+			tradeValue[fmt.Sprintf(`%s|%s|%s`, coin, model.Open, model.OrderSideBuy)],
+			tradeAmount[fmt.Sprintf(`%s|%s|%s`, coin, model.Close, model.OrderSideBuy)],
+			tradePrice[fmt.Sprintf(`%s|%s|%s`, coin, model.Close, model.OrderSideBuy)],
+			tradeValue[fmt.Sprintf(`%s|%s|%s`, coin, model.Close, model.OrderSideBuy)],
+			tradeAmount[fmt.Sprintf(`%s|%s|%s`, coin, model.Switch, model.OrderSideBuy)],
+			tradePrice[fmt.Sprintf(`%s|%s|%s`, coin, model.Switch, model.OrderSideBuy)],
+			tradeValue[fmt.Sprintf(`%s|%s|%s`, coin, model.Switch, model.OrderSideBuy)]})
+		tradeInfos = append(tradeInfos, []interface{}{coin, model.OrderSideBuy, priceSell, amountSell, valueSell,
+			tradeAmount[fmt.Sprintf(`%s|%s|%s`, coin, model.Open, model.OrderSideSell)],
+			tradePrice[fmt.Sprintf(`%s|%s|%s`, coin, model.Open, model.OrderSideSell)],
+			tradeValue[fmt.Sprintf(`%s|%s|%s`, coin, model.Open, model.OrderSideSell)],
+			tradeAmount[fmt.Sprintf(`%s|%s|%s`, coin, model.Close, model.OrderSideSell)],
+			tradePrice[fmt.Sprintf(`%s|%s|%s`, coin, model.Close, model.OrderSideSell)],
+			tradeValue[fmt.Sprintf(`%s|%s|%s`, coin, model.Close, model.OrderSideSell)],
+			tradeAmount[fmt.Sprintf(`%s|%s|%s`, coin, model.Switch, model.OrderSideSell)],
+			tradePrice[fmt.Sprintf(`%s|%s|%s`, coin, model.Switch, model.OrderSideSell)],
+			tradeValue[fmt.Sprintf(`%s|%s|%s`, coin, model.Switch, model.OrderSideSell)]})
+	}
+	return tradeInfos
+}
+
 func GetHoldings(accounts map[string]*model.Account) (holding [][]interface{}) {
 	holding = make([][]interface{}, 0)
 	coinHold := make(map[string]float64)

@@ -548,8 +548,11 @@ func GetBalances(account *model.Account, market string) (
 			}
 		}
 	}
-	//util.Notice(fmt.Sprintf(`get balances %s %s %f %d %#v`,
-	//	market, key[:5], totalInUsd, len(balances), success))
+	if balances == nil || len(balances) == 0 {
+		util.Log(util.LogLevelError, fmt.Sprintf(`get balances %s %s%#v %v empty`, market, account.Key, balances, success))
+		time.Sleep(time.Second * 5)
+		return GetBalances(account, market)
+	}
 	return success, balances, totalInUsd, collateral
 }
 
@@ -711,8 +714,11 @@ func GetPositions(account *model.Account, market string) (success bool, position
 		success, positions = getPositionsOKEX(account)
 		accountValue, availableU, mmr = total, collateral.Available, collateral.Rate
 	}
-	//util.Notice(fmt.Sprintf(`get positions %s %s %f %f %d %#v`,
-	//	market, key[:5], accountValue, availableU, len(positions), success))
+	if positions == nil || len(positions) == 0 {
+		util.Log(util.LogLevelError, fmt.Sprintf(`get empty positions %s %s %v %v`, market, account.Key, positions, success))
+		time.Sleep(time.Second * 5)
+		return GetPositions(account, market)
+	}
 	return success, positions, accountValue, availableU, mmr
 }
 
