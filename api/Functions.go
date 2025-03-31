@@ -511,6 +511,7 @@ func GetBalances(account *model.Account, market string) (
 	//if now-update < delaySeconds {
 	//	return true, balances, totalInUsd, collateral
 	//}
+	ignore := false
 	switch market {
 	//case model.BitgetSpot:
 	//	success, balances = deprecated.getBalanceBitgetSpot(key, secret)
@@ -524,6 +525,8 @@ func GetBalances(account *model.Account, market string) (
 		success, balances = getBalanceBinanceMargin(account.Key, account.Secret)
 	case model.Bybit:
 		success, balances, totalInUsd, collateral = getBalanceBybit(account.Key, account.Secret)
+	default:
+		ignore = true
 	}
 	accounts := model.AppConfig.GetAccounts(market)
 	if len(accounts) > 0 && !accounts[0].IsUnified && totalInUsd == 0 {
@@ -548,7 +551,7 @@ func GetBalances(account *model.Account, market string) (
 			}
 		}
 	}
-	if balances == nil || len(balances) == 0 {
+	if !ignore && (balances == nil || len(balances) == 0) {
 		util.Log(util.LogLevelLocal, fmt.Sprintf(`get empty balances %s %s%#v %v`, market, account.Key, balances, success))
 		time.Sleep(time.Second * 5)
 		lock.(*sync.Mutex).Lock()
@@ -697,6 +700,7 @@ func GetPositions(account *model.Account, market string) (success bool, position
 		time.Sleep(time.Millisecond * 100)
 		lock.(*sync.Mutex).Unlock()
 	}()
+	ignore := false
 	switch market {
 	//case model.BitgetPerp:
 	//	success, positions, accountValue, availableU, mmr = deprecated.getPositionsBitgetPerp(key, secret)
@@ -714,8 +718,10 @@ func GetPositions(account *model.Account, market string) (success bool, position
 		_, _, total, collateral := getBalanceOKEX(account)
 		success, positions = getPositionsOKEX(account)
 		accountValue, availableU, mmr = total, collateral.Available, collateral.Rate
+	default:
+		ignore = true
 	}
-	if positions == nil || len(positions) == 0 {
+	if !ignore && (positions == nil || len(positions) == 0) {
 		util.Log(util.LogLevelLocal, fmt.Sprintf(`get empty positions %s %s %v %v`, market, account.Key, positions, success))
 		time.Sleep(time.Second * 5)
 		lock.(*sync.Mutex).Unlock()
