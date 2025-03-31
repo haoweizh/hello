@@ -73,7 +73,7 @@ func createSpotMarket(account *model.Account, market string) (sm *spotMarket) {
 				}
 			}
 		}
-		util.Log(util.LogLevelInfo, fmt.Sprintf(`create spot market %s %d %#v %d`, market, account.Index, sm, len(balances)))
+		util.Log(util.LogLevelLocal, fmt.Sprintf(`create spot market %s %d %#v %d`, market, account.Index, sm, len(balances)))
 		//if collateral != nil {
 		//	util.Log(util.LogLevelInfo, fmt.Sprintf(`collateral for sm available u %s %f to %f maintain rate %f`,
 		//		market, sm.availableU, collateral.Available, collateral.Rate))
@@ -91,10 +91,11 @@ func createFromPosition(account *model.Account, setting *model.Setting) (carrySt
 	key := account.Key
 	value, ok := contractMarkets.Load(key)
 	if value == nil || !ok {
-		contractMarkets.Store(key, createContractMarket(account, setting.Market))
+		cm := createContractMarket(account, setting.Market)
+		contractMarkets.Store(key, cm)
 		value, _ = contractMarkets.Load(key)
 		spotValue, spotOk := spotMarkets.Load(key)
-		util.Log(util.LogLevelLocal, fmt.Sprintf(`success set cm %d %s`, account.Index, setting.Market))
+		util.Log(util.LogLevelLocal, fmt.Sprintf(`success set cm %d %s %v`, account.Index, setting.Market, cm))
 		if account.IsUnified && (spotValue == nil || !spotOk) {
 			spotMarkets.Store(key, createSpotMarket(account, setting.Market))
 		}
@@ -198,9 +199,10 @@ func createFromBalance(account *model.Account, setting *model.Setting) (carrySta
 	key := account.Key
 	value, ok := spotMarkets.Load(key)
 	if value == nil || !ok {
-		spotMarkets.Store(key, createSpotMarket(account, setting.Market))
+		sm := createSpotMarket(account, setting.Market)
+		spotMarkets.Store(key, sm)
 		value, ok = spotMarkets.Load(key)
-		util.Log(util.LogLevelLocal, fmt.Sprintf(`success set sm %d %s`, account.Index, setting.Market))
+		util.Log(util.LogLevelLocal, fmt.Sprintf(`success set sm %d %s %v`, account.Index, setting.Market, sm))
 	}
 	success, price := api.GetPriceForce(setting.Market, setting.Symbol, true)
 	if value == nil {
