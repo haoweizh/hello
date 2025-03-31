@@ -80,7 +80,7 @@ func createSpotMarket(account *model.Account, market string) (sm *spotMarket) {
 		//	sm.availableU = math.Min(sm.availableU, collateral.Available)
 		//}
 	} else {
-		util.Log(util.LogLevelError, fmt.Sprintf(`fail to createSpotMarket %s %s`, market, account.Key))
+		util.Log(util.LogLevelLocal, fmt.Sprintf(`fail to createSpotMarket %s %s`, market, account.Key))
 		return nil
 	}
 	return
