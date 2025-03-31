@@ -89,7 +89,7 @@ func LogChanHandler(apiUrl, serverName string) {
 
 func Log(logLevel, content string) {
 	if logLevel == LogLevelLocal {
-		if localCount%10000 == 0 {
+		if localCount%100000 == 0 {
 			if localFile != nil {
 				_ = localFile.Close()
 			}

@@ -208,7 +208,9 @@ func GetHoldings(accounts map[string]*model.Account) (holding [][]interface{}) {
 			_, price := api.GetPriceForce(setting.Market, setting.Symbol, false)
 			if marketType == model.MarketTypeSpot {
 				smValue, _ := spotMarkets.Load(account.Key)
-				util.Log(util.LogLevelLocal, fmt.Sprintf(`get sm %s %s %s`, setting.Market, account.Key, setting.Symbol))
+				if smValue == nil {
+					util.Log(util.LogLevelLocal, fmt.Sprintf(`get sm %s %s %s`, setting.Market, account.Key, setting.Symbol))
+				}
 				balance := smValue.(*spotMarket).balances[setting.Symbol]
 				if (balance != nil && balance.Amount != 0) || !setting.Valid || setting.MarketRelated != `` {
 					if setting.Valid && setting.MarketRelated == `` {
