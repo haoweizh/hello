@@ -8,6 +8,8 @@ import (
 type Order struct {
 	AccountIndex      int `gorm:"index:function_index_market_oid,unique"` // 记录配置账户序号index
 	Amount            float64
+	CoinPrice         float64 // 针对1000倍等类似的对应交易的币种价格
+	CoinAmount        float64 // 针对1000倍等类似的对应交易的币种数量
 	DealAmount        float64
 	DealPrice         float64
 	Fee               float64

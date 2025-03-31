@@ -888,6 +888,11 @@ func PlaceOrder(account *model.Account, orderSide, orderType, market, symbol, co
 			go postOrder(order)
 		}
 	}
+	setting := GetSetting(refreshType, market, symbol)
+	if setting != nil {
+		order.CoinPrice = order.Price / setting.GridAmount
+		order.CoinAmount = order.Amount * setting.GridAmount
+	}
 	model.AppDB.Save(order)
 	return order
 }

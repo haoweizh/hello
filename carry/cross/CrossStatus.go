@@ -110,9 +110,9 @@ func handledFRate(status *model.CarryStatus, marketInfo *model.MarketInfo, price
 // GetCoinTraded 当日买入和卖出的open close switch分别的总数量，均价（包含滑点的价格），总金额，按总金额大小排序各个币种
 func GetCoinTraded(accountIndex int) (tradeInfos [][]interface{}) {
 	coinRows, _ := model.AppDB.Model(&model.Order{}).Select(`coin`).Where(`order_time>? and refresh_type=? and account_index=?`,
-		util.GetToday().Format("2006-01-02"), model.FunctionCross, accountIndex).Group("coin").Having(`sum(price*abs(amount))>10000`).Order(
-		"sum(price*abs(amount)) desc").Rows()
-	tradeRows, _ := model.AppDB.Model(&model.Order{}).Select(`coin,function,order_side,sum(abs(amount)),avg(price)`).Where(
+		util.GetToday().Format("2006-01-02"), model.FunctionCross, accountIndex).Group("coin").Having(`sum(coin_price*abs(coin_amount))>10000`).Order(
+		"sum(coin_price*abs(coin_amount)) desc").Rows()
+	tradeRows, _ := model.AppDB.Model(&model.Order{}).Select(`coin,function,order_side,sum(abs(coin_amount)),avg(coin_price)`).Where(
 		`order_time>? and refresh_type=? and account_index=?`, util.GetToday().Format("2006-01-02"), model.FunctionCross, accountIndex).Group(
 		`coin,function,order_side`).Rows()
 	if coinRows == nil || tradeRows == nil {
