@@ -28,27 +28,6 @@
         </tr>
     {{end}}
 </table>
-<h4>交易概览表</h4>
-<table border="1" cellspacing="0">
-    <th>市场</th>
-    <th>日期</th>
-    <th>方向</th>
-    <th>交易额/USD</th>
-    <th>类型</th>
-    <th>单数</th>
-    <th>找平率</th>
-    {{range $i, $value := $.trade}}
-        <tr>
-            <td>{{index $value 0}}</td>
-            <td>{{index $value 1}}</td>
-            <td>{{index $value 2}}</td>
-            <td>{{index $value 3}}</td>
-            <td>{{index $value 4}}</td>
-            <td>{{index $value 5}}</td>
-            <td>{{index $value 6}}%</td>
-        </tr>
-    {{end}}
-</table>
 <h4>近期失败下单</h4>
 <table border="1" cellspacing="0">
     <th>id</th>
@@ -101,6 +80,27 @@
                 <td bgcolor="#FF0000">{{index $value 8}}</td>
                 <td bgcolor="#FF0000">{{index $value 9}}</td>
             {{end}}
+        </tr>
+    {{end}}
+</table>
+<h4>交易概览表</h4>
+<table border="1" cellspacing="0">
+    <th>市场</th>
+    <th>日期</th>
+    <th>方向</th>
+    <th>交易额/USD</th>
+    <th>类型</th>
+    <th>单数</th>
+    <th>找平率</th>
+    {{range $i, $value := $.trade}}
+        <tr>
+            <td>{{index $value 0}}</td>
+            <td>{{index $value 1}}</td>
+            <td>{{index $value 2}}</td>
+            <td>{{index $value 3}}</td>
+            <td>{{index $value 4}}</td>
+            <td>{{index $value 5}}</td>
+            <td>{{index $value 6}}%</td>
         </tr>
     {{end}}
 </table>

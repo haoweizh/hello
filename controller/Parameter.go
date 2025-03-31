@@ -451,7 +451,7 @@ func holdPage(c *gin.Context) {
 		strconv.FormatFloat(inAll[3], 'f', 0, 64), strconv.FormatFloat(inAll[4], 'f', 0, 64),
 		strconv.FormatFloat(inAll[5], 'f', 0, 64), strconv.FormatFloat(inAll[6], 'f', 0, 64)})
 	tradeInfo := make([][]string, 0)
-	duration, _ := time.ParseDuration(`-96h`)
+	duration, _ := time.ParseDuration(`-48h`)
 	timeBegin := time.Now().Add(duration)
 	timeBegin = time.Date(timeBegin.Year(), timeBegin.Month(), timeBegin.Day(), 0, 0, 0, 0, timeBegin.Location())
 	compRows, _ := model.AppDB.Model(model.Order{}).Select(`market,order_side,date(order_time),sum(price*abs(amount))`).
@@ -471,7 +471,7 @@ func holdPage(c *gin.Context) {
 		}
 	}
 	carryRows, _ := model.AppDB.Model(model.Order{}).Select(`account_index,order_side,sum(price*abs(amount)),date(order_time),count(*),refresh_type`).
-		Where(`refresh_type!=?`, model.FunctionSimulation).
+		Where(`refresh_type!=? and order_time>?`, model.FunctionSimulation, timeBegin.Format("2006-01-02")).
 		Group(`order_side,date(order_time),account_index,refresh_type`).Order(`date(order_time) desc`).Rows()
 	if carryRows != nil {
 		crossInU := map[string]map[string]float64{}
@@ -514,7 +514,7 @@ func holdPage(c *gin.Context) {
 		//	indexStr, ``, model.OrderSideBuy, 0, 1.2, model.OrderSideSell, 0, 1.2).Order(`order_time desc`).Limit(100).Rows()
 		Where(`account_index=? and refresh_type!=? and ((client_ord_id=order_id and order_time<?) or status=? or refresh_type!=?)`,
 			indexStr, `liquidate`, time.Now().Add(-time.Minute*2), `fail`, model.FunctionCross).
-		Order(`order_time desc`).Limit(300).Rows()
+		Order(`order_time desc`).Limit(100).Rows()
 	if carryRows != nil {
 		for carryRows.Next() {
 			var orderId, market, symbol, orderSide, refreshType, errCode, status string

@@ -168,7 +168,7 @@ func GetCoinTraded(accountIndex int) (tradeInfos [][]interface{}) {
 			tradeAmount[fmt.Sprintf(`%s|%s|%s`, coin, model.Switch, model.OrderSideBuy)],
 			tradePrice[fmt.Sprintf(`%s|%s|%s`, coin, model.Switch, model.OrderSideBuy)],
 			tradeValue[fmt.Sprintf(`%s|%s|%s`, coin, model.Switch, model.OrderSideBuy)]})
-		tradeInfos = append(tradeInfos, []interface{}{coin, model.OrderSideBuy, priceSell, amountSell, valueSell,
+		tradeInfos = append(tradeInfos, []interface{}{coin, model.OrderSideSell, priceSell, amountSell, valueSell,
 			tradeAmount[fmt.Sprintf(`%s|%s|%s`, coin, model.Open, model.OrderSideSell)],
 			tradePrice[fmt.Sprintf(`%s|%s|%s`, coin, model.Open, model.OrderSideSell)],
 			tradeValue[fmt.Sprintf(`%s|%s|%s`, coin, model.Open, model.OrderSideSell)],
