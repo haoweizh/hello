@@ -549,8 +549,9 @@ func GetBalances(account *model.Account, market string) (
 		}
 	}
 	if balances == nil || len(balances) == 0 {
-		util.Log(util.LogLevelError, fmt.Sprintf(`get balances %s %s%#v %v empty`, market, account.Key, balances, success))
+		util.Log(util.LogLevelLocal, fmt.Sprintf(`get empty balances %s %s%#v %v`, market, account.Key, balances, success))
 		time.Sleep(time.Second * 5)
+		lock.(*sync.Mutex).Lock()
 		return GetBalances(account, market)
 	}
 	return success, balances, totalInUsd, collateral
@@ -715,8 +716,9 @@ func GetPositions(account *model.Account, market string) (success bool, position
 		accountValue, availableU, mmr = total, collateral.Available, collateral.Rate
 	}
 	if positions == nil || len(positions) == 0 {
-		util.Log(util.LogLevelError, fmt.Sprintf(`get empty positions %s %s %v %v`, market, account.Key, positions, success))
+		util.Log(util.LogLevelLocal, fmt.Sprintf(`get empty positions %s %s %v %v`, market, account.Key, positions, success))
 		time.Sleep(time.Second * 5)
+		lock.(*sync.Mutex).Unlock()
 		return GetPositions(account, market)
 	}
 	return success, positions, accountValue, availableU, mmr

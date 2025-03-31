@@ -83,6 +83,42 @@
         </tr>
     {{end}}
 </table>
+
+<h4>币种交易表</h4>
+<table border="1" cellspacing="0">
+    <th>coin</th>
+    <th>side</th>
+    <th>均价</th>
+    <th>总量</th>
+    <th>价值</th>
+    <th>开量</th>
+    <th>开价</th>
+    <th>开值</th>
+    <th>关量</th>
+    <th>关价</th>
+    <th>关值</th>
+    <th>换量</th>
+    <th>换价</th>
+    <th>换值</th>
+    {{range $i, $value := $.coins}}
+        <tr>
+            <td>{{index $value 0}}</td>
+            <td>{{index $value 1}}</td>
+            <td>{{index $value 2}}</td>
+            <td>{{index $value 3}}</td>
+            <td>{{index $value 4}}</td>
+            <td>{{index $value 5}}</td>
+            <td>{{index $value 6}}</td>
+            <td>{{index $value 7}}</td>
+            <td>{{index $value 8}}</td>
+            <td>{{index $value 9}}</td>
+            <td>{{index $value 10}}</td>
+            <td>{{index $value 11}}</td>
+            <td>{{index $value 12}}</td>
+            <td>{{index $value 13}}</td>
+        </tr>
+    {{end}}
+</table>
 <h4>交易概览表</h4>
 <table border="1" cellspacing="0">
     <th>市场</th>
@@ -179,41 +215,6 @@
                 <td>{{index $value 10}}</td>
                 <td>{{index $value 11}}</td>
             {{end}}
-        </tr>
-    {{end}}
-</table>
-<h4>币种交易表</h4>
-<table border="1" cellspacing="0">
-    <th>coin</th>
-    <th>side</th>
-    <th>均价</th>
-    <th>总量</th>
-    <th>价值</th>
-    <th>开量</th>
-    <th>开价</th>
-    <th>开值</th>
-    <th>关量</th>
-    <th>关价</th>
-    <th>关值</th>
-    <th>换量</th>
-    <th>换价</th>
-    <th>换值</th>
-    {{range $i, $value := $.coins}}
-        <tr>
-            <td>{{index $value 0}}</td>
-            <td>{{index $value 1}}</td>
-            <td>{{index $value 2}}</td>
-            <td>{{index $value 3}}</td>
-            <td>{{index $value 4}}</td>
-            <td>{{index $value 5}}</td>
-            <td>{{index $value 6}}</td>
-            <td>{{index $value 7}}</td>
-            <td>{{index $value 8}}</td>
-            <td>{{index $value 9}}</td>
-            <td>{{index $value 10}}</td>
-            <td>{{index $value 11}}</td>
-            <td>{{index $value 12}}</td>
-            <td>{{index $value 13}}</td>
         </tr>
     {{end}}
 </table>
