@@ -10,7 +10,7 @@ import (
 )
 
 func GetWSSubscribes(market string, subTypes []string) []interface{} {
-	symbols := GetMarketSymbols(market, false)
+	symbols := GetMarketSymbols(market)
 	subscribes := make([]interface{}, 0)
 	for symbol := range symbols {
 		if len(strings.Trim(symbol, ` `)) == 0 {

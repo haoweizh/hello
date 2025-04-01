@@ -518,7 +518,7 @@ var perpBookWsHandler = func(market string, conn *model.WSConn, event []byte) {
 
 func WsTickServeBybit(market string) (socketMap map[*model.WSConn]bool, connectErr error) {
 	socketMap = make(map[*model.WSConn]bool)
-	symbols := GetMarketSymbols(model.Bybit, false)
+	symbols := GetMarketSymbols(model.Bybit)
 	spotSubBook := make([]interface{}, 0)
 	futureSubBook := make([]interface{}, 0)
 	futureSubTick := make([]interface{}, 0)
@@ -838,7 +838,7 @@ func setSymbolLeverageBybit(account *model.Account, symbol string) (setSuc bool)
 }
 
 func setBybitPerpLeverage(key, secret string) {
-	symbols := GetMarketSymbols(model.Bybit, false)
+	symbols := GetMarketSymbols(model.Bybit)
 	for symbol := range symbols {
 		success, marketType, _, dialectSymbol := model.GetFromStandard(model.Bybit, symbol)
 		if !success {

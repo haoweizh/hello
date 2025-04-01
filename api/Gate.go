@@ -129,7 +129,7 @@ func appendSpotMarketsGate(key, secret string, marketInfos map[string]*model.Mar
 
 // setLeverageGate 设置杠杆和risk limit
 func setLeverageGate(account *model.Account) (success bool) {
-	symbols := GetMarketSymbols(model.Gate, false)
+	symbols := GetMarketSymbols(model.Gate)
 	for symbol := range symbols {
 		_, marketType, _, _ := model.GetFromStandard(model.Gate, symbol)
 		if marketType == model.MarketTypePerp {
@@ -688,7 +688,7 @@ func WSOrderServeGate(account *model.Account, marketType string) {
 
 func WsTickServeGateSpot(market string) (socketMap map[*model.WSConn]bool, connectErr error) {
 	var spotSubs []interface{}
-	symbols := GetMarketSymbols(market, false)
+	symbols := GetMarketSymbols(market)
 	for symbol := range symbols {
 		if strings.LastIndex(symbol, model.UniStandardTail[model.MarketTypeSpot]) == len(symbol)-len(model.UniStandardTail[model.MarketTypeSpot]) &&
 			len(symbol)-len(model.UniStandardTail[model.MarketTypeSpot]) > 0 {
@@ -710,7 +710,7 @@ func WsTickServeGateSpot(market string) (socketMap map[*model.WSConn]bool, conne
 func WsTickServeGatePerp(market string) (socketMap map[*model.WSConn]bool, connectErr error) {
 	var futureSubs []interface{}
 	socketMap = make(map[*model.WSConn]bool)
-	symbols := GetMarketSymbols(market, false)
+	symbols := GetMarketSymbols(market)
 	for symbol := range symbols {
 		if strings.LastIndex(symbol, model.UniStandardTail[model.MarketTypePerp]) == len(symbol)-len(model.UniStandardTail[model.MarketTypePerp]) &&
 			len(symbol)-len(model.UniStandardTail[model.MarketTypePerp]) > 0 {
