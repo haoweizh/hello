@@ -522,10 +522,10 @@ func GetMarketSymbols(market string) map[string]bool {
 		if marketInfo != nil {
 			symbols[value.Symbol] = true
 		} else {
-			util.Log(util.LogLevelLocal, fmt.Sprintf(`no market info for %s %s`, market, value.Symbol))
+			util.LogLess(util.LogLevelLocal, fmt.Sprintf(`no market info for %s %s`, market, value.Symbol))
 		}
 	}
-	util.Log(util.LogLevelLocal, fmt.Sprintf(`get market symbols %s %d %v`, market, len(symbols), withMarketInfo))
+	util.Log(util.LogLevelLocal, fmt.Sprintf(`get market symbols %s %d`, market, len(symbols)))
 	return symbols
 }
 
