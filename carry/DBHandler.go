@@ -187,7 +187,7 @@ func Maintain() {
 	//go util.StartMidNightTimer(CancelAllOrders)
 	//go MaintainBalance()
 	//go MaintainTransFee()
-	api.InitApp(true)
+	api.InitApp()
 	initCross := false
 	for _, market := range model.AppEnvironment.Markets {
 		crossSettings := api.GetSettings(model.FunctionCross, market)

@@ -405,6 +405,12 @@ func handleMarketDynamic(market string) (handled bool) {
 		accounts == nil || len(accounts) == 0 {
 		return false
 	}
+	model.MarketInfos.Range(func(key, value any) bool {
+		if strings.Index(key.(string), market) == 0 {
+			model.MarketInfos.Delete(key)
+		}
+		return true
+	})
 	InitMarketInfos(market)
 	topLen := 70
 	if settingDynamicCombine != nil {
@@ -423,7 +429,7 @@ func handleMarketDynamic(market string) (handled bool) {
 	return true
 }
 
-func InitApp(refreshDynamic bool) bool {
+func InitApp() bool {
 	util.Log(util.LogLevelInfo, `begin to init app`)
 	if settingLoading {
 		return false
@@ -431,10 +437,8 @@ func InitApp(refreshDynamic bool) bool {
 	PrepareSettings()
 	handled := false
 	for _, market := range model.AppEnvironment.Markets {
-		if refreshDynamic {
-			if handleMarketDynamic(market) {
-				handled = true
-			}
+		if handleMarketDynamic(market) {
+			handled = true
 		}
 		if !handled {
 			InitMarketInfos(market)

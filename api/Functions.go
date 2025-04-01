@@ -1111,12 +1111,6 @@ func InitMarketInfos(market string) (success bool) {
 			util.Log(util.LogLevelInfo, fmt.Sprintf(`warning %s %s un-list from market`, market, setting.Symbol))
 		}
 	}
-	model.MarketInfos.Range(func(key, value any) bool {
-		if strings.Index(key.(string), market) == 0 && marketInfos != nil && len(marketInfos) > 0 {
-			model.MarketInfos.Delete(key)
-		}
-		return true
-	})
 	for symbol, info := range marketInfos {
 		util.StoreSyncMap(model.MarketInfos, info, market, symbol)
 	}
