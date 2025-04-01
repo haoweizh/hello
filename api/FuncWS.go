@@ -148,7 +148,6 @@ func CreateWSTick(environment *model.Environment, market string) (
 		util.Log(util.LogLevelError, market+` can not create depth server `+err.Error())
 	}
 	model.AppEnvironment.WsInitTime.Store(market, util.GetNow())
-	CheckSetProcessing(model.FunctionTickMaintain, market, ``, false)
 	return socketMap, channels
 }
 

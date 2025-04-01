@@ -519,6 +519,7 @@ func GetMarketSymbols(market string) map[string]bool {
 			continue
 		}
 		marketInfo, _ := util.LoadSyncMap(model.MarketInfos, market, value.Symbol)
+		// 无效symbol会造成交易所ticker返回异常，所以要进行过滤
 		if marketInfo != nil {
 			symbols[value.Symbol] = true
 		} else {
