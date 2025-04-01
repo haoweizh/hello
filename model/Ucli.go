@@ -93,7 +93,11 @@ func SubRecover(market, marketType string, channelType ChannelType) {
 		lenTopic := C.uint(len(topic))
 		publisher := C.init_market_publisher(cTopic, lenTopic)
 		if publisher != nil {
+			util.Log(util.LogLevelLocal, fmt.Sprintf("publish market %s %s %d %s",
+				market, marketType, channelType, msg))
 			C.publish_market(publisher, cMsg, lenTopic)
+			util.Log(util.LogLevelLocal, fmt.Sprintf("publish market done %s %s %d %s",
+				market, marketType, channelType, msg))
 		}
 	} else if channelType == ChanTypeOrder {
 		topic = topic + `_order_sub-recovery`
