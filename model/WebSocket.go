@@ -51,11 +51,11 @@ type WSConn struct {
 	WSChan chan []byte
 	//默认ws 使用ws  ChanTypeMarket 使用特殊通道market WSTypeOrder使用特殊通道order
 	WSType           ChannelType
-	MarketPublisher  *util.MarketPublisher
+	MarketPublisher  *MarketPublisher
 	MarketSubscriber []byte
-	MarketReceiver   *util.MarketReceiver
-	OrderPublisher   *util.OrderPublisher
-	OrderReceiver    *util.OrderReceiver
+	MarketReceiver   *MarketReceiver
+	OrderPublisher   *OrderPublisher
+	OrderReceiver    *OrderReceiver
 }
 
 func (wsConn *WSConn) Close() {
@@ -198,11 +198,11 @@ func newTsChannel(url, tsCode string, wsType ChannelType) (newCreate bool, wsCon
 	}
 	if wsType == ChanTypeMarket {
 		wsConn = &WSConn{conn: nil, WSType: wsType, WSChan: make(chan []byte, 50)}
-		wsConn.MarketPublisher, err = util.InitMarketPublisher(tsCode + "_m_sub")
+		wsConn.MarketPublisher, err = InitMarketPublisher(tsCode + "_m_sub")
 		if err != nil {
 			return false, nil, err
 		}
-		wsConn.MarketReceiver, err = util.InitMarketReceiver(tsCode + "_m_pub")
+		wsConn.MarketReceiver, err = InitMarketReceiver(tsCode + "_m_pub")
 		if err != nil {
 			return false, nil, err
 		}
@@ -211,11 +211,11 @@ func newTsChannel(url, tsCode string, wsType ChannelType) (newCreate bool, wsCon
 		return true, wsConn, nil
 	} else if wsType == ChanTypeOrder {
 		wsConn = &WSConn{conn: nil, WSType: wsType, WSChan: make(chan []byte, 50)}
-		wsConn.OrderPublisher, err = util.InitOrderPublisher(tsCode + "_order_sub")
+		wsConn.OrderPublisher, err = InitOrderPublisher(tsCode + "_order_sub")
 		if err != nil {
 			return false, nil, err
 		}
-		wsConn.OrderReceiver, err = util.InitOrderReceiver(tsCode + "_order_pub")
+		wsConn.OrderReceiver, err = InitOrderReceiver(tsCode + "_order_pub")
 		if err != nil {
 			return false, nil, err
 		}

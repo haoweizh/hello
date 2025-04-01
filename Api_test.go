@@ -932,10 +932,10 @@ func Test_SetLeverage(t *testing.T) {
 
 func Test_C(t *testing.T) {
 	// Initialize publishers and receivers
-	marketPublisher, _ := util.InitMarketPublisher("BTCUSDT")
-	orderPublisher, _ := util.InitOrderPublisher("BTCUSDT")
-	marketReceiver, _ := util.InitMarketReceiver("BTCUSDT")
-	orderReceiver, _ := util.InitOrderReceiver("BTCUSDT")
+	marketPublisher, _ := model.InitMarketPublisher("BTCUSDT")
+	orderPublisher, _ := model.InitOrderPublisher("BTCUSDT")
+	marketReceiver, _ := model.InitMarketReceiver("BTCUSDT")
+	orderReceiver, _ := model.InitOrderReceiver("BTCUSDT")
 
 	// Publish messages
 	msg := "{\"id\": \"187d3cb2-942d-484c-8271-4e2141bbadb1\",\"method\": \"time\"}"

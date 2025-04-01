@@ -1,5 +1,4 @@
-// ucli/ucli.go
-package util
+package model
 
 /*
 #cgo CFLAGS: -I/usr/local/include
@@ -62,6 +61,50 @@ func InitOrderPublisher(topic string) (*OrderPublisher, error) {
 	}
 	return &OrderPublisher{oPublisher: publisher}, nil
 }
+
+// SubRecover
+// 只有gate需要传入marketType
+func SubRecover(market, marketType string, channelType ChannelType) {
+	topic := ``
+	switch market {
+	case BinanceSpot:
+		topic = `bs`
+	case BinancePerp:
+		topic = `bf`
+	case Gate:
+		if marketType == MarketTypePerp {
+			topic = `gf`
+		} else if marketType == MarketTypeSpot {
+			topic = `gs`
+		}
+	case OKEX:
+		topic = `ok`
+	}
+	msg := `recovery`
+	cMsg := C.CString(`recovery`)
+	defer C.free(unsafe.Pointer(cMsg))
+	lenTopicMsg := C.uint(len(msg))
+	if channelType == ChanTypeMarket {
+		topic = topic + `_m_sub-recovery`
+		cTopic := C.CString(topic)
+		defer C.free(unsafe.Pointer(cTopic))
+		lenTopic := C.uint(len(topic))
+		publisher := C.init_market_publisher(cTopic, lenTopic)
+		if publisher != nil {
+			C.publish_market(publisher, cMsg, lenTopic)
+		}
+	} else if channelType == ChanTypeOrder {
+		topic = topic + `_order_sub-recovery`
+		cTopic := C.CString(topic)
+		defer C.free(unsafe.Pointer(cTopic))
+		lenTopic := C.uint(len(topic))
+		publisher := C.init_order_publisher(cTopic, lenTopic)
+		if publisher != nil {
+			C.publish_order(publisher, cMsg, lenTopicMsg)
+		}
+	}
+}
+
 func InitMarketReceiver(topic string) (*MarketReceiver, error) {
 	cTopic := C.CString(topic)
 	if cTopic == nil {
