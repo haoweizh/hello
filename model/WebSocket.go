@@ -292,7 +292,7 @@ func publicHandler(market, url string, connection *WSConn, subHandler SubscribeH
 								stepSubscribes = subscribes[i*step:]
 							}
 							_ = subHandler(market, connection, stepSubscribes)
-							util.Log(util.LogLevelInfo, fmt.Sprintf(`chan need reconnect market %s %s sub %#v`,
+							util.Log(util.LogLevelLocal, fmt.Sprintf(`chan need reconnect market %s %s sub %#v`,
 								market, buf[:msgSize], stepSubscribes))
 							time.Sleep(time.Millisecond * 200)
 						}
@@ -359,7 +359,7 @@ var pubHandleSettle sync.Map // url - bool
 
 func WsPublicClient(market, url string, subscribes []interface{}, subHandler SubscribeHandler,
 	msgHandler MsgHandler, step int, noSpecialChan bool) (socketMap map[*WSConn]bool, connectErr error) {
-	util.Log(util.LogLevelInfo, market+` create depth channel `+url)
+	util.Log(util.LogLevelLocal, fmt.Sprintf(`create depth channel %s %s %v`, market, url, subscribes))
 	AppEnvironment.PubSubscribes.Store(fmt.Sprintf("%s*%s", market, url), subscribes)
 	socketMap = make(map[*WSConn]bool)
 	var stepSubscribes []interface{}
@@ -371,13 +371,16 @@ func WsPublicClient(market, url string, subscribes []interface{}, subHandler Sub
 		}
 		newCreate, connection, err := initChannel(nil, url, market, ChanTypeMarket, noSpecialChan)
 		if err != nil || connection == nil {
-			util.Log(util.LogLevelError, fmt.Sprintf("can not create web socket %s %s %#v", market, url, err))
+			util.Log(util.LogLevelLocal, fmt.Sprintf("can not create web socket %s %s %#v", market, url, err))
 			return nil, err
 		}
 		go func() {
-			_ = subHandler(market, connection, stepSubscribes)
 			settle, ok := pubHandleSettle.Load(url)
-			util.Log(util.LogLevelInfo, fmt.Sprintf("subscribe WsPublicClient %s %s %v %v %v", market, url, stepSubscribes, ok, settle))
+			if market != Bybit {
+				util.Log(util.LogLevelLocal, fmt.Sprintf("subscribe WsPublicClient %s %d/%d %s %v %v %v",
+					market, i*step, len(subscribes), url, stepSubscribes, ok, settle))
+			}
+			_ = subHandler(market, connection, stepSubscribes)
 			if newCreate || !ok || settle.(bool) == false {
 				pubHandleSettle.Store(url, true)
 				util.Log(util.LogLevelInfo, fmt.Sprintf("new create public chan %s %s", market, url))
