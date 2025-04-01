@@ -151,7 +151,7 @@ func (mp *MarketPublisher) PublishMarket(msg string) error {
 	if cMsg == nil {
 		return errors.New("PublishMarket:trans go.msg to c.msg error")
 	}
-	util.Log(util.LogLevelLocal, fmt.Sprintf("publish market %s", msg))
+	//util.Log(util.LogLevelLocal, fmt.Sprintf("publish market %s", msg))
 	defer C.free(unsafe.Pointer(cMsg))
 	lenTopic := C.uint(len(msg))
 	C.publish_market(mp.mPublisher, cMsg, lenTopic)

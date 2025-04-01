@@ -131,6 +131,7 @@ func ManageConnTicks(market string) (reset bool) {
 		if api.GetSpecialChan(market) == 1 {
 			if market == model.Gate {
 				model.SubRecover(market, model.MarketTypePerp, model.ChanTypeMarket)
+				time.Sleep(time.Second)
 				model.SubRecover(market, model.MarketTypeSpot, model.ChanTypeMarket)
 			} else {
 				model.SubRecover(market, ``, model.ChanTypeMarket)
