@@ -103,12 +103,12 @@ func _(market string, symbols map[string]bool) (
 
 func CreateWSTick(environment *model.Environment, market string) (
 	socketMap map[*model.WSConn]bool, channels []chan struct{}) {
-	for !util.Terminal {
-		locking := CheckSetProcessing(model.FunctionTickMaintain, market, ``, true)
-		if !locking {
-			break
-		}
-		time.Sleep(time.Second)
+	locking, _ := util.LoadSyncMap(processing, model.FunctionTickMaintain, market, ``)
+	if locking != nil && locking.(bool) {
+		return
+	} else {
+		util.StoreSyncMap(processing, true, model.FunctionTickMaintain, market, ``)
+		defer util.StoreSyncMap(processing, false, model.FunctionTickMaintain, market, ``)
 	}
 	util.Log(util.LogLevelInfo, " create depth chan for "+market)
 	channels = make([]chan struct{}, 1)
