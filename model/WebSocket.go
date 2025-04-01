@@ -371,15 +371,13 @@ func WsPublicClient(market, url string, subscribes []interface{}, subHandler Sub
 		}
 		newCreate, connection, err := initChannel(nil, url, market, ChanTypeMarket, noSpecialChan)
 		if err != nil || connection == nil {
-			if err != nil {
-				util.Log(util.LogLevelError, fmt.Sprintf("can not create web socket %s %s %s", market, url, err.Error()))
-			}
+			util.Log(util.LogLevelError, fmt.Sprintf("can not create web socket %s %s %#v", market, url, err))
 			return nil, err
 		}
 		go func() {
 			_ = subHandler(market, connection, stepSubscribes)
 			settle, ok := pubHandleSettle.Load(url)
-			util.Log(util.LogLevelInfo, fmt.Sprintf("subscribe %s %s %v %v %v", market, url, stepSubscribes, ok, settle))
+			util.Log(util.LogLevelInfo, fmt.Sprintf("subscribe WsPublicClient %s %s %v %v %v", market, url, stepSubscribes, ok, settle))
 			if newCreate || !ok || settle.(bool) == false {
 				pubHandleSettle.Store(url, true)
 				util.Log(util.LogLevelInfo, fmt.Sprintf("new create public chan %s %s", market, url))
