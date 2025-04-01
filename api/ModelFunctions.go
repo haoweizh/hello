@@ -515,9 +515,12 @@ func GetMarketSymbols(market string, withMarketInfo bool) map[string]bool {
 	}
 	symbols := make(map[string]bool)
 	for _, value := range model.AppEnvironment.Settings {
+		if value.Market != market {
+			continue
+		}
 		if withMarketInfo {
-			marketInfo, getMarketInfo := util.LoadSyncMap(model.MarketInfos, market, value.Symbol)
-			if value.Market == market && marketInfo != nil && getMarketInfo {
+			marketInfo, _ := util.LoadSyncMap(model.MarketInfos, market, value.Symbol)
+			if marketInfo != nil {
 				symbols[value.Symbol] = true
 			} else {
 				util.Log(util.LogLevelLocal, fmt.Sprintf(`no market info for %s %s`, market, value.Symbol))

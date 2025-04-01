@@ -359,7 +359,8 @@ var pubHandleSettle sync.Map // url - bool
 
 func WsPublicClient(market, url string, subscribes []interface{}, subHandler SubscribeHandler,
 	msgHandler MsgHandler, step int, noSpecialChan bool) (socketMap map[*WSConn]bool, connectErr error) {
-	util.Log(util.LogLevelLocal, fmt.Sprintf(`create depth channel WsPublicClient %s %d %s`, market, len(subscribes), url))
+	util.Log(util.LogLevelLocal, fmt.Sprintf(`create depth channel WsPublicClient %s %d %s %v`,
+		market, len(subscribes), url, subscribes))
 	AppEnvironment.PubSubscribes.Store(fmt.Sprintf("%s*%s", market, url), subscribes)
 	socketMap = make(map[*WSConn]bool)
 	var stepSubscribes []interface{}
@@ -376,10 +377,6 @@ func WsPublicClient(market, url string, subscribes []interface{}, subHandler Sub
 		}
 		go func() {
 			settle, ok := pubHandleSettle.Load(url)
-			//if market != Bybit {
-			//	util.Log(util.LogLevelLocal, fmt.Sprintf("subscribe WsPublicClient %s %d/%d %s %v %v %v",
-			//		market, i*step, len(subscribes), url, stepSubscribes, ok, settle))
-			//}
 			_ = subHandler(market, connection, stepSubscribes)
 			if newCreate || !ok || settle.(bool) == false {
 				pubHandleSettle.Store(url, true)
