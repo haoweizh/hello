@@ -1482,7 +1482,7 @@ func setAutoBorrowRepayOkx(account *model.Account) (success bool) {
 }
 
 func setLeverageOkx(account *model.Account) (success bool) {
-	symbols := GetMarketSymbols(model.OKEX)
+	symbols := GetMarketSymbols(model.OKEX, false)
 	for symbol := range symbols {
 		setSymbolLeverageOkx(account, symbol)
 		time.Sleep(time.Millisecond * 200)

@@ -86,7 +86,7 @@ func RequireConnTickReset(environment *model.Environment, market string) bool {
 	now := time.Now().UnixMilli()
 	validSymbolNum := 0
 	validSymbols := make(map[string]bool)
-	symbols := GetMarketSymbols(market)
+	symbols := GetMarketSymbols(market, true)
 	for symbol := range symbols {
 		if len(strings.Trim(symbol, ` `)) == 0 {
 			validSymbolNum++

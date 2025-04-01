@@ -475,11 +475,11 @@ func cancelOrdersBinancePerp(key, secret string, symbol string) bool {
 	return true
 }
 
-func GetTradingStatusBinancePerp(account *model.Account) {
-	responseBody := signedRequestBinance(account.Key, account.Secret, model.BinancePerp, http.MethodGet,
-		restBinancePerp+"/fapi/v1/apiTradingStatus", true, nil)
-	util.Log(util.LogLevelLocal, string(responseBody))
-}
+//func GetTradingStatusBinancePerp(account *model.Account) {
+//	responseBody := signedRequestBinance(account.Key, account.Secret, model.BinancePerp, http.MethodGet,
+//		restBinancePerp+"/fapi/v1/apiTradingStatus", true, nil)
+//	util.Log(util.LogLevelLocal, string(responseBody))
+//}
 
 // sdk暂不支持该接口
 func getPositionsBinancePerp(key, secret string) (success bool, positions []*model.Position, accountValue, availableU, mmr float64) {
@@ -837,7 +837,7 @@ func setSymbolLeverageBinancePerp(account *model.Account, symbol string) (succes
 }
 
 func setLeverageBinancePerp(key, secret string) (success bool) {
-	symbols := GetMarketSymbols(model.BinancePerp)
+	symbols := GetMarketSymbols(model.BinancePerp, false)
 	for symbol, value := range symbols {
 		if value == false {
 			continue

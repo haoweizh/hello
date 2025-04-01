@@ -487,7 +487,7 @@ func initMarketMode(account *model.Account, market string) {
 	}
 }
 
-func GetMarketSymbols(market string) map[string]bool {
+func GetMarketSymbols(market string, withMarketInfo bool) map[string]bool {
 	if model.AppConfig.Env == `test` {
 		if market == model.BinancePerp {
 			return map[string]bool{`1000BONK_PERP`: true, `1000SHIB_PERP`: true, `AAVE_PERP`: true, `ADA_PERP`: true, `APE_PERP`: true, `APT_PERP`: true, `ARB_PERP`: true, `ATOM_PERP`: true,
@@ -514,12 +514,17 @@ func GetMarketSymbols(market string) map[string]bool {
 		return nil
 	}
 	symbols := make(map[string]bool)
+	if !withMarketInfo {
+		util.Log(util.LogLevelLocal, fmt.Sprintf(`get market symbols %s %d %v`, market, len(symbols), withMarketInfo))
+		return symbols
+	}
 	for _, value := range model.AppEnvironment.Settings {
 		marketInfo, getMarketInfo := util.LoadSyncMap(model.MarketInfos, market, value.Symbol)
 		if value.Market == market && marketInfo != nil && getMarketInfo {
 			symbols[value.Symbol] = true
 		}
 	}
+	util.Log(util.LogLevelLocal, fmt.Sprintf(`get market symbols %s %d %v`, market, len(symbols), withMarketInfo))
 	return symbols
 }
 

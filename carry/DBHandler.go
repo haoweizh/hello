@@ -128,16 +128,15 @@ func ManageConnTicks(market string) (reset bool) {
 	} else if api.RequireConnTickReset(model.AppEnvironment, market) {
 		reset = true
 		if api.GetSpecialChan(market) == 1 {
-			//if market == model.Gate {
-			//	model.SubRecover(market, model.MarketTypePerp, model.ChanTypeMarket)
-			//	model.SubRecover(market, model.MarketTypeSpot, model.ChanTypeMarket)
-			//} else {
-			//	model.SubRecover(market, ``, model.ChanTypeMarket)
-			//}
+			if market == model.Gate {
+				model.SubRecover(market, model.MarketTypePerp, model.ChanTypeMarket)
+				model.SubRecover(market, model.MarketTypeSpot, model.ChanTypeMarket)
+			} else {
+				model.SubRecover(market, ``, model.ChanTypeMarket)
+			}
 			util.Log(util.LogLevelLocal, fmt.Sprintf(`special chan reset %s`, market))
-		} else {
-			api.CreateWSTick(model.AppEnvironment, market)
 		}
+		api.CreateWSTick(model.AppEnvironment, market)
 	}
 	//var settingMonitors []*model.SettingMonitor
 	//model.AppDB.Find(&settingMonitors)

@@ -518,7 +518,7 @@ var perpBookWsHandler = func(market string, conn *model.WSConn, event []byte) {
 
 func WsTickServeBybit(market string) (socketMap map[*model.WSConn]bool, connectErr error) {
 	socketMap = make(map[*model.WSConn]bool)
-	symbols := GetMarketSymbols(model.Bybit)
+	symbols := GetMarketSymbols(model.Bybit, false)
 	spotSubBook := make([]interface{}, 0)
 	futureSubBook := make([]interface{}, 0)
 	futureSubTick := make([]interface{}, 0)
@@ -838,7 +838,7 @@ func setSymbolLeverageBybit(account *model.Account, symbol string) (setSuc bool)
 }
 
 func setBybitPerpLeverage(key, secret string) {
-	symbols := GetMarketSymbols(model.Bybit)
+	symbols := GetMarketSymbols(model.Bybit, false)
 	for symbol := range symbols {
 		success, marketType, _, dialectSymbol := model.GetFromStandard(model.Bybit, symbol)
 		if !success {
@@ -1319,12 +1319,12 @@ func getInterestBybit(key, secret string) (interestDay map[string]float64) {
 // 返回值:
 //
 //	vipLevel - 以字符串形式返回账户的VIP等级，如果获取失败则返回"No VIP"。
-func getApikeyBybit(account *model.Account) (vipLevel string) {
-	response, _ := SignedRequestBybit(account.Key, account.Secret, http.MethodGet, bybitRestUrl, "/v5/user/query-api", nil)
-	loanJson, err := util.NewJSON(response)
-	if loanJson == nil || err != nil || loanJson.Get(`result`) == nil || loanJson.Get(`retCode`).MustInt() != 0 {
-		util.Log(util.LogLevelError, fmt.Sprintf(`market %s to getInterest http error %v `, model.Bybit, err))
-		return "No VIP"
-	}
-	return loanJson.GetPath(`result`, `vipLevel`).MustString()
-}
+//func getApikeyBybit(account *model.Account) (vipLevel string) {
+//	response, _ := SignedRequestBybit(account.Key, account.Secret, http.MethodGet, bybitRestUrl, "/v5/user/query-api", nil)
+//	loanJson, err := util.NewJSON(response)
+//	if loanJson == nil || err != nil || loanJson.Get(`result`) == nil || loanJson.Get(`retCode`).MustInt() != 0 {
+//		util.Log(util.LogLevelError, fmt.Sprintf(`market %s to getInterest http error %v `, model.Bybit, err))
+//		return "No VIP"
+//	}
+//	return loanJson.GetPath(`result`, `vipLevel`).MustString()
+//}
