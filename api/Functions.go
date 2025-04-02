@@ -712,9 +712,9 @@ func GetPositions(account *model.Account, market string) (success bool, position
 		success, positions, _ = getPositionsBybit(account.Key, account.Secret)
 		accountValue, availableU, mmr = total, collateral.Available, collateral.Rate
 	case model.OKEX:
-		_, _, total, collateral := getBalanceOKEX(account)
+		_, _, _, collateral := getBalanceOKEX(account)
 		success, positions = getPositionsOKEX(account)
-		accountValue, availableU, mmr = total, collateral.Available, collateral.Rate
+		accountValue, availableU, mmr = collateral.AccountValueInU, collateral.Available, collateral.Rate
 	default:
 		ignore = true
 	}

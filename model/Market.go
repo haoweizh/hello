@@ -213,9 +213,7 @@ func (environment *Environment) SetBidAsk(market, symbol string, bidAsk *BidAsk)
 	//	util.StoreSyncMap(&environment.BidAsk, bidAsk, market, symbol)
 	//	return true
 	//}
-	if time.Now().Second() == 0 {
-		go AppMetric.AddTick(market, symbol, util.GetNow(), nil, bidAsk)
-	}
+	go AppMetric.AddTick(market, symbol, util.GetNow(), nil, bidAsk)
 	util.StoreSyncMap(&environment.BidAsk, bidAsk, market, symbol)
 	return true
 }

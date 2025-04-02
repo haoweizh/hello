@@ -281,7 +281,7 @@ var wsAccountHandlerOKEX = func(market, key string, event []byte) {
 				if value[`ccy`] != nil && value[`ccy`].(string) == `USDT` {
 					//collateral.Available, _ = strconv.ParseFloat(value[`availEq`].(string), 64) // 可用保证金
 					collateral.Available = collateral.Available - collateral.Occupied
-					collateral.AccountValueInU, _ = strconv.ParseFloat(dataArray[0].(map[string]interface{})[`totalEq`].(string), 64)
+					//collateral.AccountValueInU, _ = strconv.ParseFloat(dataArray[0].(map[string]interface{})[`totalEq`].(string), 64)
 					//util.Log(util.LogLevelInfo, fmt.Sprintf("okex unified %s %f", collateral.AccountKey, collateral.Available))
 					model.CollateralHandler(key, ``, false, collateral)
 				} else if value[`ccy`] != nil {
@@ -289,6 +289,9 @@ var wsAccountHandlerOKEX = func(market, key string, event []byte) {
 				}
 			}
 			model.CrossBalancesHandler(market, key, balances)
+		}
+		if data[`totalEq`] != nil {
+			collateral.AccountValueInU, _ = strconv.ParseFloat(data[`totalEq`].(string), 64)
 		}
 	}
 	//https://www.okx.com/docs-v5/zh/#trading-account-websocket-positions-channel
@@ -1422,7 +1425,7 @@ func getBalanceOKEX(account *model.Account) (success bool, balances []*model.Bal
 	if data[`totalEq`] != nil {
 		totalInUsd, _ = strconv.ParseFloat(data[`totalEq`].(string), 64)
 	}
-	collateral = &model.Collateral{}
+	collateral = &model.Collateral{AccountValueInU: totalInUsd}
 	//if data[`details`] != nil {
 	//for _, item := range data[`details`].([]interface{}) {
 	//value := item.(map[string]interface{})

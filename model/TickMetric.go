@@ -78,10 +78,16 @@ func (metricManager *MetricManager) AddCarry(mark string, carryOpen, carryClose 
 	metricManager.carryHour.Store(key, carryMetric)
 }
 
+var tickClearTime time.Time
+
 func (metricManager *MetricManager) AddTick(market, symbol string, current time.Time, lastBidAsk, bidAsk *BidAsk) {
 	//key := fmt.Sprintf(`%s*%s%d/%d_%d`, market, symbol, current.Month(), current.Day(), current.Hour())
 	if current.Second() != 0 {
 		return
+	}
+	if current.Unix()-tickClearTime.Unix() > 3600 {
+		metricManager.tickHour.Clear()
+		tickClearTime = current
 	}
 	key := fmt.Sprintf(`%s %s %d`, market, symbol, current.Hour())
 	value, ok := metricManager.tickHour.Load(key)
