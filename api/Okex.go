@@ -273,6 +273,7 @@ var wsAccountHandlerOKEX = func(market, key string, event []byte) {
 		collateral.Occupied, _ = strconv.ParseFloat(dataArray[0].(map[string]interface{})[`imr`].(string), 64) // 被占用保证金
 		collateral.Rate, _ = strconv.ParseFloat(dataArray[0].(map[string]interface{})[`mgnRatio`].(string), 64)
 		collateral.Available, _ = strconv.ParseFloat(dataArray[0].(map[string]interface{})[`adjEq`].(string), 64)
+		collateral.AccountValueInU, _ = strconv.ParseFloat(dataArray[0].(map[string]interface{})[`totalEq`].(string), 64)
 		data := dataArray[0].(map[string]interface{})
 		if data[`details`] != nil {
 			balances := make([]*model.Balance, 0)
@@ -289,9 +290,6 @@ var wsAccountHandlerOKEX = func(market, key string, event []byte) {
 				}
 			}
 			model.CrossBalancesHandler(market, key, balances)
-		}
-		if data[`totalEq`] != nil {
-			collateral.AccountValueInU, _ = strconv.ParseFloat(data[`totalEq`].(string), 64)
 		}
 	}
 	//https://www.okx.com/docs-v5/zh/#trading-account-websocket-positions-channel
