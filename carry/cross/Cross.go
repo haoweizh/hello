@@ -450,6 +450,7 @@ var ClearCross = func() {
 	if model.AppConfig.Handle == `1` {
 		equalAccounts(doEqual, traceId)
 	}
+	syncGridHoldings()
 	//for _, market := range model.AppEnvironment.Markets {
 	//	go PostInit(market)
 	//}
@@ -562,6 +563,78 @@ func updateMoneyPerStep(account *model.Account) {
 		return true
 	})
 	return
+}
+
+func syncGridHoldings() {
+	value := api.GetCoinSettings(model.FunctionCross)
+	if value == nil {
+		return
+	}
+	value.Range(func(coin, settings interface{}) bool {
+		coinHolding := 0.0
+		valueCarryCoin, ok := util.LoadSyncMap(carryCoinMap, coin.(string), `0`)
+		if valueCarryCoin == nil || !ok {
+			util.Log(util.LogLevelError, fmt.Sprintf(`carryCoin not exist in %s`, coin.(string)))
+			return true
+		}
+		if settings == nil {
+			return true
+		}
+		price := 0.0
+		var priceSetting *model.Setting
+		for _, setting := range settings.([]*model.Setting) {
+			if price == 0 {
+				_, price = api.GetPriceForce(setting.Market, setting.Symbol, false)
+				price /= setting.GridAmount
+				priceSetting = setting
+			}
+			crossStyles := model.AppConfig.GetCrossStyles()
+			_, marketType, _, _ := model.GetFromStandard(setting.Market, setting.Symbol)
+			for i := 0; i < api.GetCrossLen(); i++ {
+				if crossStyles[i] != crossGrid {
+					continue
+				}
+				account := model.GetAccounts(i)[setting.Market]
+				if marketType == model.MarketTypeSpot {
+					sm, _ := spotMarkets.Load(account.Key)
+					if sm != nil {
+						balance := sm.(*spotMarket).balances[setting.Symbol]
+						if balance != nil && balance.Amount > 0 {
+							coinHolding += balance.Amount * setting.GridAmount
+						}
+					}
+				} else if marketType == model.MarketTypePerp {
+					cm, _ := contractMarkets.Load(account.Key)
+					if cm != nil {
+						position := cm.(*contractMarket).positions[setting.Symbol]
+						if position != nil && position.Holding > 0 {
+							coinHolding += position.Holding * setting.GridAmount
+						}
+					}
+				}
+			}
+		}
+		if price == 0 || priceSetting == nil {
+			return true
+		}
+		change := false
+		moneyInAll := coinHolding * price
+		carryCoin := valueCarryCoin.(*model.CarryCoin)
+		logMsg := fmt.Sprintf(`add trade deal money price %f sync %v`, price, carryCoin)
+		if carryCoin.CurrentStep == 0 && carryCoin.MoneyCurStep < model.SmallHolding {
+			carryCoin.MoneyCurStep = math.Min(moneyInAll, carryCoin.MoneyPerStep)
+			carryCoin.Holding = coinHolding
+			logMsg += fmt.Sprintf(`curStep %d`, carryCoin.CurrentStep)
+			change = true
+		}
+		if change {
+			model.AppDB.Model(&model.CarryCoin{}).Where(`coin=? and account_index=?`, valueCarryCoin.(*model.CarryCoin).Coin,
+				valueCarryCoin.(*model.CarryCoin).AccountIndex).Updates(map[string]interface{}{
+				`holding`: valueCarryCoin.(*model.CarryCoin).Holding, `current_step`: carryCoin.CurrentStep, `money_cur_step`: carryCoin.MoneyCurStep})
+			util.Log(util.LogLevelLocal, logMsg)
+		}
+		return true
+	})
 }
 
 func equalAccount(i int, equalChan chan int, accounts map[string]*model.Account, doEqual bool, traceId int64) {
