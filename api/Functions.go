@@ -872,7 +872,7 @@ func PlaceOrder(account *model.Account, orderSide, orderType, market, symbol, co
 		placeOrderBybit(account, isWs, order, orderParam)
 	}
 	if isWs {
-		model.AppEnvironment.ReqIdOrders.Store(order.ClientOrdId, order)
+		model.AppEnvironment.AddWsClientOrder(order.ClientOrdId, order)
 		util.Log(util.LogLevelInfo, fmt.Sprintf(`store order %s %s %s %s %s %#v`, market, coin, symbol, orderSide, order.ClientOrdId, order))
 	}
 	if !isWs || order.Status != model.CarryStatusWorking {

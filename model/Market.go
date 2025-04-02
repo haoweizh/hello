@@ -48,37 +48,61 @@ type WSResp struct {
 }
 
 type Environment struct {
-	markPriceInfos                    sync.Map // symbol - market - ticker 行情包含标记价格
-	BidAsk                            sync.Map // market*symbol - bidAsk
-	kLines                            sync.Map // symbol - market - *candle
-	MsgChanKLine                      sync.Map // market - []chan struct{}
-	WsInitTime                        sync.Map // market - time
-	ConnTick                          sync.Map // market(特殊处理gate） - map[*websocket.conn]bool for depth sockets
-	ConnOrder                         sync.Map // market*accountKey / Gate*marketType*accountKey - *WSConn;
-	ConnOrderUpdate                   sync.Map // market*accountKey / Gate*marketType*accountKey - *WSConn;
-	ReqIdOrders                       sync.Map // requestId - *Order
-	OrderIdOrders                     sync.Map // orderId - *Order
-	RiskLimitsGate                    sync.Map // accountKey * symbol - money in usdt
-	PauseTrade                        sync.Map // coin*market*symbol*key*orderSide bool
-	ADLSymbol                         sync.Map // market symbol key
-	WSRespChan                        chan WSResp
-	MonitorSettings                   sync.Map // sync.Map[market]*sync.Map[symbol]*sync.Map[interval]*sync.Map[address]*MonitorSetting
-	WsManager                         *WSManager
-	Markets                           []string
-	Settings                          []Setting
-	CrossEqualing, CrossPause, Moving bool
-	PriConnecting                     sync.Map // accountKey * market - bool
-	SpecialChans                      sync.Map // tsCode * wsType *WSConn
-	LastOrderMilli                    sync.Map // account.Key - last order time in million-seconds
-	PubChanNeedReset                  sync.Map // market - bool
-	PubSubscribes                     sync.Map // market*wsUrl - []interface{}
-	OkexPubMarkets                    sync.Map // channel*instid - string
-	FundingFeeToday                   sync.Map // account index*market*symbol - value in usdt
+	markPriceInfos                               sync.Map // symbol - market - ticker 行情包含标记价格
+	BidAsk                                       sync.Map // market*symbol - bidAsk
+	kLines                                       sync.Map // symbol - market - *candle
+	MsgChanKLine                                 sync.Map // market - []chan struct{}
+	WsInitTime                                   sync.Map // market - time
+	ConnTick                                     sync.Map // market(特殊处理gate） - map[*websocket.conn]bool for depth sockets
+	ConnOrder                                    sync.Map // market*accountKey / Gate*marketType*accountKey - *WSConn;
+	ConnOrderUpdate                              sync.Map // market*accountKey / Gate*marketType*accountKey - *WSConn;
+	ReqIdOrders                                  sync.Map // requestId - *Order
+	OrderIdOrders                                sync.Map // orderId - *Order
+	RiskLimitsGate                               sync.Map // accountKey * symbol - money in usdt
+	PauseTrade                                   sync.Map // coin*market*symbol*key*orderSide bool
+	ADLSymbol                                    sync.Map // market symbol key
+	WSRespChan                                   chan WSResp
+	MonitorSettings                              sync.Map // sync.Map[market]*sync.Map[symbol]*sync.Map[interval]*sync.Map[address]*MonitorSetting
+	WsManager                                    *WSManager
+	Markets                                      []string
+	Settings                                     []Setting
+	CrossEqualing, CrossPause, CrossStop, Moving bool
+	PriConnecting                                sync.Map // accountKey * market - bool
+	SpecialChans                                 sync.Map // tsCode * wsType *WSConn
+	LastOrderMilli                               sync.Map // account.Key - last order time in million-seconds
+	PubChanNeedReset                             sync.Map // market - bool
+	PubSubscribes                                sync.Map // market*wsUrl - []interface{}
+	OkexPubMarkets                               sync.Map // channel*instid - string
+	FundingFeeToday                              sync.Map // account index*market*symbol - value in usdt
 }
 
 type MarkPriceInfo struct {
 	MarkPrice float64
 	Ts        int // time in unix epoch millionSeconds
+}
+
+func (environment *Environment) AddWsClientOrder(clientOid string, order *Order) {
+	environment.ReqIdOrders.Store(clientOid, order)
+	ts := time.Now().Unix()
+	failOrders := make(map[int]int)
+	environment.ReqIdOrders.Range(func(requestId, value interface{}) bool {
+		if value == nil {
+			return true
+		}
+		failOrder := value.(*Order)
+		orderTs := value.(*Order).OrderTime.Unix()
+		if ts-orderTs > 180 && value.(*Order).OrderId == value.(*Order).ClientOrdId {
+			failOrders[failOrder.AccountIndex] = failOrders[failOrder.AccountIndex] + 1
+			util.Log(util.LogLevelInfo, fmt.Sprintf(`no response ws order %s %#v len %d`, requestId, value, failOrders[failOrder.AccountIndex]))
+		}
+		return true
+	})
+	for i, fails := range failOrders {
+		if fails > 100 {
+			util.Log(util.LogLevelInfo, fmt.Sprintf(`stop cross no response ws order %d %#v`, i, failOrders[i]))
+			environment.CrossStop = true
+		}
+	}
 }
 
 func (environment *Environment) HandleWSResp() {

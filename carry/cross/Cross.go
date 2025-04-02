@@ -901,7 +901,7 @@ var ProcessCross = func(setting *model.Setting, tick *model.BidAsk) {
 	//tsMark := time.Now().UnixMicro()
 	ts1 := time.Now().UnixMilli()
 	if tick == nil || tick.Asks == nil || tick.Bids == nil || setting == nil || setting.Valid == false ||
-		model.AppEnvironment.CrossEqualing || model.AppEnvironment.CrossPause ||
+		model.AppEnvironment.CrossEqualing || model.AppEnvironment.CrossPause || model.AppEnvironment.CrossStop ||
 		(model.AppConfig.Env != `test` && model.AppConfig.Handle != `1`) || settings == nil || len(settings) == 0 ||
 		time.Now().Minute() < 2 {
 		return
