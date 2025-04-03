@@ -14,7 +14,6 @@ import (
 // var socketCount, infoCount, noticeCount int
 // var DebugCount int
 
-var DoDebug = false
 var logChan = make(chan cmn.GlcData, 100000)
 
 var localCount = 0
@@ -90,10 +89,11 @@ func LogChanHandler(apiUrl, serverName string) {
 func Log(logLevel, content string) {
 	if logLevel == LogLevelLocal {
 		if localCount%100000 == 0 {
-			if localFile != nil {
-				_ = localFile.Close()
-			}
+			oldLogFile := localFile
 			localLogger, localFile, _ = initLog(getPath("local"))
+			if oldLogFile != nil {
+				_ = oldLogFile.Close()
+			}
 		}
 		localCount++
 		localLogger.Println(content)
