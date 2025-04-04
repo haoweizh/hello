@@ -441,7 +441,6 @@ var ClearCross = func() {
 	FailOrdersReconnect()
 	model.AppEnvironment.PauseTrade.Clear()
 	model.AppEnvironment.ADLSymbol.Clear()
-	compOrders.Clear()
 	carryStatusMap.Clear()
 	spotMarkets.Clear()
 	contractMarkets.Clear()
@@ -459,11 +458,17 @@ var ClearCross = func() {
 	util.Log(util.LogLevelInfo, fmt.Sprintf("end to clearing cross get set %v %d", model.AppEnvironment.CrossEqualing, traceId))
 }
 
-func equalAccounts(doEqual bool, traceId int64) {
-	util.Log(util.LogLevelInfo, fmt.Sprintf(`enter clearing cross all %d`, traceId))
+func equalAccounts(doEqual bool, unixSeconds int64) {
+	util.Log(util.LogLevelInfo, fmt.Sprintf(`enter clearing cross all %d`, unixSeconds))
 	waitEqual := make(map[int]bool)
 	equalChannel := make(chan int, 1)
-	if !doEqual {
+	if doEqual {
+		for time.Now().Unix()-unixSeconds < 75 {
+			time.Sleep(time.Second * 5)
+			util.Log(util.LogLevelInfo, fmt.Sprintf(`wait 75 seconds %d`, unixSeconds))
+		}
+		compOrders.Clear()
+	} else {
 		api.InitCrossMarketInfos(model.AppEnvironment.Markets)
 		api.PrepareSettings()
 		for _, market := range model.AppEnvironment.Markets {
@@ -478,7 +483,7 @@ func equalAccounts(doEqual bool, traceId int64) {
 			accounts[market] = indexAccounts[market]
 		}
 		waitEqual[i] = true
-		go equalAccount(i, equalChannel, accounts, doEqual, traceId)
+		go equalAccount(i, equalChannel, accounts, doEqual, unixSeconds)
 	}
 	for !util.Terminal {
 		index := <-equalChannel
@@ -507,7 +512,7 @@ func equalAccounts(doEqual bool, traceId int64) {
 			}
 		}
 	}
-	util.Log(util.LogLevelInfo, fmt.Sprintf(`exit clearing cross all %d`, traceId))
+	util.Log(util.LogLevelInfo, fmt.Sprintf(`exit clearing cross all %d`, unixSeconds))
 }
 
 func customizeFrHours() {
@@ -1263,7 +1268,7 @@ func handleCross(account *model.Account, order *model.Order) {
 		compOrder(account, order, leftAmt)
 	} else if leftAmt > marketInfo.SizeMin && leftAmt*order.Price > marketInfo.MoneyMin && order.Status != model.CarryStatusSuccess && order.HaveId() {
 		api.CancelOrder(account, order.Market, order.Symbol, model.OrderTypeLimit, order.OrderId)
-		time.Sleep(time.Second * 10)
+		time.Sleep(time.Second * 3)
 		queryOrder := api.QueryOrderById(account, order.Market, order.Symbol, order.OrderType, order.OrderId)
 		if queryOrder != nil {
 			leftAmt = queryOrder.Amount - queryOrder.DealAmount
@@ -1340,9 +1345,6 @@ func ContinueComp() {
 				result, _, _ := api.CancelOrder(account, order.Market, order.Symbol, model.OrderTypeLimit, order.OrderId)
 				if result {
 					compOrders.Delete(order.OrderId)
-					if model.AppEnvironment.CrossEqualing {
-						return false
-					}
 					orderComp := api.PlaceOrder(account, order.OrderSide, model.OrderTypeLimit, order.Market, order.Symbol, order.Coin,
 						``, order.RefreshType, order.Function, price, price, leftAmt, false, nil)
 					if orderComp != nil && orderComp.Status != model.CarryStatusFail {
@@ -1388,29 +1390,24 @@ var PostOrderCross = func(order *model.Order) {
 
 // Order.Fee 记录了原始下单的价格，用以判断最终comp成功时损失了多少
 func compOrder(account *model.Account, order *model.Order, leftAmt float64) {
-	if !model.AppEnvironment.CrossEqualing {
-		price := order.Price
-		_, bidAsk := model.AppEnvironment.GetBidAsk(order.Market, order.Symbol)
-		if bidAsk == nil {
-			util.Log(util.LogLevelError, fmt.Sprintf(`can not get bidAsk for comp %s %s`, order.Market, order.Symbol))
-		} else {
-			if order.OrderSide == model.OrderSideSell {
-				price = bidAsk.Bids[0].Price * (1 - compSlide)
-			} else {
-				price = bidAsk.Asks[0].Price * (1 + compSlide)
-			}
-		}
-		comp := api.PlaceOrder(account, order.OrderSide, model.OrderTypeLimit, order.Market, order.Symbol, order.Coin,
-			order.Param, model.FunctionComplement, order.Function, price, price, leftAmt, false, nil)
-		comp.Fee = order.Price
-		compOrders.Store(comp.OrderId, comp)
-		model.AppDB.Save(comp)
-		util.Log(util.LogLevelInfo, fmt.Sprintf(`post comp from %#v %#v not deal %f 百分之%f`,
-			order, comp, leftAmt, math.Round(100*leftAmt/order.Amount)))
+	price := order.Price
+	_, bidAsk := model.AppEnvironment.GetBidAsk(order.Market, order.Symbol)
+	if bidAsk == nil {
+		util.Log(util.LogLevelError, fmt.Sprintf(`can not get bidAsk for comp %s %s`, order.Market, order.Symbol))
 	} else {
-		util.Log(util.LogLevelInfo, fmt.Sprintf(`comp all processing and ignore %#v`, order))
+		if order.OrderSide == model.OrderSideSell {
+			price = bidAsk.Bids[0].Price * (1 - compSlide)
+		} else {
+			price = bidAsk.Asks[0].Price * (1 + compSlide)
+		}
 	}
-	time.Sleep(time.Millisecond * 100)
+	comp := api.PlaceOrder(account, order.OrderSide, model.OrderTypeLimit, order.Market, order.Symbol, order.Coin,
+		order.Param, model.FunctionComplement, order.Function, price, price, leftAmt, false, nil)
+	comp.Fee = order.Price
+	compOrders.Store(comp.OrderId, comp)
+	model.AppDB.Save(comp)
+	util.Log(util.LogLevelInfo, fmt.Sprintf(`post comp from %#v %#v not deal %f 百分之%f`,
+		order, comp, leftAmt, math.Round(100*leftAmt/order.Amount)))
 }
 
 // FormatCrossPair 不支持以BTC或ETH计价的交易对，只支持USD类
