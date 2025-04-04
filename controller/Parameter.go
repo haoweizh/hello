@@ -52,7 +52,7 @@ func ParameterServe() {
 	router.GET(`hold`, holdPage)
 	router.GET(`tick`, tickPage)
 	router.GET(`cross_refresh`, crossRefresh)
-	router.GET(`debug`, debug)
+	//router.GET(`debug`, debug)
 	router.GET(`candles`, getCandles)
 	router.GET(`mine`, mindZeroAddr)
 	router.GET(`monitor`, MonitorTrade)
@@ -341,16 +341,16 @@ func simulate(c *gin.Context) {
 	c.String(http.StatusOK, msg)
 }
 
-func debug(c *gin.Context) {
-	doDebug := c.Query(`count`)
-	if doDebug != `0` {
-		util.DoDebug = true
-		//util.DebugCount = 0
-	} else {
-		util.DoDebug = false
-	}
-	c.String(http.StatusOK, fmt.Sprintf(`set do debug 0-false, !0-true %s`, doDebug))
-}
+//func debug(c *gin.Context) {
+//	doDebug := c.Query(`count`)
+//	if doDebug != `0` {
+//		util.DoDebug = true
+//		//util.DebugCount = 0
+//	} else {
+//		util.DoDebug = false
+//	}
+//	c.String(http.StatusOK, fmt.Sprintf(`set do debug 0-false, !0-true %s`, doDebug))
+//}
 
 // testSpeed
 //func _(c *gin.Context) {
