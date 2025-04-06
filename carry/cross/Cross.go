@@ -445,7 +445,6 @@ var ClearCross = func() {
 	spotMarkets.Clear()
 	contractMarkets.Clear()
 	coinCrossing.Clear()
-	model.AppEnvironment.ReqIdOrders.Clear()
 	if model.AppConfig.Handle == `1` {
 		equalAccounts(doEqual, traceId)
 	}
@@ -462,13 +461,13 @@ func equalAccounts(doEqual bool, unixSeconds int64) {
 	util.Log(util.LogLevelInfo, fmt.Sprintf(`enter clearing cross all %d`, unixSeconds))
 	waitEqual := make(map[int]bool)
 	equalChannel := make(chan int, 1)
-	if doEqual {
-		for time.Now().Unix()-unixSeconds < 75 {
-			time.Sleep(time.Second * 5)
-			util.Log(util.LogLevelInfo, fmt.Sprintf(`wait 75 seconds %d`, unixSeconds))
-		}
-		compOrders.Clear()
-	} else {
+	for time.Now().Unix()-unixSeconds < 75 {
+		time.Sleep(time.Second * 5)
+		util.Log(util.LogLevelInfo, fmt.Sprintf(`wait 75 seconds %d`, unixSeconds))
+	}
+	compOrders.Clear()
+	model.AppEnvironment.ReqIdOrders.Clear()
+	if !doEqual {
 		api.InitCrossMarketInfos(model.AppEnvironment.Markets)
 		api.PrepareSettings()
 		for _, market := range model.AppEnvironment.Markets {
