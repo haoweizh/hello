@@ -270,7 +270,7 @@ func Test_BalAndPos(t *testing.T) {
 	account := model.AppConfig.GetAccounts(market)[0]
 	api.GetPositions(account, market)
 	markets := []string{`okex`, `binancespot`, `gate`, `binanceperp`, `bybit`}
-	api.InitCrossMarketInfos(markets)
+	api.InitCrossMarketInfos(markets, false)
 	model.AppDB, _ = gorm.Open(postgres.Open(model.AppConfig.DBConnection), &gorm.Config{})
 	api.InitMarketInfos(model.OKEX)
 	account = model.AppConfig.GetAccounts(model.BinancePerp)[0]

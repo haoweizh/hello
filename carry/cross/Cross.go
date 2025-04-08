@@ -421,7 +421,7 @@ func FailOrdersReconnect() {
 
 var RefreshMarkets = func() {
 	util.Log(util.LogLevelInfo, fmt.Sprintf(`begin to refresh markets %s`, model.FunctionCross))
-	api.InitCrossMarketInfos(model.AppEnvironment.Markets)
+	api.InitCrossMarketInfos(model.AppEnvironment.Markets, false)
 }
 
 var ClearCross = func() {
@@ -468,7 +468,7 @@ func equalAccounts(doEqual bool, unixSeconds int64) {
 	compOrders.Clear()
 	model.AppEnvironment.ReqIdOrders.Clear()
 	if !doEqual {
-		api.InitCrossMarketInfos(model.AppEnvironment.Markets)
+		api.InitCrossMarketInfos(model.AppEnvironment.Markets, true)
 		api.PrepareSettings()
 		for _, market := range model.AppEnvironment.Markets {
 			model.AppEnvironment.PubChanNeedReset.Store(market, true)

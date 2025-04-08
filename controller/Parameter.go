@@ -51,7 +51,7 @@ func ParameterServe() {
 	router.GET(`cross`, crossPage)
 	router.GET(`hold`, holdPage)
 	router.GET(`tick`, tickPage)
-	router.GET(`cross_refresh`, crossRefresh)
+	//router.GET(`cross_refresh`, crossRefresh)
 	//router.GET(`debug`, debug)
 	router.GET(`candles`, getCandles)
 	router.GET(`mine`, mindZeroAddr)
@@ -580,27 +580,27 @@ func holdPage(c *gin.Context) {
 			fundingFee, interestFee, fundingFee+interestFee)})
 }
 
-func crossRefresh(c *gin.Context) {
-	//session := sessions.Default(c)
-	//value := c.Query(`code`)
-	//if codes[value] {
-	//	session.Set(`code`, value)
-	//	_ = session.Save()
-	//}
-	//sessionValue := session.Get(`code`)
-	//if sessionValue == nil || !codes[sessionValue.(string)] {
-	//	c.String(http.StatusOK, `no correct code`)
-	//} else {
-	//}
-	param := c.Query(`markets`)
-	api.InitCrossMarketInfos(strings.Split(param, `,`))
-	api.PrepareSettings()
-	//markets := api.GetMarkets()
-	//for _, market := range markets {
-	//	api.SetRequireReset(market)
-	//}
-	c.String(http.StatusOK, `init cross markets done`)
-}
+//func crossRefresh(c *gin.Context) {
+//	//session := sessions.Default(c)
+//	//value := c.Query(`code`)
+//	//if codes[value] {
+//	//	session.Set(`code`, value)
+//	//	_ = session.Save()
+//	//}
+//	//sessionValue := session.Get(`code`)
+//	//if sessionValue == nil || !codes[sessionValue.(string)] {
+//	//	c.String(http.StatusOK, `no correct code`)
+//	//} else {
+//	//}
+//	param := c.Query(`markets`)
+//	api.InitCrossMarketInfos(strings.Split(param, `,`))
+//	api.PrepareSettings()
+//	//markets := api.GetMarkets()
+//	//for _, market := range markets {
+//	//	api.SetRequireReset(market)
+//	//}
+//	c.String(http.StatusOK, `init cross markets done`)
+//}
 
 func tickPage(c *gin.Context) {
 	//tickInfo, recentTickInfo := model.AppMetric.ToArray()
