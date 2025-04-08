@@ -411,7 +411,7 @@ var wsPriHandlerGateUnified = func(market, key string, msg []byte) {
 	if value[`R`] != nil {
 		collateral.Rate, _ = strconv.ParseFloat(value[`R`].(string), 64)
 	}
-	//util.Log(util.LogLevelInfo, fmt.Sprintf("gate unified %s %f", collateral.AccountKey, collateral.Available))
+	util.Log(util.LogLevelLocal, fmt.Sprintf("gate unified %s %f %s", collateral.AccountKey, collateral.Available, string(msg)))
 	model.CollateralHandler(key, ``, false, collateral)
 }
 
