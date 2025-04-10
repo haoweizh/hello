@@ -92,8 +92,8 @@ func handledFRate(status *model.CarryStatus, marketInfo *model.MarketInfo, price
 			util.Log(util.LogLevelError, fmt.Sprintf(`funding rate expired %s %s %d`, status.Market, status.Symbol, fundingRate.ExpireTime))
 			leftHours = 2.0
 		}
-		if leftHours > hours {
-			leftHours = hours
+		for leftHours > hours {
+			leftHours -= hours
 		}
 		//handledFr = fundingRate.Rate * (2/hours + (1.0-leftHours/hours)*(1.0-leftHours/hours)/2)
 		handledFr = fundingRate.Rate * (1 + (1.0-leftHours/hours)*(1.0-leftHours/hours)) * 2 / hours
