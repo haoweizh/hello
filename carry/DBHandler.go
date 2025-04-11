@@ -211,12 +211,6 @@ func Maintain() {
 		} else {
 			c.Start()
 		}
-		_, errSyncFees := c.AddFunc("5,35 * * * ?", cross.SyncFees)
-		if errSyncFees != nil {
-			util.Log(util.LogLevelError, `fail to cron sync fees `+errSyncFees.Error())
-		} else {
-			c.Start()
-		}
 	}
 	// 监听信号的 goroutine
 	go func() {

@@ -502,6 +502,7 @@ func equalAccounts(doEqual bool, unixSeconds int64) {
 		indexAccounts := model.GetAccounts(i)
 		for _, market := range model.AppEnvironment.Markets {
 			if doEqual {
+				go syncFees(indexAccounts[market])
 				go liquidateSmallContracts(indexAccounts[market], market)
 			} else {
 				account := indexAccounts[market]
