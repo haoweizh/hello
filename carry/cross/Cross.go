@@ -469,7 +469,7 @@ func equalAccounts(doEqual bool, unixSeconds int64) {
 	compOrders.Clear()
 	model.AppEnvironment.ReqIdOrders.Clear()
 	if !doEqual {
-		api.InitCrossMarketInfos(model.AppEnvironment.Markets, true)
+		//api.InitCrossMarketInfos(model.AppEnvironment.Markets, true)
 		api.PrepareSettings()
 		for _, market := range model.AppEnvironment.Markets {
 			model.AppEnvironment.PubChanNeedReset.Store(market, true)
