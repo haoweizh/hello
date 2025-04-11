@@ -419,6 +419,7 @@ func FailOrdersReconnect() {
 	}
 }
 
+// RefreshMarkets 用于刷新市场信息(更新期货周期)
 var RefreshMarkets = func() {
 	util.Log(util.LogLevelInfo, fmt.Sprintf(`begin to refresh markets %s`, model.FunctionCross))
 	api.InitCrossMarketInfos(model.AppEnvironment.Markets, false)

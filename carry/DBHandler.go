@@ -205,7 +205,7 @@ func Maintain() {
 		} else {
 			c.Start()
 		}
-		_, errMarketInfo := c.AddFunc("2,50 * * * ?", cross.RefreshMarkets)
+		_, errMarketInfo := c.AddFunc("5,35 * * * ?", cross.RefreshMarkets)
 		if errMarketInfo != nil {
 			util.Log(util.LogLevelError, `fail to cron refresh market info `+errMarketInfo.Error())
 		} else {
