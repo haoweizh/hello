@@ -497,6 +497,16 @@ func _(order *model.Order, setting *model.Setting) {
 	//util.Notice(`---- add done %s`, setting.Symbol)
 }
 
+var SyncFees = func() {
+	for i := 0; i < api.GetCrossLen(); i++ {
+		accounts := model.GetAccounts(i)
+		for _, market := range model.AppEnvironment.Markets {
+			util.Log(util.LogLevelInfo, fmt.Sprintf(`sync fees %d %s`, i, market))
+			go syncFees(accounts[market])
+		}
+	}
+}
+
 // syncFees
 // 包括funding fee和interest
 func syncFees(account *model.Account) {
