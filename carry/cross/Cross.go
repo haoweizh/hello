@@ -440,14 +440,8 @@ var ClearCross = func() {
 	util.Log(util.LogLevelInfo, fmt.Sprintf("begin to clearing cross get set %s %v do equal %v %d",
 		model.FunctionCross, model.AppEnvironment.CrossEqualing, doEqual, traceId))
 	FailOrdersReconnect()
-	model.AppEnvironment.PauseTrade.Clear()
-	model.AppEnvironment.ADLSymbol.Clear()
-	carryStatusMap.Clear()
-	spotMarkets.Clear()
-	contractMarkets.Clear()
-	coinCrossing.Clear()
 	if model.AppConfig.Handle == `1` {
-		equalAccounts(doEqual, traceId)
+		resetAccounts(doEqual, traceId)
 	}
 	syncGridHoldings()
 	//for _, market := range model.AppEnvironment.Markets {
@@ -458,14 +452,20 @@ var ClearCross = func() {
 	util.Log(util.LogLevelInfo, fmt.Sprintf("end to clearing cross get set %v %d", model.AppEnvironment.CrossEqualing, traceId))
 }
 
-func equalAccounts(doEqual bool, unixSeconds int64) {
+func resetAccounts(doEqual bool, unixSeconds int64) {
 	util.Log(util.LogLevelInfo, fmt.Sprintf(`enter clearing cross all %d`, unixSeconds))
-	waitEqual := make(map[int]bool)
-	equalChannel := make(chan int, 1)
+	waitReset := make(map[string]bool)
+	resetChannel := make(chan string, 1)
 	for time.Now().Unix()-unixSeconds < 75 {
 		time.Sleep(time.Second * 5)
 		util.Log(util.LogLevelInfo, fmt.Sprintf(`wait 75 seconds %d`, unixSeconds))
 	}
+	model.AppEnvironment.PauseTrade.Clear()
+	model.AppEnvironment.ADLSymbol.Clear()
+	carryStatusMap.Clear()
+	spotMarkets.Clear()
+	contractMarkets.Clear()
+	coinCrossing.Clear()
 	compOrders.Clear()
 	model.AppEnvironment.ReqIdOrders.Clear()
 	if !doEqual {
@@ -477,19 +477,17 @@ func equalAccounts(doEqual bool, unixSeconds int64) {
 	}
 	//needWaitEqual := false // 是否需要进入等待环节
 	for i := 0; i < api.GetCrossLen(); i++ {
-		accounts := make(map[string]*model.Account)
 		indexAccounts := model.GetAccounts(i)
 		for _, market := range model.AppEnvironment.Markets {
-			accounts[market] = indexAccounts[market]
+			waitReset[indexAccounts[market].Key] = true
+			go resetAccount(resetChannel, indexAccounts[market])
 		}
-		waitEqual[i] = true
-		go equalAccount(i, equalChannel, accounts, doEqual, unixSeconds)
 	}
 	for !util.Terminal {
-		index := <-equalChannel
-		waitEqual[index] = false
+		accountKey := <-resetChannel
+		waitReset[accountKey] = false
 		finish := true
-		for _, value := range waitEqual {
+		for _, value := range waitReset {
 			if value == true {
 				finish = false
 			}
@@ -497,6 +495,14 @@ func equalAccounts(doEqual bool, unixSeconds int64) {
 		if finish {
 			break
 		}
+	}
+	for i := 0; i < api.GetCrossLen(); i++ {
+		accounts := make(map[string]*model.Account)
+		indexAccounts := model.GetAccounts(i)
+		for _, market := range model.AppEnvironment.Markets {
+			accounts[market] = indexAccounts[market]
+		}
+		go equalAccount(i, accounts, doEqual)
 	}
 	for i := 0; i < api.GetCrossLen(); i++ {
 		indexAccounts := model.GetAccounts(i)
@@ -641,71 +647,80 @@ func syncGridHoldings() {
 	})
 }
 
-func equalAccount(i int, equalChan chan int, accounts map[string]*model.Account, doEqual bool, traceId int64) {
-	util.Log(util.LogLevelInfo, fmt.Sprintf(`begin to clearing cross %d trace %d`, i, traceId))
-	for market, account := range accounts {
-		if account.Index != i {
-			continue
-		}
-		api.CancelAll(account, market)
-	}
-	value := api.GetCoinSettings(model.FunctionCross)
+func resetAccount(resetChan chan string, account *model.Account) {
+	util.Log(util.LogLevelInfo, fmt.Sprintf(`begin to clearing cross %s %d`, account.Market, account.Index))
+	api.CancelAll(account, account.Market)
+	value := api.GetSettings(model.FunctionCross, account.Market)
 	if value != nil {
-		value.Range(func(coin, settings interface{}) bool {
-			equalStatuses := make([]*model.CarryStatus, len(settings.([]*model.Setting)))
-			for j, setting := range settings.([]*model.Setting) {
-				account := accounts[setting.Market]
-				if setting == nil || len(coin.(string)) == 0 || account == nil {
-					util.Log(util.LogLevelError, `can not equal`)
-					continue
-				}
-				equalStatuses[j] = initStatus(account, setting)
-				if equalStatuses[j] == nil {
+		value.Range(func(symbol, setting interface{}) bool {
+			if setting != nil {
+				status := initStatus(account, setting.(*model.Setting))
+				if status == nil {
 					util.Log(util.LogLevelError, fmt.Sprintf(`store carry nil coin %s %s %s %s %d`,
-						setting.Coin, setting.Market, setting.Symbol, account.Key, account.Index))
-					//} else {
-					//	util.Log(util.LogLevelInfo, fmt.Sprintf(`create init status %s %s %d %#v`, setting.Coin, setting.Market, account.Index, equalStatuses[j]))
-				}
-			}
-			coinCrossing.Store(coin.(string), false)
-			for index := 0; index <= 10 && doEqual; index++ {
-				coinEqual, leftHolding, errMsg := equalCoin(i, coin.(string), equalStatuses)
-				if !coinEqual {
-					util.Log(util.LogLevelInfo, fmt.Sprintf(
-						`equal coin %s account %d equal %#v left hold %f err %s`, coin, i, coinEqual, leftHolding, errMsg))
-				} else {
-					break
-				}
-				if index == 10 {
-					api.SendMails(fmt.Sprintf(`fail equal after 10 time %s`, coin),
-						fmt.Sprintf(`%s holding %f`, coin, leftHolding))
-				}
-			}
-			if model.AppConfig.GetCrossStyles()[i] == crossGrid {
-				//_, _, _, _, bidHolding, price, _ := getHolding(equalStatuses)
-				//if price == 0 {
-				//	return true
-				//}
-				valueCarryCoin, _ := util.LoadSyncMap(carryCoinMap, coin.(string), `0`)
-				if valueCarryCoin == nil {
-					carryCoin := api.GetCarryCoin(coin.(string))
-					if carryCoin == nil {
-						moneyPerStep, _ := strconv.ParseFloat(model.AppConfig.GetMoneyPerStep()[i], 64)
-						carryCoin = &model.CarryCoin{Coin: coin.(string), MoneyPerStep: moneyPerStep}
-						util.StoreSyncMap(carryCoinMap, carryCoin, coin.(string), `0`)
-						util.Log(util.LogLevelLocal, fmt.Sprintf(`get a carry coin from init %d %v`, i, coin))
-						go model.AppDB.Save(carryCoin)
-					} else {
-						util.StoreSyncMap(carryCoinMap, carryCoin, coin.(string), `0`)
-						util.Log(util.LogLevelLocal, fmt.Sprintf(`get a carry coin from db %d %v`, i, coin))
-					}
+						setting.(*model.Setting).Coin, setting.(*model.Setting).Market, setting.(*model.Setting).Symbol, account.Key, account.Index))
 				}
 			}
 			return true
 		})
 	}
-	equalChan <- i
-	util.Log(util.LogLevelInfo, fmt.Sprintf(`exit clearing cross account index %d trace %d`, i, traceId))
+	resetChan <- account.Key
+	util.Log(util.LogLevelInfo, fmt.Sprintf(`exit clearing cross account index %s %d`, account.Market, account.Index))
+}
+
+func equalAccount(i int, accounts map[string]*model.Account, doEqual bool) {
+	value := api.GetCoinSettings(model.FunctionCross)
+	if value == nil {
+		return
+	}
+	value.Range(func(coin, settings interface{}) bool {
+		equalStatuses := make([]*model.CarryStatus, len(settings.([]*model.Setting)))
+		for j, setting := range settings.([]*model.Setting) {
+			account := accounts[setting.Market]
+			if setting == nil || len(coin.(string)) == 0 || account == nil {
+				util.Log(util.LogLevelError, `can not equal`)
+				continue
+			}
+			valueStatus, _ := util.LoadSyncMap(carryStatusMap, setting.Coin, setting.Market, setting.Symbol, account.Key)
+			if valueStatus != nil {
+				equalStatuses[j] = valueStatus.(*model.CarryStatus)
+			}
+		}
+		coinCrossing.Store(coin.(string), false)
+		for index := 0; index <= 10 && doEqual; index++ {
+			coinEqual, leftHolding, errMsg := equalCoin(i, coin.(string), equalStatuses)
+			if !coinEqual {
+				util.Log(util.LogLevelInfo, fmt.Sprintf(
+					`equal coin %s account %d equal %#v left hold %f err %s`, coin, i, coinEqual, leftHolding, errMsg))
+			} else {
+				break
+			}
+			if index == 10 {
+				api.SendMails(fmt.Sprintf(`fail equal after 10 time %s`, coin),
+					fmt.Sprintf(`%s holding %f`, coin, leftHolding))
+			}
+		}
+		if model.AppConfig.GetCrossStyles()[i] == crossGrid {
+			//_, _, _, _, bidHolding, price, _ := getHolding(equalStatuses)
+			//if price == 0 {
+			//	return true
+			//}
+			valueCarryCoin, _ := util.LoadSyncMap(carryCoinMap, coin.(string), `0`)
+			if valueCarryCoin == nil {
+				carryCoin := api.GetCarryCoin(coin.(string))
+				if carryCoin == nil {
+					moneyPerStep, _ := strconv.ParseFloat(model.AppConfig.GetMoneyPerStep()[i], 64)
+					carryCoin = &model.CarryCoin{Coin: coin.(string), MoneyPerStep: moneyPerStep}
+					util.StoreSyncMap(carryCoinMap, carryCoin, coin.(string), `0`)
+					util.Log(util.LogLevelLocal, fmt.Sprintf(`get a carry coin from init %d %v`, i, coin))
+					go model.AppDB.Save(carryCoin)
+				} else {
+					util.StoreSyncMap(carryCoinMap, carryCoin, coin.(string), `0`)
+					util.Log(util.LogLevelLocal, fmt.Sprintf(`get a carry coin from db %d %v`, i, coin))
+				}
+			}
+		}
+		return true
+	})
 }
 
 // getHolding
@@ -1179,8 +1194,10 @@ func placeCross(carryCoin *model.CarryCoin, statusBuy, statusSell *model.CarrySt
 	if carryCoin != nil && model.AppConfig.GetCrossStyles()[statusBuy.Account.Index] == crossGrid && priceBuy > 0 {
 		carryCoin.AddTrade(statusBuy, statusSell, priceBuy, priceSell, amountBuy)
 	}
-	placeStatus(statusBuy, priceBuy, amountBuy)
-	placeStatus(statusSell, priceSell, -1*amountSell)
+	if !model.AppEnvironment.CrossEqualing {
+		placeStatus(statusBuy, priceBuy, amountBuy)
+		placeStatus(statusSell, priceSell, -1*amountSell)
+	}
 	// 把ts改成0后，此tick不会再被使用
 	tick.Ts = 0
 	tickRelate.Ts = 0
