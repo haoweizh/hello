@@ -593,6 +593,17 @@ func maintainConnsGate(accounts []*model.Account) {
 			} else {
 				successPerp = false
 			}
+			wsUnified, _ := model.AppEnvironment.ConnOrderUpdate.Load(connKeyPerp)
+			if wsUnified != nil {
+				pingMsg := fmt.Sprintf(`{"time": %d, "channel" : "unified.ping"}`, time.Now().Unix())
+				if err := wsUnified.(*model.WSConn).WriteMsg([]byte(pingMsg)); err != nil {
+					model.AppEnvironment.ConnOrderUpdate.Delete(connKeyPerp)
+					util.Log(util.LogLevelError, fmt.Sprintf("send account unified ping message err:%s %s", model.Gate, err.Error()))
+					successPerp = false
+				}
+			} else {
+				successPerp = false
+			}
 			if !successPerp {
 				go WSOrderServeGate(account, model.MarketTypePerp)
 			}
