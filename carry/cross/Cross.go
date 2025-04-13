@@ -433,8 +433,6 @@ var ClearCross = func() {
 	doEqual := false
 	if time.Now().Minute() == 15 {
 		doEqual = true
-	} else {
-		model.AppEnvironment.FundingFeeToday.Clear()
 	}
 	traceId := time.Now().Unix()
 	util.Log(util.LogLevelInfo, fmt.Sprintf("begin to clearing cross get set %s %v do equal %v %d",
