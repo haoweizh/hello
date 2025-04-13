@@ -13,9 +13,10 @@ import (
 )
 
 // step(n) = step(n-1) + 0.0012 + 0.0001*(n-1)
-var stepScores = []float64{-0.001, 0, 0.0013, 0.0029, 0.0048, 0.0070, 0.0095, 0.0123, 0.0154, 0.0188, 0.0225, 0.0265, 0.0308, 0.0354,
-	0.0403, 0.0455, 0.0510, 0.0568, 0.0629, 0.0693, 0.0760, 0.0830, 0.0903, 0.0979, 0.1058, 0.1140, 0.1225, 0.1313, 0.1404, 0.1498, 0.1595,
-	0.1695, 0.1798, 0.1904, 0.2013, 0.2125, 0.2240, 0.2358, 0.2479, 0.2603, 0.2730, 0.2860, 0.2993, 0.3129}
+var stepScores = []float64{-0.001, 0, 0.0012, 0.0026, 0.0042, 0.0060, 0.0080, 0.0102, 0.0126, 0.0152, 0.0180, 0.0210, 0.0242, 0.0276,
+	0.0312, 0.0350, 0.0390, 0.0432, 0.0476, 0.0522, 0.0570, 0.0620, 0.0672, 0.0726, 0.0782, 0.0840, 0.0900, 0.0962, 0.1026, 0.1092, 0.1160,
+	0.1230, 0.1302, 0.1376, 0.1452, 0.1530, 0.1610, 0.1692, 0.1776, 0.1862, 0.1950, 0.2040, 0.2132, 0.2226, 0.2322, 0.2420, 0.2520, 0.2622,
+	0.2726, 0.2832, 0.2940, 0.305}
 
 const GridGap = 3
 
@@ -32,7 +33,7 @@ func CalcGridLine(base float64) {
 		if n == 1 {
 			p[n] = base
 		} else {
-			p[n] = p[n-1] + base + 0.0003*float64(n-1)
+			p[n] = p[n-1] + base + 0.0002*float64(n-1)
 			fmt.Print(fmt.Sprintf(`%.4f,`, p[n]))
 		}
 		if p[n] > 0.3 {
@@ -374,9 +375,9 @@ func checkTradeLine(statusBuy, statusSell *model.CarryStatus, carryCoin *model.C
 			if currentStep < 0 || currentStep > len(stepScores)-GridGap {
 				return false, 0, scoreClose, model.Close
 			}
-			statusBuy.TradeLineBuy = -1 * stepScores[currentStep]
-			statusSell.TradeLineSell = -1 * stepScores[currentStep]
-			return scoreClose > -1*stepScores[currentStep], math.Min(limit, closeLimit), scoreClose, model.Close
+			closeScore := -1*stepScores[currentStep]/2 - 0.0005
+			statusBuy.TradeLineBuy, statusSell.TradeLineSell = closeScore, closeScore
+			return scoreClose > closeScore, math.Min(limit, closeLimit), scoreClose, model.Close
 		} else {
 			if scoreClose > statusBuy.TradeLineBuy {
 				return true, math.Min(math.Abs(statusBuy.Holding)*statusBuy.Setting.GridAmount, crossLimit), scoreClose, model.Close
