@@ -375,7 +375,7 @@ func checkTradeLine(statusBuy, statusSell *model.CarryStatus, carryCoin *model.C
 			if currentStep < 0 || currentStep > len(stepScores)-GridGap {
 				return false, 0, scoreClose, model.Close
 			}
-			closeScore := stepScores[currentStep]/2 - 0.0005
+			closeScore := -1 * (stepScores[currentStep]/2 - 0.0005)
 			statusBuy.TradeLineBuy, statusSell.TradeLineSell = closeScore, closeScore
 			return scoreClose > closeScore, math.Min(limit, closeLimit), scoreClose, model.Close
 		} else {
