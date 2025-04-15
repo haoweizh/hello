@@ -598,7 +598,7 @@ func maintainConnsGate(accounts []*model.Account) {
 				pingMsg := fmt.Sprintf(`{"time": %d, "channel" : "unified.ping"}`, time.Now().Unix())
 				if err := wsUnified.(*model.WSConn).WriteMsg([]byte(pingMsg)); err != nil {
 					model.AppEnvironment.ConnOrderUpdate.Delete(connKeyPerp)
-					util.Log(util.LogLevelError, fmt.Sprintf("send account unified ping message err:%s %s", model.Gate, err.Error()))
+					util.Log(util.LogLevelLocal, fmt.Sprintf("send account unified ping message err:%s %s", model.Gate, err.Error()))
 					successPerp = false
 				}
 			} else {
@@ -606,6 +606,8 @@ func maintainConnsGate(accounts []*model.Account) {
 			}
 			if !successPerp {
 				go WSOrderServeGate(account, model.MarketTypePerp)
+			} else if account.Index == 0 {
+				util.LogLess(util.LogLevelLocal, fmt.Sprintf(`no need gate order connect %s %v`, connKeyPerp, wsUnified))
 			}
 		}
 		time.Sleep(time.Second * 20)

@@ -37,8 +37,8 @@ func createContractMarket(account *model.Account, market string) (cm *contractMa
 		cm.accountValueInU = accountValue
 		cm.collateralsAvailable = availableU
 		cm.mmr = mmr
-		util.Log(util.LogLevelLocal, fmt.Sprintf(`get positions %s %d %#v account value %f available u %f maintain rate %f cm %#v positions %d`,
-			market, account.Index, success, accountValue, availableU, mmr, cm, len(positions)))
+		util.Log(util.LogLevelLocal, fmt.Sprintf(`get positions %s %d %#v account value %f available u %f maintain rate %f positions %d`,
+			market, account.Index, success, accountValue, availableU, mmr, len(positions)))
 	} else {
 		util.Log(util.LogLevelLocal, fmt.Sprintf(`fail to createContractMarket %s %s`, market, account.Key))
 		return nil

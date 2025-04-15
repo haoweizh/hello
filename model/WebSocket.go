@@ -307,7 +307,7 @@ func publicHandler(market, url string, connection *WSConn, subHandler SubscribeH
 
 func WsPrivateClient(account *Account, connMap *sync.Map, connKey, market, url string, accountMsgHandler AccountMsgHandler,
 	noSpecialChan bool) (connection *WSConn, err error) {
-	util.Log(util.LogLevelInfo, fmt.Sprintf(` create account channel %s %d %s`, market, account.Index, url))
+	util.Log(util.LogLevelLocal, fmt.Sprintf(` create account channel %s %d %s`, market, account.Index, url))
 	newCreate := false
 	newCreate, connection, err = initChannel(account, url, market, ChanTypeOrder, noSpecialChan)
 	if !newCreate {
