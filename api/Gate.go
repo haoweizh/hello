@@ -606,11 +606,8 @@ func maintainConnsGate(accounts []*model.Account) {
 			}
 			if !successPerp {
 				go WSOrderServeGate(account, model.MarketTypePerp)
-			} else if account.Index == 0 {
-				util.Log(util.LogLevelLocal, fmt.Sprintf(`no need gate order connect %s %v`, connKeyPerp, wsUnified))
 			}
 		}
-		util.Log(util.LogLevelLocal, fmt.Sprintf(`gate order connect`))
 		time.Sleep(time.Second * 20)
 	}
 }
