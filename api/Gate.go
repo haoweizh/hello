@@ -610,6 +610,7 @@ func maintainConnsGate(accounts []*model.Account) {
 				util.Log(util.LogLevelLocal, fmt.Sprintf(`no need gate order connect %s %v`, connKeyPerp, wsUnified))
 			}
 		}
+		util.Log(util.LogLevelLocal, fmt.Sprintf(`gate order connect`))
 		time.Sleep(time.Second * 20)
 	}
 }
