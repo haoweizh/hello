@@ -77,7 +77,7 @@ var wsPriHandlerGatePerp = func(market, key string, msg []byte) {
 		return
 	}
 	channel := responseJson.Get(`channel`).MustString()
-	ts := responseJson.Get(`time_ms`).MustInt64()
+	//ts := responseJson.Get(`time_ms`).MustInt64()
 	result := responseJson.GetPath(`header`, `status`).MustString()
 	connKey := getPrivateConnKey(model.Gate, key, model.MarketTypePerp)
 	valueFuture, _ := model.AppEnvironment.ConnOrder.Load(connKey)
@@ -185,7 +185,10 @@ var wsPriHandlerGatePerp = func(market, key string, msg []byte) {
 			if result == `200` {
 				//connKey := getPrivateConnKey(model.Gate, key, model.MarketTypePerp)
 				//未用到ts
-				_ = ts
+				//_ = ts
+				if valueFuture == nil {
+					return
+				}
 				subscribePrivateGatePerp(valueFuture.(*model.WSConn), connKey, key)
 			}
 		}
