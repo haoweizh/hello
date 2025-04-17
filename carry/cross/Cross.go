@@ -670,8 +670,11 @@ func equalAccount(i int, accounts map[string]*model.Account, doEqual bool) {
 	if value == nil {
 		return
 	}
+	valid := true
 	value.Range(func(coin, settings interface{}) bool {
 		equalStatuses := make([]*model.CarryStatus, len(settings.([]*model.Setting)))
+		coinHolding := 0.0
+		standardPrice := 0.0
 		for j, setting := range settings.([]*model.Setting) {
 			account := accounts[setting.Market]
 			if setting == nil || len(coin.(string)) == 0 || account == nil {
@@ -681,10 +684,19 @@ func equalAccount(i int, accounts map[string]*model.Account, doEqual bool) {
 			valueStatus, _ := util.LoadSyncMap(carryStatusMap, setting.Coin, setting.Market, setting.Symbol, account.Key)
 			if valueStatus != nil {
 				equalStatuses[j] = valueStatus.(*model.CarryStatus)
+				if equalStatuses[j].Holding > 0 {
+					coinHolding += equalStatuses[j].Holding * setting.GridAmount
+				}
+				if standardPrice == 0 {
+					_, standardPrice = api.GetPriceForce(setting.Market, setting.Symbol, false)
+					standardPrice /= setting.GridAmount
+				}
+			} else {
+				valid = false
 			}
 		}
 		coinCrossing.Store(coin.(string), false)
-		for index := 0; index <= 10 && doEqual; index++ {
+		for index := 0; index <= 10 && doEqual && valid; index++ {
 			coinEqual, leftHolding, errMsg := equalCoin(i, coin.(string), equalStatuses)
 			if !coinEqual {
 				util.Log(util.LogLevelInfo, fmt.Sprintf(
@@ -702,9 +714,10 @@ func equalAccount(i int, accounts map[string]*model.Account, doEqual bool) {
 			//if price == 0 {
 			//	return true
 			//}
+			var carryCoin *model.CarryCoin
 			valueCarryCoin, _ := util.LoadSyncMap(carryCoinMap, coin.(string), `0`)
 			if valueCarryCoin == nil {
-				carryCoin := api.GetCarryCoin(coin.(string))
+				carryCoin = api.GetCarryCoin(coin.(string))
 				if carryCoin == nil {
 					moneyPerStep, _ := strconv.ParseFloat(model.AppConfig.GetMoneyPerStep()[i], 64)
 					carryCoin = &model.CarryCoin{Coin: coin.(string), MoneyPerStep: moneyPerStep}
@@ -714,6 +727,15 @@ func equalAccount(i int, accounts map[string]*model.Account, doEqual bool) {
 				} else {
 					util.StoreSyncMap(carryCoinMap, carryCoin, coin.(string), `0`)
 					util.Log(util.LogLevelLocal, fmt.Sprintf(`get a carry coin from db %d %v`, i, coin))
+				}
+			} else {
+				carryCoin = valueCarryCoin.(*model.CarryCoin)
+			}
+			if valid {
+				if coinHolding*standardPrice < carryCoin.MoneyCurStep/2 && carryCoin.CurrentStep > 0 {
+					carryCoin.CurrentStep = 0
+					util.Log(util.LogLevelLocal, fmt.Sprintf(`update money per step %s to 0`, coin))
+					go model.AppDB.Save(carryCoin)
 				}
 			}
 		}
