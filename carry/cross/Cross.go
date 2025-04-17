@@ -95,7 +95,7 @@ func createFromPosition(account *model.Account, setting *model.Setting) (carrySt
 		contractMarkets.Store(key, cm)
 		value, _ = contractMarkets.Load(key)
 		spotValue, spotOk := spotMarkets.Load(key)
-		util.Log(util.LogLevelLocal, fmt.Sprintf(`success set cm %d %s %v`, account.Index, setting.Market, cm))
+		util.Log(util.LogLevelLocal, fmt.Sprintf(`success set cm %d %s %d`, account.Index, setting.Market, len(cm.positions)))
 		if account.IsUnified && (spotValue == nil || !spotOk) {
 			spotMarkets.Store(key, createSpotMarket(account, setting.Market))
 		}
@@ -202,7 +202,7 @@ func createFromBalance(account *model.Account, setting *model.Setting) (carrySta
 		sm := createSpotMarket(account, setting.Market)
 		spotMarkets.Store(key, sm)
 		value, ok = spotMarkets.Load(key)
-		util.Log(util.LogLevelLocal, fmt.Sprintf(`success set sm %d %s %v`, account.Index, setting.Market, sm))
+		util.Log(util.LogLevelLocal, fmt.Sprintf(`success set sm %d %s %d`, account.Index, setting.Market, len(sm.balances)))
 	}
 	success, price := api.GetPriceForce(setting.Market, setting.Symbol, true)
 	if value == nil {
@@ -1190,7 +1190,7 @@ func placeCross(carryCoin *model.CarryCoin, statusBuy, statusSell *model.CarrySt
 		//	statusBuy.Account.Index, statusBuy.Market, statusBuy.Symbol, statusBuy.LimitSell, statusBuy.AvailableSell, amountBuy, amountSell))
 	}
 	if carryCoin != nil && model.AppConfig.GetCrossStyles()[statusBuy.Account.Index] == crossGrid && priceBuy > 0 {
-		carryCoin.AddTrade(statusBuy, statusSell, priceBuy, priceSell, amountBuy)
+		carryCoin.AddTrade(statusBuy, priceBuy, amountBuy, closeType)
 	}
 	if !model.AppEnvironment.CrossEqualing {
 		placeStatus(statusBuy, priceBuy, amountBuy)

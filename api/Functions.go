@@ -1177,7 +1177,15 @@ func GetBills(account *model.Account, begin, end int64) (success bool, fundingFe
 		}
 		success = true
 	case model.Gate:
-		return getBillsGate(account, begin, end)
+		_, fundingFees = getBillsGatePerp(account, begin, end)
+		if fundingFees == nil {
+			fundingFees = []*model.FundingFee{}
+		}
+		_, interestFees := getBillsGateSpot(account, begin, end)
+		for _, fee := range interestFees {
+			fundingFees = append(fundingFees, fee)
+		}
+		success = true
 	case model.Bybit:
 		_, fundingFees = getBillsBybit(account, begin, end, `SETTLEMENT`)
 		if fundingFees == nil {

@@ -361,11 +361,11 @@ func GetHoldings(accounts map[string]*model.Account) (holding [][]interface{}) {
 				fundingStr = fmt.Sprintf(`%e %dH %d:%d`,
 					100*fr.Rate, marketInfo.FundingRateInterval/3600000, updateTime.Hour(), updateTime.Minute())
 			} else {
-				fundingStr = fmt.Sprintf(`%e`, 100*marketInfo.InterestRate/-4)
+				fundingStr = fmt.Sprintf(`%e 4H`, 100*marketInfo.InterestRate/-4)
 			}
 			fundingFeeValue, _ := util.LoadSyncMap(&model.AppEnvironment.FundingFeeToday, strconv.Itoa(accounts[market].Index), market, symbol)
 			if fundingFeeValue != nil {
-				fundingStr = fundingStr + fmt.Sprintf("\n%.2fU", fundingFeeValue.(float64))
+				fundingStr = fundingStr + fmt.Sprintf("金额\n%.2fU", fundingFeeValue.(float64)*price)
 				//if marketType == model.MarketTypeSpot {
 				//	util.Log(util.LogLevelInfo, fmt.Sprintf(`add in all fee symbol %s %s %v`, market, symbol, fundingFeeValue))
 				//}

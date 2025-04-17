@@ -1340,6 +1340,53 @@ func queryOrderGate(key, secret, symbol, orderId string) (order *model.Order) {
 	return order
 }
 
+// getBillsGateSpot 获取Gate交易所的账户资金费用记录 https://www.gate.io/docs/developers/apiv4/en/#query-account-book
+// 参数:
+//
+//	account: 包含账户信息的指针，包括API密钥和密钥
+//	begin: unix second 开始时间戳，用于筛选记录
+//	end: unix second 结束时间戳，用于筛选记录
+//
+// 返回值:
+//
+//	bool: 请求是否成功
+//	[]*model.FundingFee: 资金费用记录的切片
+func getBillsGateSpot(account *model.Account, begin, end int64) (bool, []*model.FundingFee) {
+	limit := 100
+	page := 1
+	client, ctx := getClientGate(account.Key, account.Secret)
+	opts := &gateApi.ListSpotAccountBookOpts{From: optional.NewInt64(begin / 1000), To: optional.NewInt64(end / 1000),
+		Type_: optional.NewString("interest_out"), Limit: optional.NewInt32(int32(limit)), Page: optional.NewInt32(int32(page))}
+	var fundingFees = make([]*model.FundingFee, 0)
+	book, _, err := client.SpotApi.ListSpotAccountBook(ctx, opts)
+	for !util.Terminal {
+		if err != nil {
+			util.Log(util.LogLevelError, fmt.Sprintf(`market %s to getbills http error %v`, model.Gate, err))
+			break
+		}
+		for _, data := range book {
+			balChg, _ := strconv.ParseFloat(data.Change, 64)
+			fundingFee := &model.FundingFee{
+				Market: model.Gate,
+				Ccy:    strings.ToUpper(data.Currency),
+				Ts:     data.Time,
+				BalChg: balChg,
+				Symbol: data.Currency + model.UniStandardTail[model.MarketTypeSpot],
+				Index:  account.Index,
+			}
+			fundingFees = append(fundingFees, fundingFee)
+		}
+		if len(book) < limit {
+			break
+		}
+		page++
+		opts.Page = optional.NewInt32(int32(page))
+		book, _, err = client.SpotApi.ListSpotAccountBook(ctx, opts)
+		time.Sleep(time.Second)
+	}
+	return true, fundingFees
+}
+
 func GetBorrowGate(key, secret string, coin string) (canMargin bool, availableWithBorrow float64) {
 	client, ctx := getClientGate(key, secret)
 	BorrowReq, _, err := client.UnifiedApi.GetUnifiedBorrowable(ctx, coin)

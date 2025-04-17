@@ -34,9 +34,9 @@ type CarryCoin struct {
 	UpdatedAt    time.Time
 }
 
-func (carryCoin *CarryCoin) AddTrade(statusBuy, statusSell *CarryStatus, priceBuy, priceSell, amountBuy float64) {
+func (carryCoin *CarryCoin) AddTrade(statusBuy *CarryStatus, priceBuy, amountBuy float64, closeType string) {
 	change := false
-	if statusBuy.Holding*priceBuy >= -SmallHolding && statusSell.Holding*priceSell <= SmallHolding { // 加仓
+	if closeType == Open { // 加仓
 		change = true
 		carryCoin.Holding += amountBuy * statusBuy.Setting.GridAmount
 		carryCoin.MoneyCurStep += amountBuy * priceBuy
@@ -46,7 +46,7 @@ func (carryCoin *CarryCoin) AddTrade(statusBuy, statusSell *CarryStatus, priceBu
 		}
 		util.Log(util.LogLevelLocal, fmt.Sprintf(`add trade deal money %s +%f=%f +%f=%f %d %#v price %f`,
 			carryCoin.Coin, amountBuy, carryCoin.Holding, amountBuy*priceBuy, carryCoin.MoneyCurStep, carryCoin.CurrentStep, carryCoin, priceBuy))
-	} else if statusBuy.Holding*priceBuy < -SmallHolding && statusSell.Holding*priceSell > SmallHolding { // 平仓
+	} else if closeType == Close { // 平仓
 		change = true
 		carryCoin.Holding -= amountBuy * statusBuy.Setting.GridAmount
 		carryCoin.MoneyCurStep -= amountBuy * priceBuy

@@ -266,13 +266,13 @@ func Test_Sync(t *testing.T) {
 
 func Test_BalAndPos(t *testing.T) {
 	model.NewConfig()
+	api.InitMarketInfos(model.BinanceSpot)
 	market := model.Gate
 	account := model.AppConfig.GetAccounts(market)[0]
 	api.GetPositions(account, market)
 	markets := []string{`okex`, `binancespot`, `gate`, `binanceperp`, `bybit`}
 	api.InitCrossMarketInfos(markets, false)
 	model.AppDB, _ = gorm.Open(postgres.Open(model.AppConfig.DBConnection), &gorm.Config{})
-	api.InitMarketInfos(model.OKEX)
 	account = model.AppConfig.GetAccounts(model.BinancePerp)[0]
 	model.AppRedis.Set(context.Background(), `test`, `11`, 0)
 	temp, err := model.AppRedis.Get(context.Background(), `test`).Result()
@@ -457,7 +457,7 @@ func Test_CutTail(t *testing.T) {
 
 func Test_initTurtleN(t *testing.T) {
 	model.NewConfig()
-	api.InitMarketInfos(model.Bybit)
+	api.InitMarketInfos(model.BinanceSpot)
 	market := model.OKEX
 	account := model.AppConfig.GetAccounts(market)[0]
 	//now := time.Now()
@@ -962,9 +962,9 @@ func Test_C(t *testing.T) {
 }
 
 func Test_Funding(t *testing.T) {
-	market := model.Bybit
+	market := model.Gate
 	model.NewConfig()
-	model.AppDB, _ = gorm.Open(postgres.Open(model.AppConfig.DBConnection), &gorm.Config{})
+	//model.AppDB, _ = gorm.Open(postgres.Open(model.AppConfig.DBConnection), &gorm.Config{})
 	//_ = model.AppDB.AutoMigrate(&model.FundingFee{})
 	account := model.GetAccounts(0)[market]
 	_, fees := api.GetBills(account, time.Now().UnixMilli()-28800000, time.Now().UnixMilli())

@@ -16,7 +16,7 @@ import (
 	"time"
 )
 
-// getBillsGate 获取Gate交易所的账户资金费用记录 https://www.gate.io/docs/developers/apiv4/en/#query-futures-account
+// getBillsGatePerp 获取Gate交易所的账户资金费用记录 https://www.gate.io/docs/developers/apiv4/en/#query-futures-account
 // 参数:
 //
 //	account: 包含账户信息的指针，包括API密钥和密钥
@@ -27,7 +27,7 @@ import (
 //
 //	bool: 请求是否成功
 //	[]*model.FundingFee: 资金费用记录的切片
-func getBillsGate(account *model.Account, begin, end int64) (bool, []*model.FundingFee) {
+func getBillsGatePerp(account *model.Account, begin, end int64) (bool, []*model.FundingFee) {
 	settle := `usdt`
 	limit := 100
 	offset := 0
