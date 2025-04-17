@@ -16,21 +16,29 @@ import (
 	"math"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 )
 
-var apiClientsGate = make(map[string]*gateApi.APIClient)
-var apiCtxGate = make(map[string]context.Context)
+var apiClientsGate = sync.Map{} // key -*gateApi.APIClient
+var apiCtxGate = sync.Map{}     // key - context.Context
 
 const wsStepGate = 50
 
 func getClientGate(key, secret string) (apiClient *gateApi.APIClient, ctx context.Context) {
-	if apiClientsGate[key] == nil {
-		apiClientsGate[key] = gateApi.NewAPIClient(gateApi.NewConfiguration())
-		apiCtxGate[key] = context.WithValue(context.Background(), gateApi.ContextGateAPIV4, gateApi.GateAPIV4{
+	valueClient, _ := apiClientsGate.Load(key)
+	valueCtx, _ := apiCtxGate.Load(key)
+	if valueClient == nil || valueCtx == nil {
+		apiClient = gateApi.NewAPIClient(gateApi.NewConfiguration())
+		ctx = context.WithValue(context.Background(), gateApi.ContextGateAPIV4, gateApi.GateAPIV4{
 			Key: key, Secret: secret})
+		apiClientsGate.Store(key, apiClient)
+		apiCtxGate.Store(key, ctx)
+	} else {
+		apiClient = valueClient.(*gateApi.APIClient)
+		ctx = valueCtx.(context.Context)
 	}
-	return apiClientsGate[key], apiCtxGate[key]
+	return apiClient, ctx
 }
 
 func getMarketsGate(key, secret string) (success bool, marketInfos map[string]*model.MarketInfo) {
