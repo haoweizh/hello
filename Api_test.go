@@ -170,6 +170,7 @@ func Test_WsAndOrderApi(t *testing.T) {
 	symbols := []string{coin + model.UniStandardTail[model.MarketTypePerp]}
 	//coin + model.UniStandardTail[model.MarketTypeSpot]}
 	model.NewConfig()
+	api.SendMails(`test`, `code`)
 	//model.AppDB, _ = gorm.Open(postgres.Open(model.AppConfig.DBConnection), &gorm.Config{})
 	api.InitMarketInfos(market)
 	account := model.AppConfig.GetAccounts(market)[0]

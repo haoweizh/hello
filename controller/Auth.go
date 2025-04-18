@@ -76,9 +76,9 @@ func MailCode(c *gin.Context) {
 		code := fmt.Sprintf("%06v", rnd.Int31n(1000000))
 		codeTime := time.Now()
 		codes.Store(code, &codeTime)
-		util.Log(util.LogLevelInfo, fmt.Sprintf(`code is %s`, code))
+		util.Log(util.LogLevelLocal, fmt.Sprintf(`code is %s`, code))
 		api.SendMails(`验证码`, `验证码是 `+code)
-		c.JSON(http.StatusOK, map[string]interface{}{`status`: `ok`, `msg`: `success`, `data`: map[string]interface{}{}})
+		c.String(http.StatusOK, `code sent check mail`)
 		return
 	}
 }
