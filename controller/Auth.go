@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"github.com/gin-contrib/sessions"
 	"github.com/gin-gonic/gin"
+	"hello/api"
 	"hello/model"
 	"hello/util"
 	"math/rand"
@@ -59,6 +60,27 @@ func login(c *gin.Context) {
 		return
 	}
 	c.JSON(http.StatusOK, map[string]interface{}{`status`: `fail`, `msg`: `登陆失败`, `data`: map[string]interface{}{}})
+}
+
+func MailCode(c *gin.Context) {
+	waitTime := (util.GetNowUnixMillion() - codeGenTime) / 1000
+	if waitTime < 30 {
+		waitTime = 30 - waitTime
+		c.JSON(http.StatusOK, map[string]interface{}{`status`: `fail`, `msg`: fmt.Sprintf(
+			`还要等待 %d 秒才能再次发送`, waitTime), `data`: map[string]interface{}{}})
+		return
+	} else {
+		codeGenTime = util.GetNowUnixMillion()
+		rnd := rand.New(rand.NewSource(time.Now().UnixNano()))
+		rnd = rand.New(rand.NewSource(rnd.Int63()))
+		code := fmt.Sprintf("%06v", rnd.Int31n(1000000))
+		codeTime := time.Now()
+		codes.Store(code, &codeTime)
+		util.Log(util.LogLevelInfo, fmt.Sprintf(`code is %s`, code))
+		api.SendMails(`验证码`, `验证码是 `+code)
+		c.JSON(http.StatusOK, map[string]interface{}{`status`: `ok`, `msg`: `success`, `data`: map[string]interface{}{}})
+		return
+	}
 }
 
 func GetCode(c *gin.Context) {

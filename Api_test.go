@@ -401,6 +401,7 @@ func Test_CreateReport(t *testing.T) {
 
 func Test_CutTail(t *testing.T) {
 	model.NewConfig()
+	api.SendMails(`test`, `test`)
 	model.AppDB, _ = gorm.Open(postgres.Open(model.AppConfig.DBConnection), &gorm.Config{})
 	coins := `1000SHIB,SOL,DOGE,MATIC,ADA,TRB,FIL,DYDX,FTM,AVAX,DOT,MASK,NEAR,BLZ,MKR,GALA,STORJ,ATOM,RUNE,CRV`
 	//allLimit := 12

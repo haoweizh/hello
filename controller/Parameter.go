@@ -46,6 +46,7 @@ func ParameterServe() {
 	//router.GET(`test`, testSpeed)
 	router.GET(`currentUser`, currentUser)
 	router.POST(`pw`, GetCode)
+	router.GET(`mailpw`, MailCode)
 	router.GET(`simulate`, simulate)
 	router.GET(`simulateGrid`, simulateGrid)
 	router.GET(`cross`, crossPage)
