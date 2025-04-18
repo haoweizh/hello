@@ -9,6 +9,19 @@ import (
 	"strconv"
 )
 
+func GetFrInterval(c *gin.Context) {
+	market := c.Query(`market`)
+	symbol := c.Query(`symbol`)
+	marketInfo := model.GetMarketInfo(market, symbol)
+	if marketInfo == nil {
+		c.String(http.StatusOK, fmt.Sprintf(`no market info %s %s`, market, symbol))
+		return
+	}
+	msg := fmt.Sprintf(`get fr interval %s %s %d`, market, symbol, marketInfo.FundingRateInterval/1000/3600)
+	util.Log(util.LogLevelLocal, msg)
+	c.String(http.StatusOK, msg)
+}
+
 func SetFrInterval(c *gin.Context) {
 	strCode := c.Query(`code`)
 	if !checkCode(strCode) {
