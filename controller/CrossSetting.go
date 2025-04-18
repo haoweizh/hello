@@ -13,7 +13,7 @@ import (
 func GetFrInterval(c *gin.Context) {
 	market := strings.ToLower(c.Query(`market`))
 	symbol := strings.ToUpper(c.Query(`symbol`))
-	if strings.Contains(symbol, `_`) {
+	if !strings.Contains(symbol, `_`) {
 		symbol += model.UniStandardTail[model.MarketTypePerp]
 	}
 	if market == `binance` {
@@ -41,7 +41,7 @@ func SetFrInterval(c *gin.Context) {
 	if market == `binance` {
 		market = `binanceperp`
 	}
-	if strings.Contains(symbol, `_`) {
+	if !strings.Contains(symbol, `_`) {
 		symbol += model.UniStandardTail[model.MarketTypePerp]
 	}
 	marketInfo := model.GetMarketInfo(market, symbol)
