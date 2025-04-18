@@ -23,7 +23,7 @@ func checkCode(code string) (valid bool) {
 	if !ok || value == nil {
 		return false
 	}
-	valid = value.(*time.Time).Add(time.Minute * 5).After(time.Now())
+	valid = value.(*time.Time).Add(time.Minute * 3).After(time.Now())
 	if !valid {
 		codes.Delete(code)
 	}
