@@ -39,6 +39,7 @@ func SetFrInterval(c *gin.Context) {
 		} else {
 			c.String(http.StatusOK, fmt.Sprintf(`clear manual %s %s %s %d`, market, symbol, strHour, marketInfo.FundingRateInterval))
 		}
+	} else {
+		c.String(http.StatusOK, fmt.Sprintf(`wrong hour no set %s %s %s`, market, symbol, strHour))
 	}
-	c.String(http.StatusOK, fmt.Sprintf(`wrong hour no set %s %s %s`, market, symbol, strHour))
 }
