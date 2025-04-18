@@ -7,11 +7,15 @@ import (
 	"hello/util"
 	"net/http"
 	"strconv"
+	"strings"
 )
 
 func GetFrInterval(c *gin.Context) {
-	market := c.Query(`market`)
-	symbol := c.Query(`symbol`)
+	market := strings.ToLower(c.Query(`market`))
+	symbol := strings.ToUpper(c.Query(`symbol`))
+	if strings.Contains(symbol, `_`) {
+		symbol += model.UniStandardTail[model.MarketTypePerp]
+	}
 	marketInfo := model.GetMarketInfo(market, symbol)
 	if marketInfo == nil {
 		c.String(http.StatusOK, fmt.Sprintf(`no market info %s %s`, market, symbol))
@@ -29,8 +33,11 @@ func SetFrInterval(c *gin.Context) {
 		return
 	}
 	strHour := c.Query(`hour`)
-	market := c.Query(`market`)
-	symbol := c.Query(`symbol`)
+	market := strings.ToLower(c.Query(`market`))
+	symbol := strings.ToUpper(c.Query(`symbol`))
+	if strings.Contains(symbol, `_`) {
+		symbol += model.UniStandardTail[model.MarketTypePerp]
+	}
 	marketInfo := model.GetMarketInfo(market, symbol)
 	if marketInfo == nil {
 		c.String(http.StatusOK, fmt.Sprintf(`no market info %s %s`, market, symbol))
