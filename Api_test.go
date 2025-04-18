@@ -163,7 +163,7 @@ func TestWs(t *testing.T) {
 }
 
 func Test_WsAndOrderApi(t *testing.T) {
-	market := model.Bybit
+	market := model.Gate
 	coin := `ETH`
 	orderType := model.OrderTypeLimit
 	orderSide := model.OrderSideSell
