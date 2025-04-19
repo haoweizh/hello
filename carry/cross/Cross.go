@@ -849,7 +849,7 @@ func equalCoin(index int, coin string, statuses []*model.CarryStatus) (isEqual b
 		getBid, bidAsk := model.AppEnvironment.GetBidAsk(bids[i].Market, bids[i].Symbol)
 		if !getBid || time.Now().UnixMilli()-int64(bidAsk.Ts) > 60000 {
 			errMsg += fmt.Sprintf(`delay when equal %s %s bid %d`, bids[i].Market, bids[i].Symbol, time.Now().UnixMilli()-int64(bidAsk.Ts))
-			continue
+			//continue
 		}
 		price := bidAsk.Bids[0].Price * (1 - compSlide)
 		if holding > CompLineInMoney/holdingPrice {

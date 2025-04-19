@@ -487,7 +487,7 @@ func calcAmount(index int, coin string, carryStatus, carryStatusRelate *model.Ca
 			statusBuy.Market, statusBuy.Symbol, priceBuy, priceSell, scoreUseR, scoreTypeR, statusBuy.TradeLineBuy, tradeLimit, bidAmount, askAmount, carryCoin)
 	}
 	generateMonitorMsg(index, coin, scoreType, scoreTypeR, scoreUse, scoreUseR, carryStatus, carryStatusRelate, marketInfo, marketInfoR, rate, rateR, valid || validR)
-	if !valid && !validR {
+	if statusBuy == nil {
 		return false, nil, nil, 0, 0, 0, ``, ``
 	}
 	if breakMarkPrice(statusBuy.Account, statusBuy.Setting, priceBuy, model.OrderSideBuy) ||
@@ -501,11 +501,11 @@ func calcAmount(index int, coin string, carryStatus, carryStatusRelate *model.Ca
 			if sm != nil {
 				balance := sm.(*spotMarket).balances[statusSell.Symbol]
 				if balance != nil && balance.Amount <= askAmount { //gate借币
-					oldAmt := askAmount
+					//oldAmt := askAmount
 					randRate := 0.55 + 0.4*rand.Float64()
 					askAmount = askAmount * randRate
-					util.Log(util.LogLevelInfo, fmt.Sprintf(`rand gate borrow sell amt %s %f to rand %f %f`,
-						statusSell.Symbol, oldAmt, randRate, askAmount))
+					//util.Log(util.LogLevelInfo, fmt.Sprintf(`rand gate borrow sell amt %s %f to rand %f %f`,
+					//	statusSell.Symbol, oldAmt, randRate, askAmount))
 				}
 			}
 		}
