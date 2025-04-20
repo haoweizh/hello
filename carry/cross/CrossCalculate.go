@@ -13,10 +13,10 @@ import (
 )
 
 // step(n) = step(n-1) + 0.0012 + 0.0001*(n-1)
-var stepScores = []float64{-0.001, 0, 0.0012, 0.0026, 0.0042, 0.0060, 0.0080, 0.0102, 0.0126, 0.0152, 0.0180, 0.0210, 0.0242, 0.0276,
-	0.0312, 0.0350, 0.0390, 0.0432, 0.0476, 0.0522, 0.0570, 0.0620, 0.0672, 0.0726, 0.0782, 0.0840, 0.0900, 0.0962, 0.1026, 0.1092, 0.1160,
-	0.1230, 0.1302, 0.1376, 0.1452, 0.1530, 0.1610, 0.1692, 0.1776, 0.1862, 0.1950, 0.2040, 0.2132, 0.2226, 0.2322, 0.2420, 0.2520, 0.2622,
-	0.2726, 0.2832, 0.2940, 0.305}
+var stepScores = []float64{-0.0014, 0, 0.0014, 0.0030, 0.0048, 0.0068, 0.0090, 0.0114, 0.0140, 0.0168, 0.0198, 0.0230, 0.0264, 0.03,
+	0.0338, 0.0378, 0.0420, 0.0464, 0.0510, 0.0558, 0.0608, 0.0660, 0.0714, 0.0770, 0.0828, 0.0888, 0.0950, 0.1014, 0.1080, 0.1148, 0.1218,
+	0.1290, 0.1364, 0.1440, 0.1518, 0.1598, 0.1680, 0.1764, 0.1850, 0.1938, 0.2028, 0.2120, 0.2214, 0.2310, 0.2408, 0.2508, 0.2610, 0.2714,
+	0.2820, 0.2928, 0.3038}
 
 const GridGap = 3
 
@@ -375,7 +375,7 @@ func checkTradeLine(statusBuy, statusSell *model.CarryStatus, carryCoin *model.C
 			if currentStep < 0 || currentStep > len(stepScores)-GridGap {
 				return false, 0, scoreClose, model.Close
 			}
-			closeScore := -1 * (stepScores[currentStep]/2 - 0.0005)
+			closeScore := -1 * (stepScores[currentStep]/2 - 0.0007)
 			statusBuy.TradeLineBuy, statusSell.TradeLineSell = closeScore, closeScore
 			return scoreClose > closeScore, math.Min(limit, closeLimit), scoreClose, model.Close
 		} else {
