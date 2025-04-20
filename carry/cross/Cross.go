@@ -73,7 +73,7 @@ func createSpotMarket(account *model.Account, market string) (sm *spotMarket) {
 				}
 			}
 		}
-		util.Log(util.LogLevelLocal, fmt.Sprintf(`create spot market %s %d %#v %d`, market, account.Index, sm, len(balances)))
+		util.Log(util.LogLevelLocal, fmt.Sprintf(`create spot market %s %d %d`, market, account.Index, len(balances)))
 		//if collateral != nil {
 		//	util.Log(util.LogLevelInfo, fmt.Sprintf(`collateral for sm available u %s %f to %f maintain rate %f`,
 		//		market, sm.availableU, collateral.Available, collateral.Rate))
