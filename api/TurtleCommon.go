@@ -202,7 +202,7 @@ func CheckActiveTrail(account *model.Account, setting *model.Setting, data *mode
 	if setting.Chance > 0 && data.LowActTrail*data.ActivationRate > 0 && data.LowActTrail < bidAsk.Bids[0].Price*(1-data.ActivationRate) {
 		trailed = true
 		data.OrderShort = nil
-		trails = MustPlaceOrder(account, model.OrderSideSell, model.OrderTypeTrailStop, setting.Market, setting.Symbol, ``,
+		trails = MustPlaceOrder(account, model.OrderSideSell, model.OrderTypeTrailStop, setting.Market, setting.Symbol, model.ReduceOnly,
 			setting.Function, bidAsk.Bids[0].Price, data.CallBackRatio, setting.GridAmount, true)
 		for _, order := range trails {
 			order.Function = model.Close
@@ -214,7 +214,7 @@ func CheckActiveTrail(account *model.Account, setting *model.Setting, data *mode
 	} else if setting.Chance < 0 && data.ActivationRate > 0 && bidAsk.Asks[0].Price < data.HighActTrail*(1-data.ActivationRate) {
 		trailed = true
 		data.OrderLong = nil
-		trails = MustPlaceOrder(account, model.OrderSideBuy, model.OrderTypeTrailStop, setting.Market, setting.Symbol, ``,
+		trails = MustPlaceOrder(account, model.OrderSideBuy, model.OrderTypeTrailStop, setting.Market, setting.Symbol, model.ReduceOnly,
 			setting.Function, bidAsk.Asks[0].Price, data.CallBackRatio, setting.GridAmount, true)
 		for _, order := range trails {
 			order.Function = model.Close
