@@ -70,7 +70,9 @@ type spotMarket struct {
 	reduceOnly      bool // 只减仓模式
 }
 
-// (1+(1-剩余/周期）^2)*2/周期
+// 周期大于等于4时用（1+（1-t/T）^2）*2/T
+// 周期为2时用（1+（1-t/T）^2）*3/4
+// 周期为1时用（1+（1-t/T）^2）*9/8
 func handledFRate(status *model.CarryStatus, marketInfo *model.MarketInfo, price float64, orderSide string) (
 	got, delayed bool, fundingRate *model.FundingRate, handledFr float64) {
 	if status.IsSpot { // [-50和50之间时，买入没利息，卖出有利息][<-50都有，>50都没有]
@@ -78,7 +80,8 @@ func handledFRate(status *model.CarryStatus, marketInfo *model.MarketInfo, price
 			(orderSide == model.OrderSideSell && status.Holding*price > model.SmallHolding) {
 			return true, false, &model.FundingRate{Rate: 0, UpdateTime: time.Now()}, 0
 		} else {
-			rate := marketInfo.InterestRate / -4
+			// 24/6=4小时利息
+			rate := marketInfo.InterestRate / -6
 			return true, false, &model.FundingRate{Rate: rate, UpdateTime: time.Now()}, rate
 		}
 	} else {
@@ -96,7 +99,13 @@ func handledFRate(status *model.CarryStatus, marketInfo *model.MarketInfo, price
 			leftHours -= hours
 		}
 		//handledFr = fundingRate.Rate * (2/hours + (1.0-leftHours/hours)*(1.0-leftHours/hours)/2)
-		handledFr = fundingRate.Rate * (1 + (1.0-leftHours/hours)*(1.0-leftHours/hours)) * 2 / hours
+		if hours >= 4 {
+			handledFr = fundingRate.Rate * (1 + (1.0-leftHours/hours)*(1.0-leftHours/hours)) * 2 / hours
+		} else if hours >= 2 {
+			handledFr = fundingRate.Rate * (1 + (1.0-leftHours/hours)*(1.0-leftHours/hours)) * 3 / 4
+		} else if hours >= 1 {
+			handledFr = fundingRate.Rate * (1 + (1.0-leftHours/hours)*(1.0-leftHours/hours)) * 9 / 8
+		}
 		if handledFr > 0.1 || handledFr < -0.1 {
 			got = false
 			util.Log(util.LogLevelError, fmt.Sprintf(`fatal error funding rate break %s %s %f %#v %d`,
