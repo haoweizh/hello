@@ -11,7 +11,7 @@ import (
 )
 
 func GetFrInterval(c *gin.Context) {
-	rows, _ := model.AppDB.Model(&model.Setting{}).Select(`market, symbol,chance_limit`).Where(
+	rows, _ := model.AppDB.Model(&model.Setting{}).Select(`market,symbol,chance_limit`).Where(
 		`function=? and chance_limit!=0 and chance_limit is not null`, model.FunctionCross).Rows()
 	intervalTable := `修改周期表`
 	for rows.Next() {
