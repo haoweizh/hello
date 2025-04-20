@@ -11,22 +11,15 @@ import (
 )
 
 func GetFrInterval(c *gin.Context) {
-	rows, _ := model.AppDB.Model(&model.Setting{}).Select(`function=? and chance_limit!=?`, model.FunctionCross, 0).Rows()
+	rows, _ := model.AppDB.Model(&model.Setting{}).Select(`market, symbol,chance_limit`).Where(
+		`function=? and chance_limit!=0 and chance_limit is not null`, model.FunctionCross).Rows()
 	intervalTable := `修改周期表`
 	for rows.Next() {
-		market := strings.ToLower(c.Query(`market`))
-		symbol := strings.ToUpper(c.Query(`symbol`))
-		if !strings.Contains(symbol, `_`) {
-			symbol += model.UniStandardTail[model.MarketTypePerp]
-		}
-		if market == `binance` {
-			market = `binanceperp`
-		}
-		marketInfo := model.GetMarketInfo(market, symbol)
-		if marketInfo == nil {
-			intervalTable += fmt.Sprintf("\n%s %s no market info", market, symbol)
-		} else {
-			intervalTable += fmt.Sprintf("\n%s %s %d", market, symbol, marketInfo.FundingRateInterval/1000/3600)
+		var market, symbol string
+		var chanceLimit int
+		err := rows.Scan(&market, &symbol, &chanceLimit)
+		if err == nil {
+			intervalTable += fmt.Sprintf("\n%s %s %d", market, symbol, chanceLimit)
 		}
 	}
 	util.Log(util.LogLevelLocal, intervalTable)
