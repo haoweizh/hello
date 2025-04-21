@@ -419,7 +419,7 @@ func calcScores(statusBuy, statusSell *model.CarryStatus, marketInfoBuy, marketI
 	priceXBuy := statusBuy.Setting.PriceX
 	priceXSell := statusSell.Setting.PriceX
 	scoreBase = (priceSell/priceXSell - priceBuy/priceXBuy) / (priceBuy / priceXBuy)
-	scoreOpen, scoreSwitch, scoreClose = scoreBase, scoreOpen, scoreOpen
+	scoreOpen, scoreSwitch, scoreClose = scoreBase, scoreBase, scoreBase
 	scoreMsg = fmt.Sprintf(`score check1 %s %s %f rate %f score %f holding %f %s %s %f rate %f holding %f buyAsk0 %f sellBid0 %f`,
 		statusBuy.Market, statusBuy.Symbol, priceBuy, handledRateBuy, scoreOpen, statusBuy.Holding, statusSell.Market, statusSell.Symbol,
 		priceSell, handledRateSell, statusSell.Holding, tickBuy.Asks[0].Price, tickSell.Bids[0].Price)
