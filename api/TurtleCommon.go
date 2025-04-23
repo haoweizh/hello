@@ -371,7 +371,7 @@ func GetRankTurtleData(account *model.Account, symbol string, setting *model.Set
 	nowPeriod, nowStr := model.GetNowPeriod(setting.Market, setting.Seconds, now)
 	data = &model.TurtleData{TurtleTime: nowPeriod, Expire: nowPeriod.Add(time.Second * time.Duration(setting.Seconds)),
 		IsBig: true, Symbol: symbol, DaysFar: int(setting.Far), DaysNear: int(setting.Near), DaysAdjust: 5,
-		OrderAdjust: make(map[string]*model.Order), CallBackRatio: 0.03, ActivationRate: 0.43}
+		OrderAdjust: make(map[string]*model.Order), CallBackRatio: 0.05, ActivationRate: 0.43}
 	util.Log(util.LogLevelInfo, fmt.Sprintf(
 		`need to create turtle data rank %s %s %s %s %d`, setting.Function, setting.Market, symbol, nowStr, setting.Far))
 	candles := getTurtleCandles(account, setting.Market, symbol, int(setting.Far), int(setting.Seconds), nowPeriod)
@@ -460,7 +460,7 @@ func GetTurtleData(account *model.Account, setting *model.Setting, removed bool)
 	}
 	data = &model.TurtleData{TurtleTime: nowPeriod, Expire: nowPeriod.Add(time.Second * time.Duration(setting.Seconds)),
 		IsBig: true, Symbol: setting.Symbol, DaysFar: int(setting.Far), DaysNear: int(setting.Near), DaysAdjust: 5,
-		OrderAdjust: make(map[string]*model.Order), OrderCleared: lastHandled, CallBackRatio: 0.03, ActivationRate: activationRate}
+		OrderAdjust: make(map[string]*model.Order), OrderCleared: lastHandled, CallBackRatio: 0.05, ActivationRate: activationRate}
 	if removed {
 		data.CheckTimeOpen = time.Now()
 		util.StoreSyncMap(&TurtleDataSet, data, setting.Function, setting.Market, setting.Symbol, nowStr)
