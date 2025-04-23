@@ -16,7 +16,9 @@ import (
 func main() {
 	model.NewConfig()
 	go util.LogChanHandler(model.AppConfig.Log, model.AppConfig.Port)
+	fmt.Println("main")
 	if model.AppConfig.Mode == "agent" {
+		fmt.Println("start agent")
 		load()
 		//agent()
 	} else {
