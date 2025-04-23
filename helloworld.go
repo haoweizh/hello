@@ -25,7 +25,7 @@ func main() {
 }
 
 func load() {
-	response, _ := util.HttpRequest(http.MethodGet, `https://www.binance.com/zh-CN/support/announcement/list/49`, ``, nil, 2000)
+	response, _ := util.HttpRequest(http.MethodGet, `www.binance.com/zh-CN/support/announcement/list/49`, ``, nil, 2000)
 	//response, _ := util.HttpRequest(http.MethodPost, `https://www.google.com`, ``, nil, 2000)
 	fmt.Println(string(response))
 	time.Sleep(time.Second * 2)
