@@ -21,7 +21,6 @@ import (
 	"regexp"
 	"strconv"
 	"strings"
-	"sync"
 	"testing"
 	"time"
 )
@@ -764,37 +763,15 @@ func Test_LimitReport(t *testing.T) {
 	}
 }
 
-func add(value *sync.Map) {
-	time.Sleep(time.Second * 2)
-	value.Store(4, true)
-	fmt.Println(`add 4`)
-}
-
-func remove(value *sync.Map) {
-	time.Sleep(time.Second * 2)
-	value.Delete(2)
-	fmt.Println(`remove 2`)
-}
-
 // step(n) = step(n-1) + base + 0.0001*(n-1)
 func Test_CalcGridLine(t *testing.T) {
 	cross.CalcGridLine(0.0014)
 }
 
 func Test_map(t *testing.T) {
-	symbolSettings := &sync.Map{}
-	valueMap := &sync.Map{}
-	setting := &model.Setting{Market: model.Gate}
-	fmt.Println(fmt.Sprintf(`%v`, setting))
-	valueMap.Store(1, setting)
-	symbolSettings.Store(`market`, valueMap)
-	value, _ := symbolSettings.Load(`market`)
-	value1, _ := value.(*sync.Map).Load(1)
-	setting = value1.(*model.Setting)
-	setting.Market = model.BinanceSpot
-	value2, _ := symbolSettings.Load(`market`)
-	setting2, _ := value2.(*sync.Map).Load(1)
-	fmt.Println(setting2.(*model.Setting).Market)
+	response, _ := util.HttpRequest(http.MethodGet, `https://www.binance.com/zh-CN/support/announcement/list/49`, ``, nil, 2000)
+	//response, _ := util.HttpRequest(http.MethodPost, `https://www.google.com`, ``, nil, 2000)
+	fmt.Println(string(response))
 }
 
 func Test_wallet(t *testing.T) {
