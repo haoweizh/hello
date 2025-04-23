@@ -452,7 +452,7 @@ func GetTurtleData(account *model.Account, setting *model.Setting, removed bool)
 			removed = false
 		}
 	}
-	activationRate := 0.43
+	activationRate := 0.4737
 	if strings.ToLower(setting.Symbol) == `btc_perp` {
 		activationRate = 0.23
 	} else if strings.ToLower(setting.Symbol) == `eth_perp` || strings.ToLower(setting.Symbol) == `sol_perp` {

@@ -764,18 +764,17 @@ func Test_LimitReport(t *testing.T) {
 	}
 }
 
-//
-//func add(value *sync.Map) {
-//	time.Sleep(time.Second * 2)
-//	value.Store(4, true)
-//	fmt.Println(`add 4`)
-//}
-//
-//func remove(value *sync.Map) {
-//	time.Sleep(time.Second * 2)
-//	value.Delete(2)
-//	fmt.Println(`remove 2`)
-//}
+func add(value *sync.Map) {
+	time.Sleep(time.Second * 2)
+	value.Store(4, true)
+	fmt.Println(`add 4`)
+}
+
+func remove(value *sync.Map) {
+	time.Sleep(time.Second * 2)
+	value.Delete(2)
+	fmt.Println(`remove 2`)
+}
 
 // step(n) = step(n-1) + base + 0.0001*(n-1)
 func Test_CalcGridLine(t *testing.T) {
@@ -786,6 +785,7 @@ func Test_map(t *testing.T) {
 	symbolSettings := &sync.Map{}
 	valueMap := &sync.Map{}
 	setting := &model.Setting{Market: model.Gate}
+	fmt.Println(fmt.Sprintf(`%v`, setting))
 	valueMap.Store(1, setting)
 	symbolSettings.Store(`market`, valueMap)
 	value, _ := symbolSettings.Load(`market`)
