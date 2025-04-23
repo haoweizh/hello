@@ -313,9 +313,9 @@ func placeTurtleLong(account *model.Account, orderType string, data *model.Turtl
 			data.OrderAdjust = make(map[string]*model.Order)
 		}
 		util.Log(util.LogLevelInfo, fmt.Sprintf(
-			`place long %s %s %s %s %d %#v at %e %e amt %e setting amt %e, useNear %#v priceX %f n:%f seconds %d near %f %f far %f %f`,
+			`place long %s %s %s %s %d %#v at %e %e amt %e setting amt %e, useNear %#v priceX %f n:%f seconds %d near %f %f far %f %f %v`,
 			orderType, setting.Function, market, symbol, setting.Chance, canOpen, priceDeal, price, amount, setting.GridAmount,
-			data.UseNear, setting.PriceX, data.N, setting.Seconds, data.LowNear, data.HighNear, data.LowFar, data.HighFar))
+			data.UseNear, setting.PriceX, data.N, setting.Seconds, data.LowNear, data.HighNear, data.LowFar, data.HighFar, setting))
 		for _, order := range data.OrderLong {
 			order.LineBuy = data.N
 			order.LineSell = data.N
@@ -407,9 +407,9 @@ func placeTurtleShort(account *model.Account, orderType string, data *model.Turt
 			priceDeal = tick.Bids[0].Price * (1 - turtleTriggerDelta)
 			price = tick.Bids[0].Price
 		}
-		util.Log(util.LogLevelInfo, fmt.Sprintf(`place short %s %s %s %s %d %#v at %e %e amt %e setting amt %e, useNear %#v priceX %f n:%f seconds %d near %f %f far %f %f`,
+		util.Log(util.LogLevelInfo, fmt.Sprintf(`place short %s %s %s %s %d %#v at %e %e amt %e setting amt %e, useNear %#v priceX %f n:%f seconds %d near %f %f far %f %f %v`,
 			orderType, setting.Function, market, symbol, setting.Chance, canOpen, priceDeal, price, amount, setting.GridAmount,
-			data.UseNear, setting.PriceX, data.N, setting.Seconds, data.LowNear, data.HighNear, data.LowFar, data.HighFar))
+			data.UseNear, setting.PriceX, data.N, setting.Seconds, data.LowNear, data.HighNear, data.LowFar, data.HighFar, setting))
 		data.OrderShort = api.MustPlaceOrder(account, model.OrderSideSell, orderType, market, symbol,
 			``, setting.Function, priceDeal, price, amount, true)
 		if data.OrderAdjust == nil {

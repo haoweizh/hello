@@ -168,8 +168,8 @@ func AdjustPosHolding(account *model.Account, setting *model.Setting, data *mode
 				}
 			}
 		} else if setting.GridAmount != math.Abs(posMap[setting.Symbol].Holding) {
-			util.Log(util.LogLevelInfo, fmt.Sprintf(`update turtle grid Amount %s %s %s %e to %e`,
-				setting.Market, setting.Symbol, setting.Function, setting.GridAmount, posMap[setting.Symbol].Holding))
+			util.Log(util.LogLevelInfo, fmt.Sprintf(`update turtle grid Amount %s %s %s %e to %e %v`,
+				setting.Market, setting.Symbol, setting.Function, setting.GridAmount, posMap[setting.Symbol].Holding, setting))
 			setting.GridAmount = math.Abs(posMap[setting.Symbol].Holding)
 		}
 	} else {

@@ -764,17 +764,18 @@ func Test_LimitReport(t *testing.T) {
 	}
 }
 
-func add(value *sync.Map) {
-	time.Sleep(time.Second * 2)
-	value.Store(4, true)
-	fmt.Println(`add 4`)
-}
-
-func remove(value *sync.Map) {
-	time.Sleep(time.Second * 2)
-	value.Delete(2)
-	fmt.Println(`remove 2`)
-}
+//
+//func add(value *sync.Map) {
+//	time.Sleep(time.Second * 2)
+//	value.Store(4, true)
+//	fmt.Println(`add 4`)
+//}
+//
+//func remove(value *sync.Map) {
+//	time.Sleep(time.Second * 2)
+//	value.Delete(2)
+//	fmt.Println(`remove 2`)
+//}
 
 // step(n) = step(n-1) + base + 0.0001*(n-1)
 func Test_CalcGridLine(t *testing.T) {
@@ -782,44 +783,18 @@ func Test_CalcGridLine(t *testing.T) {
 }
 
 func Test_map(t *testing.T) {
+	symbolSettings := &sync.Map{}
 	valueMap := &sync.Map{}
 	setting := &model.Setting{Market: model.Gate}
 	valueMap.Store(1, setting)
-	test1, _ := valueMap.Load(1)
-	item := test1.(*model.Setting)
-	item.Market = model.BinanceSpot
-	test2, _ := valueMap.Load(1)
-	fmt.Println(test2.(*model.Setting).Market)
-	util.StoreSyncMap(valueMap, 1, `1`, `2`)
-	util.StoreSyncMap(valueMap, 2, `1`, `3`)
-	for i := 0; i < 10000; i++ {
-		valueMap.Store(i, i)
-	}
-	tm := time.Now().UnixMicro()
-	//for i := 0; i < 10000; i++ {
-	valueMap.CompareAndSwap(1, 1, 2)
-	//}
-	fmt.Println(fmt.Sprintf("%d", time.Now().UnixMicro()-tm))
-	value, ok := util.LoadSyncMap(valueMap, `1`, `2`)
-	fmt.Println(ok)
-	fmt.Println(fmt.Sprintf(`%v`, value))
-	valueMap.Store(1, true)
-	valueMap.Store(2, true)
-	valueMap.Store(3, true)
-	go add(valueMap)
-	go remove(valueMap)
-	valueMap.Range(func(key, value interface{}) bool {
-		fmt.Println(key, value)
-		time.Sleep(time.Second * 5)
-		valueMap.Delete(3)
-		return true
-	})
-	fmt.Println(`-------`)
-	valueMap.Range(func(key, value interface{}) bool {
-		fmt.Println(key, value)
-		return true
-	})
-	select {}
+	symbolSettings.Store(`market`, valueMap)
+	value, _ := symbolSettings.Load(`market`)
+	value1, _ := value.(*sync.Map).Load(1)
+	setting = value1.(*model.Setting)
+	setting.Market = model.BinanceSpot
+	value2, _ := symbolSettings.Load(`market`)
+	setting2, _ := value2.(*sync.Map).Load(1)
+	fmt.Println(setting2.(*model.Setting).Market)
 }
 
 func Test_wallet(t *testing.T) {
