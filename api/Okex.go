@@ -1411,7 +1411,7 @@ func getBalanceOKEX(account *model.Account) (success bool, balances []*model.Bal
 	response, _ := sendSignRequestOKEX(account, http.MethodGet, `/api/v5/account/balance`, nil, nil)
 	responseJson, err := util.NewJSON(response)
 	if err != nil || responseJson == nil || responseJson.GetPath(`data`) == nil || responseJson.Get(`code`).MustString() != `0` {
-		util.Log(util.LogLevelError, `fail to get okex balance `)
+		util.Log(util.LogLevelError, fmt.Sprintf(`fail to get okex balance %v %v`, account, err))
 		time.Sleep(time.Minute * 5)
 		return getBalanceOKEX(account)
 	}

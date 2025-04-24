@@ -266,8 +266,8 @@ func Test_Sync(t *testing.T) {
 
 func Test_BalAndPos(t *testing.T) {
 	model.NewConfig()
-	api.InitMarketInfos(model.BinanceSpot)
 	market := model.Gate
+	api.InitMarketInfos(market)
 	account := model.AppConfig.GetAccounts(market)[0]
 	api.GetPositions(account, market)
 	markets := []string{`okex`, `binancespot`, `gate`, `binanceperp`, `bybit`}
