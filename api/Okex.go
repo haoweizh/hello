@@ -1410,8 +1410,8 @@ func parseBalanceOKEX(value map[string]interface{}) (balance *model.Balance) {
 func getBalanceOKEX(account *model.Account) (success bool, balances []*model.Balance, totalInUsd float64, collateral *model.Collateral) {
 	response, _ := sendSignRequestOKEX(account, http.MethodGet, `/api/v5/account/balance`, nil, nil)
 	responseJson, err := util.NewJSON(response)
-	if err != nil || responseJson == nil || responseJson.GetPath(`data`) == nil || responseJson.Get(`code`).MustString() != `0` {
-		util.Log(util.LogLevelError, fmt.Sprintf(`fail to get okex balance %v %v`, account, err))
+	if err != nil || responseJson == nil || responseJson.Get(`code`).MustString() != `0` {
+		util.Log(util.LogLevelError, fmt.Sprintf(`fail to get okex balance %v %v %v`, account, err, string(response)))
 		time.Sleep(time.Minute * 5)
 		return getBalanceOKEX(account)
 	}
