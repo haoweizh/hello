@@ -597,8 +597,9 @@ func getBalanceBybit(key string, secret string) (success bool, balances []*model
 	httpResp, httpErr := SignedRequestBybit(key, secret, http.MethodGet, bybitRestUrl, "/v5/account/wallet-balance", param)
 	balanceResp := &dtos.BybitBalanceResp{}
 	jsonErr := json.Unmarshal(httpResp, balanceResp)
+	util.Log(util.LogLevelLocal, fmt.Sprintf("get balance bybit resp %s %s", key, httpResp))
 	if balanceResp == nil || balanceResp.RetCode != 0 {
-		util.Log(util.LogLevelError, fmt.Sprintf(
+		util.Log(util.LogLevelLocal, fmt.Sprintf(
 			"fail to refresh spot balance bybit, resp: %s httpErr: %#v, jsonErr: %#v", httpResp, httpErr, jsonErr))
 		time.Sleep(time.Minute)
 		return getBalanceBybit(key, secret)
@@ -638,7 +639,7 @@ func getBalanceBybit(key string, secret string) (success bool, balances []*model
 		}
 	}
 	if collateral == nil || len(balances) == 0 {
-		util.Log(util.LogLevelError, fmt.Sprintf(
+		util.Log(util.LogLevelLocal, fmt.Sprintf(
 			"fail to refresh spot balance bybit, resp: %s httpErr: %#v, jsonErr: %#v balances %d",
 			httpResp, httpErr, jsonErr, len(balances)))
 		time.Sleep(time.Second * 5)

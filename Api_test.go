@@ -458,9 +458,10 @@ func Test_CutTail(t *testing.T) {
 
 func Test_initTurtleN(t *testing.T) {
 	model.NewConfig()
-	api.InitMarketInfos(model.BinanceSpot)
-	market := model.OKEX
+	market := model.Bybit
 	account := model.AppConfig.GetAccounts(market)[0]
+	suc, bals, inU, cor := api.GetBalances(account, model.Bybit)
+	api.InitMarketInfos(model.BinanceSpot)
 	//now := time.Now()
 	//nowPeriod1, _ := model.GetNowPeriod(market, 86400, now)
 	model.AppDB, _ = gorm.Open(postgres.Open(model.AppConfig.DBConnection), &gorm.Config{})
@@ -483,7 +484,7 @@ func Test_initTurtleN(t *testing.T) {
 	//	DB:       0,
 	//})
 	api.InitMarketInfos(model.Bybit)
-	suc, bals, inU, cor := api.GetBalances(account, model.Bybit)
+	suc, bals, inU, cor = api.GetBalances(account, model.Bybit)
 	fmt.Println(fmt.Sprintf(`%#v %f %#v`, suc, inU, cor))
 	for _, bal := range bals {
 		fmt.Println(bal.Coin)
