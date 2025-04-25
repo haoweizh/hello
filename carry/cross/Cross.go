@@ -812,7 +812,7 @@ func getHolding(statuses []*model.CarryStatus) (success bool, bids, asks model.T
 // settings []*model.Setting, coinStatus map[string]map[string]map[string]*CarryStatus
 func equalCoin(index int, coin string, statuses []*model.CarryStatus) (isEqual bool, holding float64, errMsg string) {
 	success, bids, asks, statusMap, holdingValue, _, holdingPrice, holdStr := getHolding(statuses)
-	util.Log(util.LogLevelInfo, fmt.Sprintf(`compare holding %s status num index %d %d holding %e %s %v`,
+	util.Log(util.LogLevelLocal, fmt.Sprintf(`compare holding %s status num index %d %d holding %e %s %v`,
 		coin, index, len(statuses), holdingValue, holdStr, success))
 	if !success {
 		return false, holdingValue, "status has nil value"

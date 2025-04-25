@@ -102,9 +102,9 @@ func handledFRate(status *model.CarryStatus, marketInfo *model.MarketInfo, price
 		if hours >= 4 {
 			handledFr = fundingRate.Rate * (1 + (1.0-leftHours/hours)*(1.0-leftHours/hours)) * 2 / hours
 		} else if hours >= 2 {
-			handledFr = fundingRate.Rate * (1 + (1.0-leftHours/hours)*(1.0-leftHours/hours)) * 3 / 4
+			handledFr = fundingRate.Rate * (1 + (1.0-leftHours/hours)*(1.0-leftHours/hours)) * 0.85
 		} else if hours >= 1 {
-			handledFr = fundingRate.Rate * (1 + (1.0-leftHours/hours)*(1.0-leftHours/hours)) * 9 / 8
+			handledFr = fundingRate.Rate * (1 + (1.0-leftHours/hours)*(1.0-leftHours/hours)) * 1.5
 		}
 		if handledFr > 0.1 || handledFr < -0.1 {
 			got = false

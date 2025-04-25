@@ -460,6 +460,7 @@ func Test_initTurtleN(t *testing.T) {
 	model.NewConfig()
 	market := model.Bybit
 	account := model.AppConfig.GetAccounts(market)[0]
+	api.GetPositions(account, model.Bybit)
 	suc, bals, inU, cor := api.GetBalances(account, model.Bybit)
 	api.InitMarketInfos(model.BinanceSpot)
 	//now := time.Now()
