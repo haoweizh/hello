@@ -9,6 +9,7 @@ import (
 	"math/rand"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 )
 
@@ -87,6 +88,7 @@ var ProcessADL = func(accountKey, market, symbol, adlSide string, amount float64
 	equalCoin(triggerAccount.Index, adlSetting.Coin, statuses)
 }
 
+var posDisSeconds = sync.Map{} // key*market*symbol - unix seconds
 var ProcessCrossPositions = func(market, accountKey string, positions []*model.Position) {
 	value := api.GetCoinSettings(model.FunctionCross)
 	if value == nil {
@@ -95,6 +97,8 @@ var ProcessCrossPositions = func(market, accountKey string, positions []*model.P
 	triggerAccount := model.AppConfig.GetAccountFromKeyIndex(market, accountKey, -1)
 	accounts := model.GetAccounts(triggerAccount.Index)
 	for _, position := range positions {
+		needEqual := false
+		statuses := make([]*model.CarryStatus, 0)
 		posSetting := api.GetSetting(model.FunctionCross, market, position.Currency)
 		if posSetting == nil {
 			continue
@@ -106,6 +110,12 @@ var ProcessCrossPositions = func(market, accountKey string, positions []*model.P
 		}
 		holding := 0.0
 		price := 0.0
+		valueLine := 50000.0
+		contractValue, _ := contractMarkets.Load(accountKey)
+		if contractValue != nil {
+			cm := contractValue.(*contractMarket)
+			valueLine = math.Min(valueLine, cm.accountValueInU/10)
+		}
 		for _, setting := range settings.([]*model.Setting) {
 			account := accounts[setting.Market]
 			if account == nil {
@@ -116,21 +126,35 @@ var ProcessCrossPositions = func(market, accountKey string, positions []*model.P
 				continue
 			}
 			status := item.(*model.CarryStatus)
+			statuses = append(statuses, status)
+			holding += position.Holding * setting.GridAmount
+			// 不更新carryStatus holding，始终使用自己计算的holding值
 			if status.Market == position.Market && status.Symbol == position.Currency {
-				holding += position.Holding * setting.GridAmount
-				util.LogLess(util.LogLevelInfo, fmt.Sprintf(`update position holding %d %s-%s %s-%s %f to %f %#v`,
-					account.Index, status.Market, position.Market, status.Symbol, position.Currency, status.Holding, position.Holding, position))
 				// 当前某个交易所持仓很小的时候很容易造成买卖都被当作平仓来处理.只用推送的可借币数据来限制可借币数量，
 				//推送的持仓数据只用来和计算的数据比较，差额超过一万u时停止交易防止风险 status.Holding = position.Holding
-			} else {
-				holding += status.Holding * setting.GridAmount
+				_, posPrice := api.GetPriceForce(setting.Market, setting.Symbol, false)
+				if posPrice*math.Abs(status.Holding-position.Holding) > valueLine/10 {
+					oldSeconds, _ := util.LoadSyncMap(&posDisSeconds, accountKey, setting.Market, setting.Symbol)
+					if oldSeconds == nil {
+						util.StoreSyncMap(&posDisSeconds, time.Now().Unix(), accountKey, setting.Market, setting.Symbol)
+					} else if time.Now().Unix()-oldSeconds.(int64) > 5 {
+						util.Log(util.LogLevelLocal, fmt.Sprintf(`possible adl %s %s %s old time %v time last %d`,
+							accountKey, setting.Market, setting.Symbol, oldSeconds, time.Now().Unix()-oldSeconds.(int64)))
+						util.DelSyncMap(&posDisSeconds, accountKey, setting.Market, setting.Symbol)
+						status.Holding = position.Holding
+						needEqual = true
+						util.StoreSyncMap(&model.AppEnvironment.ADLSymbol, true, status.Market, status.Symbol, status.Account.Key)
+					}
+				} else {
+					util.DelSyncMap(&posDisSeconds, accountKey, setting.Market, setting.Symbol)
+				}
 			}
 			if price == 0 {
 				_, price = api.GetPriceForce(setting.Market, setting.Symbol, false)
 				price = price / setting.PriceX
 			}
 		}
-		if math.Abs(price*holding) >= 50000 {
+		if math.Abs(price*holding) >= valueLine {
 			for _, setting := range settings.([]*model.Setting) {
 				account := accounts[setting.Market]
 				if account == nil {
@@ -150,6 +174,9 @@ var ProcessCrossPositions = func(market, accountKey string, positions []*model.P
 				util.Log(util.LogLevelError, fmt.Sprintf(`pause trade when update position %s %d %s %f setting %s %s holding %e value %e`,
 					market, account.Index, position.Currency, position.Holding, setting.Market, setting.Symbol, holding, math.Abs(holding*price)))
 			}
+		}
+		if needEqual {
+			equalCoin(triggerAccount.Index, posSetting.Coin, statuses)
 		}
 	}
 }
@@ -183,24 +210,29 @@ var ProcessCrossBalances = func(market, accountKey string, balances []*model.Bal
 			if item == nil {
 				continue
 			}
-			status := item.(*model.CarryStatus)
-			if status.Market == balance.Market && status.Symbol == symbol {
-				// 当前某个交易所持仓很小的时候很容易造成买卖都被当作平仓来处理.只用推送的可借币数据来限制可借币数量，
-				//推送的持仓数据只用来和计算的数据比较，差额超过一万u时停止交易防止风险 status.Holding = balance.Amount
-				//status.LimitSell = math.Max(balance.Amount, balance.AvailableWithBorrow) - balance.FrozenAmount
-				//status.AvailableSell = math.Max(balance.Amount, balance.AvailableWithBorrow) - balance.FrozenAmount
-				holding += balance.Amount * setting.GridAmount
-				util.LogLess(util.LogLevelInfo, fmt.Sprintf(`update limit sell %d %s %s %f to %f %#v`,
-					account.Index, status.Market, status.Symbol, status.LimitSell, balance.AvailableWithBorrow-balance.FrozenAmount, balance))
-			} else {
-				holding += status.Holding * setting.GridAmount
-			}
+			//status := item.(*model.CarryStatus)
+			holding += balance.Amount * setting.GridAmount
+			// // 不更新carryStatus holding，始终使用自己计算的holding值
+			//if status.Market == balance.Market && status.Symbol == symbol {
+			// 当前某个交易所持仓很小的时候很容易造成买卖都被当作平仓来处理.只用推送的可借币数据来限制可借币数量，
+			//推送的持仓数据只用来和计算的数据比较，差额超过一万u时停止交易防止风险 status.Holding = balance.Amount
+			//status.LimitSell = math.Max(balance.Amount, balance.AvailableWithBorrow) - balance.FrozenAmount
+			//status.AvailableSell = math.Max(balance.Amount, balance.AvailableWithBorrow) - balance.FrozenAmount
+			//util.LogLess(util.LogLevelInfo, fmt.Sprintf(`update limit sell %d %s %s %f to %f %#v`,
+			//	account.Index, status.Market, status.Symbol, status.LimitSell, balance.AvailableWithBorrow-balance.FrozenAmount, balance))
+			//}
 			if price == 0 {
 				_, price = api.GetPriceForce(setting.Market, setting.Symbol, false)
 				price = price / setting.PriceX
 			}
 		}
-		if math.Abs(price*holding) >= 50000 {
+		valueLine := 50000.0
+		spotValue, _ := spotMarkets.Load(accountKey)
+		if spotValue != nil {
+			sm := spotValue.(*spotMarket)
+			valueLine = math.Min(valueLine, sm.accountValueInU/10)
+		}
+		if math.Abs(price*holding) >= valueLine {
 			for _, setting := range settings.([]*model.Setting) {
 				account := accounts[setting.Market]
 				if account == nil {
