@@ -114,7 +114,7 @@ var ProcessCrossPositions = func(market, accountKey string, positions []*model.P
 		contractValue, _ := contractMarkets.Load(accountKey)
 		if contractValue != nil {
 			cm := contractValue.(*contractMarket)
-			valueLine = math.Min(valueLine, cm.accountValueInU/10)
+			valueLine = math.Max(math.Min(valueLine, cm.accountValueInU/10), 10000.0)
 		}
 		for _, setting := range settings.([]*model.Setting) {
 			account := accounts[setting.Market]
@@ -230,7 +230,7 @@ var ProcessCrossBalances = func(market, accountKey string, balances []*model.Bal
 		spotValue, _ := spotMarkets.Load(accountKey)
 		if spotValue != nil {
 			sm := spotValue.(*spotMarket)
-			valueLine = math.Min(valueLine, sm.accountValueInU/10)
+			valueLine = math.Max(math.Min(valueLine, sm.accountValueInU/10), 2000)
 		}
 		if math.Abs(price*holding) >= valueLine {
 			for _, setting := range settings.([]*model.Setting) {
