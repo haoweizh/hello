@@ -280,6 +280,7 @@ type BybitOrderUpdateResp struct {
 		PositionIdx        int    `json:"positionIdx"`
 		CumExecFee         string `json:"cumExecFee"`
 		ClosedPnl          string `json:"closedPnl"`
+		CreateType         string `json:"createType"`
 		CreatedTime        string `json:"createdTime"`
 		UpdatedTime        string `json:"updatedTime"`
 		RejectReason       string `json:"rejectReason"`

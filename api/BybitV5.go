@@ -42,12 +42,22 @@ var wsOrdUdtHandlerBybit = func(market, key string, msg []byte) {
 		jsonErr := json.Unmarshal(msg, orderResp)
 		if jsonErr == nil {
 			for _, data := range orderResp.Data {
-				status := model.CarryStatusWorking
-				if data.OrderStatus == `Filled` {
-					status = model.CarryStatusSuccess
-				}
 				dealAmount, _ := strconv.ParseFloat(data.CumExecQty, 64)
-				UpdateOrderDeal(market, data.OrderId, data.OrderLinkId, status, string(msg), dealAmount)
+				if data.CreateType == `CreateByAdl_PassThrough` {
+					util.Log(util.LogLevelLocal, fmt.Sprintf("adl CreateByAdl_PassThrough %s %s", market, string(msg)))
+					_, _, symbol := model.GetFromDialect(model.Bybit, model.MarketTypePerp, data.Symbol)
+					orderSide := model.OrderSideBuy
+					if data.Side == `Sell` {
+						orderSide = model.OrderSideSell
+					}
+					model.ADLHandler(key, market, symbol, orderSide, dealAmount)
+				} else {
+					status := model.CarryStatusWorking
+					if data.OrderStatus == `Filled` {
+						status = model.CarryStatusSuccess
+					}
+					UpdateOrderDeal(market, data.OrderId, data.OrderLinkId, status, string(msg), dealAmount)
+				}
 			}
 		}
 	}
