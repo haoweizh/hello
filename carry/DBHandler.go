@@ -183,6 +183,7 @@ func Maintain() {
 	_ = model.AppDB.AutoMigrate(&model.SettingMonitor{})
 	_ = model.AppDB.AutoMigrate(&model.CarryCoin{})
 	_ = model.AppDB.AutoMigrate(&model.FundingFee{})
+	_ = model.AppDB.AutoMigrate(&model.Fund{})
 	//go CheckPastRefresh()
 	//go util.StartMidNightTimer(CancelAllOrders)
 	//go MaintainBalance()
@@ -202,21 +203,20 @@ func Maintain() {
 		_, err := c.AddFunc("15,45 * * * ?", cross.ClearCross)
 		if err != nil {
 			util.Log(util.LogLevelError, `fail to cron clear cross `+err.Error())
-		} else {
-			c.Start()
 		}
 		_, errMarketInfo := c.AddFunc("5,15,35,45 * * * ?", cross.RefreshMarkets)
 		if errMarketInfo != nil {
 			util.Log(util.LogLevelError, `fail to cron refresh market info `+errMarketInfo.Error())
-		} else {
-			c.Start()
 		}
 		_, errSyncFees := c.AddFunc("5 * * * ?", cross.SyncFees)
 		if errSyncFees != nil {
 			util.Log(util.LogLevelError, `fail to cron sync fees `+errSyncFees.Error())
-		} else {
-			c.Start()
 		}
+		_, errSaveFund := c.AddFunc("3,13,23,33,43,53 * * * ?", SaveFunc)
+		if errSaveFund != nil {
+			util.Log(util.LogLevelError, `fail to cron save fund `+errSaveFund.Error())
+		}
+		c.Start()
 	}
 	// 监听信号的 goroutine
 	go func() {
@@ -239,5 +239,33 @@ func ManageMarketConnTicks() {
 			go ManageConnTicks(market)
 		}
 		time.Sleep(time.Minute * 1)
+	}
+}
+
+var SaveFunc = func() {
+	seconds := time.Now().Unix()
+	accountsLen := api.GetAccountsLen()
+	for i := 0; i < accountsLen; i++ {
+		accounts := model.GetAccounts(i)
+		for market, account := range accounts {
+			inAllSpot, contractAccountValue, holdingSpot, borrowSpot, holdingFuture, marginAvailable :=
+				cross.GetCrossMarketValue(account, market, false)
+			value := contractAccountValue
+			if !account.IsUnified && market == model.BinanceSpot {
+				value = inAllSpot
+			}
+			fund := model.Fund{
+				Market:        market,
+				Key:           account.Key,
+				Seconds:       seconds,
+				Index:         account.Index,
+				Value:         value,
+				HoldingSpot:   holdingSpot,
+				HoldingFuture: holdingFuture,
+				BorrowSpot:    borrowSpot,
+				Available:     marginAvailable,
+			}
+			model.AppDB.Save(&fund)
+		}
 	}
 }

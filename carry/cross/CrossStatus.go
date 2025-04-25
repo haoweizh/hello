@@ -512,7 +512,7 @@ func _(order *model.Order, setting *model.Setting) {
 
 var SyncFees = func() {
 	model.AppEnvironment.FundingFeeToday.Clear()
-	for i := 0; i < api.GetCrossLen(); i++ {
+	for i := 0; i < api.GetAccountsLen(); i++ {
 		accounts := model.GetAccounts(i)
 		for _, market := range model.AppEnvironment.Markets {
 			util.Log(util.LogLevelInfo, fmt.Sprintf(`sync fees %d %s`, i, market))

@@ -474,7 +474,7 @@ func resetAccounts(doEqual bool, unixSeconds int64) {
 		}
 	}
 	//needWaitEqual := false // 是否需要进入等待环节
-	for i := 0; i < api.GetCrossLen(); i++ {
+	for i := 0; i < api.GetAccountsLen(); i++ {
 		indexAccounts := model.GetAccounts(i)
 		for _, market := range model.AppEnvironment.Markets {
 			waitReset[indexAccounts[market].Key] = true
@@ -494,7 +494,7 @@ func resetAccounts(doEqual bool, unixSeconds int64) {
 			break
 		}
 	}
-	for i := 0; i < api.GetCrossLen(); i++ {
+	for i := 0; i < api.GetAccountsLen(); i++ {
 		accounts := make(map[string]*model.Account)
 		indexAccounts := model.GetAccounts(i)
 		for _, market := range model.AppEnvironment.Markets {
@@ -502,7 +502,7 @@ func resetAccounts(doEqual bool, unixSeconds int64) {
 		}
 		go equalAccount(i, accounts, doEqual)
 	}
-	for i := 0; i < api.GetCrossLen(); i++ {
+	for i := 0; i < api.GetAccountsLen(); i++ {
 		indexAccounts := model.GetAccounts(i)
 		for _, market := range model.AppEnvironment.Markets {
 			if doEqual {
@@ -598,7 +598,7 @@ func syncGridHoldings() {
 			}
 			crossStyles := model.AppConfig.GetCrossStyles()
 			_, marketType, _, _ := model.GetFromStandard(setting.Market, setting.Symbol)
-			for i := 0; i < api.GetCrossLen(); i++ {
+			for i := 0; i < api.GetAccountsLen(); i++ {
 				if crossStyles[i] != crossGrid {
 					continue
 				}
@@ -1056,7 +1056,7 @@ var ProcessCross = func(setting *model.Setting, tick *model.BidAsk) {
 			//	setting.Coin, tick.Bids[0].Market, tick.Bids[0].Symbol, model.AppEnvironment.CrossEqualing))
 			continue
 		}
-		for i := api.GetCrossLen() - 1; i >= 0; i-- {
+		for i := api.GetAccountsLen() - 1; i >= 0; i-- {
 			account := model.AppConfig.GetAccounts(setting.Market)[i]
 			accountRelate := model.AppConfig.GetAccounts(settingRelate.Market)[i]
 			if account == nil || accountRelate == nil {

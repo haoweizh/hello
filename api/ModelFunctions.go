@@ -571,7 +571,7 @@ func GetCoinSettings(function string) *sync.Map {
 	return nil
 }
 
-func GetCrossLen() int {
+func GetAccountsLen() int {
 	if crossLen > 0 {
 		return crossLen
 	}
