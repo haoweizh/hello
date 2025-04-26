@@ -770,13 +770,12 @@ func Test_CalcGridLine(t *testing.T) {
 	cross.CalcGridLine(0.0014)
 }
 
-func Test_map(t *testing.T) {
-	response, _ := util.HttpRequest(http.MethodGet, `https://www.binance.com/zh-CN/support/announcement/list/49`, ``, nil, 2000)
+func Test_wallet(t *testing.T) {
+
+	response, _ := util.HttpRequest(http.MethodGet, `https://www.binance.com/zh-CN/support/announcement/detail/f04f368d1c6d430087266d128a7ccfd9`, ``, nil, 2000)
 	//response, _ := util.HttpRequest(http.MethodPost, `https://www.google.com`, ``, nil, 2000)
 	fmt.Println(string(response))
-}
 
-func Test_wallet(t *testing.T) {
 	set := &model.Setting{
 		Market: model.BinanceSpot,
 	}

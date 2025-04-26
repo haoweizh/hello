@@ -16,7 +16,7 @@ var CommonSymbols = map[string]bool{`btc_perp`: true, `BTC_PERP`: true, `ETH_PER
 //`xrp_perp`: true, `USDT_PERP`: true, `usdt_perp`: true, `ETC_PERP`: true, `etc_perp`: true, `LINK_PERP`: true, `link_perp`: true,
 //`TRX_PERP`: true, `trx_perp`: true, `BNB_PERP`: true, `bnb_perp`: true, `UNI_PERP`: true, `uni_perp`: true}
 
-var NoTurtleCoins = map[string]bool{`yfii`: true}
+var NoTurtleCoins = map[string]bool{`yfii`: true, `bch`: true, `ltc`: true, `xrp`: true, `bnb`: true, `eos`: true, `bsv`: true}
 
 type MarketInfo struct {
 	Market, Symbol, CTCurrency              string
