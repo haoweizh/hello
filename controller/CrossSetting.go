@@ -3,12 +3,21 @@ package controller
 import (
 	"fmt"
 	"github.com/gin-gonic/gin"
+	"hello/api"
 	"hello/model"
 	"hello/util"
 	"net/http"
 	"strconv"
 	"strings"
 )
+
+func SetAnnouncement(c *gin.Context) {
+	market := c.Query("market")
+	content := c.Query(`content`)
+
+	api.SendMails(`公告`+market, c.Query(content))
+	c.HTML(http.StatusOK, ``, ``)
+}
 
 func GetFrInterval(c *gin.Context) {
 	rows, _ := model.AppDB.Model(&model.Setting{}).Select(`market,symbol,chance_limit`).Where(
