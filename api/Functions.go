@@ -992,7 +992,7 @@ func InitCrossMarketInfos(markets []string, clear bool) {
 			if setting.Chance >= 0 {
 				setting.Chance = -1
 			}
-			model.AppDB.Model(&settingsDb).Where(`function=? and market=? and symbol=?`, model.FunctionCross, setting.Market, setting.Symbol).
+			model.AppDB.Model(&settingsDb).Where(`function=? and market=? and symbol=? and coin!=?`, model.FunctionCross, setting.Market, setting.Symbol, `ALPACA`).
 				Updates(map[string]interface{}{`liquidated`: false})
 		}
 		settingsDbMap[fmt.Sprintf(`%s_%s_%s`, setting.Function, setting.Market, setting.Symbol)] = setting
