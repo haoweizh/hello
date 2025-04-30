@@ -79,6 +79,7 @@ func SetAnnouncement(c *gin.Context) {
 	if len(symbols) > 0 {
 		api.SendMails(notice, announcement)
 	} else {
+		api.SendMails(`频率无关公告`, announcement)
 		util.Log(util.LogLevelLocal, "can not get symbols frequency update"+announcement)
 	}
 	c.HTML(http.StatusOK, ``, ``)
