@@ -36,6 +36,7 @@ func convertChineseToArabic(text string) string {
 func SetAnnouncement(c *gin.Context) {
 	market := c.Query("market")
 	announcement := c.Query(`content`)
+	util.Log(util.LogLevelLocal, fmt.Sprintf(`get announcement %s %s`, market, announcement))
 	announcement = convertChineseToArabic(announcement)
 	timeRegex := regexp.MustCompile(`将于([^0-9]*)(\d{4})年(\d+)月(\d)+日(\d{2}):(\d{2})`)
 	timeMatch := timeRegex.FindStringSubmatch(announcement)
