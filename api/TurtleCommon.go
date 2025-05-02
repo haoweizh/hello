@@ -199,7 +199,7 @@ func CheckActiveTrail(account *model.Account, setting *model.Setting, data *mode
 		return false
 	}
 	var trails []*model.Order
-	if setting.Chance > 0 && data.LowActTrail*data.ActivationRate > 0 && data.LowActTrail < bidAsk.Bids[0].Price*(1-data.ActivationRate) {
+	if setting.Chance > 0 && data.LowActTrail*data.ActivationRate > 0 && (data.LowActTrail+data.HighActTrail)*0.5*data.ActivationRate < bidAsk.Bids[0].Price {
 		trailed = true
 		data.OrderShort = nil
 		trails = MustPlaceOrder(account, model.OrderSideSell, model.OrderTypeTrailStop, setting.Market, setting.Symbol, model.ReduceOnly,
@@ -211,7 +211,7 @@ func CheckActiveTrail(account *model.Account, setting *model.Setting, data *mode
 				setting.Market, setting.Symbol, setting.GridAmount, data.LowActTrail*(1+data.ActivationRate), data.CallBackRatio, order.OrderId))
 			go model.AppDB.Save(order)
 		}
-	} else if setting.Chance < 0 && data.ActivationRate > 0 && bidAsk.Asks[0].Price < data.HighActTrail*(1-data.ActivationRate) {
+	} else if setting.Chance < 0 && data.ActivationRate > 0 && bidAsk.Asks[0].Price < (data.LowActTrail+data.HighActTrail)*0.5/data.ActivationRate {
 		trailed = true
 		data.OrderLong = nil
 		trails = MustPlaceOrder(account, model.OrderSideBuy, model.OrderTypeTrailStop, setting.Market, setting.Symbol, model.ReduceOnly,
@@ -371,7 +371,7 @@ func GetRankTurtleData(account *model.Account, symbol string, setting *model.Set
 	nowPeriod, nowStr := model.GetNowPeriod(setting.Market, setting.Seconds, now)
 	data = &model.TurtleData{TurtleTime: nowPeriod, Expire: nowPeriod.Add(time.Second * time.Duration(setting.Seconds)),
 		IsBig: true, Symbol: symbol, DaysFar: int(setting.Far), DaysNear: int(setting.Near), DaysAdjust: 5,
-		OrderAdjust: make(map[string]*model.Order), CallBackRatio: 0.05, ActivationRate: 0.43}
+		OrderAdjust: make(map[string]*model.Order), CallBackRatio: 0.05, ActivationRate: 1.6}
 	util.Log(util.LogLevelInfo, fmt.Sprintf(
 		`need to create turtle data rank %s %s %s %s %d`, setting.Function, setting.Market, symbol, nowStr, setting.Far))
 	candles := getTurtleCandles(account, setting.Market, symbol, int(setting.Far), int(setting.Seconds), nowPeriod)
@@ -452,11 +452,11 @@ func GetTurtleData(account *model.Account, setting *model.Setting, removed bool)
 			removed = false
 		}
 	}
-	activationRate := 0.4737
+	activationRate := 1.6
 	if strings.ToLower(setting.Symbol) == `btc_perp` {
-		activationRate = 0.23
+		activationRate = 1.2
 	} else if strings.ToLower(setting.Symbol) == `eth_perp` || strings.ToLower(setting.Symbol) == `sol_perp` {
-		activationRate = 0.29
+		activationRate = 1.3
 	}
 	data = &model.TurtleData{TurtleTime: nowPeriod, Expire: nowPeriod.Add(time.Second * time.Duration(setting.Seconds)),
 		IsBig: true, Symbol: setting.Symbol, DaysFar: int(setting.Far), DaysNear: int(setting.Near), DaysAdjust: 5,
