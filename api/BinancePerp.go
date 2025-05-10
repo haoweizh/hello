@@ -22,8 +22,12 @@ import (
 
 const restBinancePerp = `https://fapi.binance.com`
 
-var listenKeys sync.Map // market*accountKey listenKey
-var listenTime sync.Map // listenKey - time
+var listenKeys sync.Map // market*accountKey - *ListenKeyValue
+
+type ListenKeyValue struct {
+	ListenKey string
+	RenewTime time.Time
+}
 
 func MaintainConnsBinance(market string, accounts []*model.Account) {
 	for _, account := range accounts {
@@ -45,8 +49,7 @@ func MaintainConnsBinance(market string, accounts []*model.Account) {
 				if keyValue == nil {
 					continue
 				}
-				ts, _ := listenTime.Load(keyValue.(string))
-				if ts != nil && ts.(time.Time).Add(time.Minute*30).Before(time.Now()) {
+				if keyValue.(*ListenKeyValue).RenewTime.Add(time.Minute * 30).Before(time.Now()) {
 					ExtendListenKeyBinance(account, market, keyValue.(string))
 				}
 			} else {
@@ -285,7 +288,9 @@ func ExtendListenKeyBinance(account *model.Account, market, listenKey string) (s
 		resJson, _ := util.NewJSON(res)
 		if resJson != nil && len(resJson.Get(`listenKey`).MustString()) > 0 {
 			resKey := resJson.Get(`listenKey`).MustString()
-			listenTime.Store(resKey, time.Now())
+			util.StoreSyncMap(&listenKeys, &ListenKeyValue{
+				ListenKey: resKey, RenewTime: time.Now()}, market, account.Key)
+
 			util.Log(util.LogLevelInfo, fmt.Sprintf("ExtendListenKeyBinance extend Listen Key: %s %s", listenKey, market))
 			return true
 		}
@@ -309,8 +314,8 @@ func RenewListenKeyBinance(account *model.Account, market string) (success bool,
 	keyJson, _ := util.NewJSON(response)
 	if keyJson != nil && len(keyJson.Get(`listenKey`).MustString()) > 0 {
 		listenKey = keyJson.Get(`listenKey`).MustString()
-		listenTime.Store(listenKey, time.Now())
-		util.StoreSyncMap(&listenKeys, listenKey, market, account.Key)
+		util.StoreSyncMap(&listenKeys, &ListenKeyValue{
+			ListenKey: listenKey, RenewTime: time.Now()}, market, account.Key)
 		return true, listenKey
 	}
 	time.Sleep(time.Second * 3)

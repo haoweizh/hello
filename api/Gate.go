@@ -142,15 +142,17 @@ func setLeverageGate(account *model.Account) (success bool) {
 		_, marketType, coin, _ := model.GetFromStandard(model.Gate, symbol)
 		if marketType == model.MarketTypePerp {
 			setSymbolLeverageGate(account, symbol)
-			time.Sleep(time.Millisecond * 200)
 		} else {
 			client, ctx := getClientGate(account.Key, account.Secret)
-			_, err := client.UnifiedApi.SetUserLeverageCurrencySetting(ctx,
-				gateApi.UnifiedLeverageSetting{Currency: coin, Leverage: "5"})
-			if err != nil {
-				panicGateError(account.Key, "SetUserLeverageCurrencySetting", err)
-			}
+			go func() {
+				_, err := client.UnifiedApi.SetUserLeverageCurrencySetting(ctx,
+					gateApi.UnifiedLeverageSetting{Currency: coin, Leverage: "5"})
+				if err != nil {
+					panicGateError(account.Key, "SetUserLeverageCurrencySetting", err)
+				}
+			}()
 		}
+		time.Sleep(time.Millisecond * 200)
 	}
 	return true
 }
