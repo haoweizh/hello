@@ -50,7 +50,7 @@ func MaintainConnsBinance(market string, accounts []*model.Account) {
 					continue
 				}
 				if keyValue.(*ListenKeyValue).RenewTime.Add(time.Minute * 30).Before(time.Now()) {
-					ExtendListenKeyBinance(account, market, keyValue.(string))
+					ExtendListenKeyBinance(account, market, keyValue.(*ListenKeyValue).ListenKey)
 				}
 			} else {
 				//if value != nil {
