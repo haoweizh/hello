@@ -290,7 +290,6 @@ func ExtendListenKeyBinance(account *model.Account, market, listenKey string) (s
 			resKey := resJson.Get(`listenKey`).MustString()
 			util.StoreSyncMap(&listenKeys, &ListenKeyValue{
 				ListenKey: resKey, RenewTime: time.Now()}, market, account.Key)
-
 			util.Log(util.LogLevelInfo, fmt.Sprintf("ExtendListenKeyBinance extend Listen Key: %s %s", listenKey, market))
 			return true
 		}
