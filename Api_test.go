@@ -916,17 +916,58 @@ func Test_C(t *testing.T) {
 	}
 }
 
+func convertChineseToArabic(text string) string {
+	numberMap := map[string]string{
+		"一": "1",
+		"二": "2",
+		"三": "3",
+		"四": "4",
+		"五": "5",
+		"六": "6",
+		"七": "7",
+		"八": "8",
+		"九": "9",
+		"十": "10",
+	}
+	result := text
+	for chinese, arabic := range numberMap {
+		result = strings.ReplaceAll(result, chinese, arabic)
+	}
+	return result
+}
+
 func Test_Funding(t *testing.T) {
-	market := model.Gate
-	model.NewConfig()
-	//model.AppDB, _ = gorm.Open(postgres.Open(model.AppConfig.DBConnection), &gorm.Config{})
-	//_ = model.AppDB.AutoMigrate(&model.FundingFee{})
-	account := model.GetAccounts(0)[market]
-	_, fees := api.GetBills(account, time.Now().UnixMilli()-28800000, time.Now().UnixMilli())
-	for i, fee := range fees {
-		fmt.Println(i)
-		fmt.Println(fee)
-		model.AppDB.Save(&fee)
+	announcement := `公告内容： 这是一般性公告，此处提及的产品和服务可能不适用于您所在的地区。亲爱的用户：币安合约将于2025年04月25日16:00（东八区时间）调整以下永续合约资金费率结算频率：ALPACAUSDT U本位永续合约：由每二小时一次调整为每一小时一次FLMUSDT U本位永续合约：由每四小时一次调整为每二小时一次。具体安排如下：时间（东八区时间）最大资金费率ALPACAUSDT 永续合约FLMUSDT 永续合约2025年04月25日16:00 2025年04月25日16:00 +2.00% / -2.00%2025年04月25日17:00 2025年04月25日18:00 +2.00% / -2.00%2025年04月25日18:00 2025年04月25日20:00 +2.00% / -2.00%2025年04月25日19:00 2025年04月25日22:00 +2.00% / -2.00%……...注意：为保障用户权益和降低极端市场行情下的风险，币安合约将可能会对ALPACAUSDT和FLMUSDT U本位永续合约采取额外的保护措施，不再另行公告。潜在保护措施包括但不限于调整（包括每一层级的最高杠杆倍数、持仓限额、维持保证金率），调整（包括基础利率、溢价指数、费用上限），更改价格指数成份或采用“” 来更新标记价格。说明：注：英文原版公告与翻译版本可能存在差异。若有任何差异，请参照英文原版以获取最新或最准确的信息。感谢您对币安的支持！币安团队2025年04月25日币安社群币安历来重视合规义务，始终严格遵守各地监管机构相关要求，并请您遵守所在国家或地区的相关法律法规。币安保留随时全权酌情因任何理由修改、变更或取消此公告的权利，无需事先通知。免责声明：数字资产价格具有高市场风险和价格波动性。您的投资价值可能会有所波动，也可能损失投资金额。您将自行为您的投资决策负全责，币安不对任何可能产生的损失负责。尤其是合约交易会受到高市场风险和价格波动的影响，若出现不利的价格波动，您所有的保证金余额可能会被清算。过去的业绩亦不构成未来业绩的可靠预测指标。交易前，您应根据自身的目标和情况，包括风险和潜在利益，自行评估是否适合交易，并谘询独立财务顾问。本文不应被视为财务或投资建议。想知道如何做到尽责交易，请参考币安资讯页。更多详情请参阅和。`
+	//announcement := `公告内容： 这是一般性公告，此处提及的产品和服务可能不适用于您所在的地区。亲爱的用户：币安合约将于2025年04月25日20:00（东八区时间）恢复TUSDT和AERGOUSDT U本位永续合约资金费率结算频率。资金费率结算频率将由每二小时一次调整为每四小时一次。具体安排如下：时间（东八区时间）最大资金费率2025年04月25日20:00 +2.00% / -2.00%2025年04月26日00:00 +2.00% / -2.00%2025年04月26日04:00 +2.00% / -2.00%2025年04月26日08:00 +2.00% / -2.00%…...说明：注：英文原版公告与翻译版本可能存在差异。若有任何差异，请参照英文原版以获取最新或最准确的信息。感谢您对币安的支持！币安团队2025年04月25日币安社群币安历来重视合规义务，始终严格遵守各地监管机构相关要求，并请您遵守所在国家或地区的相关法律法规。币安保留随时全权酌情因任何理由修改、变更或取消此公告的权利，无需事先通知。免责声明：数字资产价格具有高市场风险和价格波动性。您的投资价值可能会有所波动，也可能损失投资金额。您将自行为您的投资决策负全责，币安不对任何可能产生的损失负责。尤其是合约交易会受到高市场风险和价格波动的影响，若出现不利的价格波动，您所有的保证金余额可能会被清算。过去的业绩亦不构成未来业绩的可靠预测指标。交易前，您应根据自身的目标和情况，包括风险和潜在利益，自行评估是否适合交易，并谘询独立财务顾问。本文不应被视为财务或投资建议。想知道如何做到尽责交易，请参考币安资讯页。更多详情请参阅和。`
+	announcement = convertChineseToArabic(announcement)
+	timeRegex := regexp.MustCompile(`将于([^0-9]*)(\d{4})年(\d+)月(\d)+日(\d{2}):(\d{2})`)
+	timeMatch := timeRegex.FindStringSubmatch(announcement)
+
+	var implementTime time.Time
+	if len(timeMatch) == 7 {
+		year, _ := strconv.Atoi(timeMatch[2])
+		month, _ := strconv.Atoi(timeMatch[3])
+		day, _ := strconv.Atoi(timeMatch[4])
+		hour, _ := strconv.Atoi(timeMatch[5])
+		minute, _ := strconv.Atoi(timeMatch[6])
+		location, _ := time.LoadLocation("Asia/Shanghai")
+		implementTime = time.Date(year, time.Month(month), day, hour, minute, 0, 0, location)
+		fmt.Println(implementTime)
+	}
+	// 解析合约信息
+	contractRegex := regexp.MustCompile(`([A-Z]+)USDT(\s*)U本位永续合约(.*?)调整为每(\d+)小时`)
+	contractMatches := contractRegex.FindAllStringSubmatch(announcement, -1)
+	for _, match := range contractMatches {
+		if len(match) == 5 {
+			fmt.Print(match[1], match[4])
+		}
+	}
+	contractRegex = regexp.MustCompile(`([A-Z]+)和([A-Z]+)USDT(\s*)U本位永续合约(.*?)调整为每(\d+)小时`)
+	contractMatches = contractRegex.FindAllStringSubmatch(announcement, -1)
+	for _, match := range contractMatches {
+		if len(match) == 6 {
+			fmt.Print(match[1], match[5])
+		}
 	}
 }
 
@@ -955,4 +996,25 @@ func Test_TradingStatus(t *testing.T) {
 		}
 	}
 	//api.GetTradingStatusBinancePerp(account)
+}
+
+func Test_SetSettings(t *testing.T) {
+	model.NewConfig()
+	market := model.BinancePerp
+	symbol := `OM_USDT`
+	function := model.FunctionCross
+	setting := &model.Setting{Market: market, Symbol: symbol, GridAmount: 1}
+	api.SetSetting(function, market, symbol, setting)
+	settings := make([]*model.Setting, 1)
+	setting1 := api.GetSetting(function, market, symbol)
+	settings[0] = setting1
+	settings[0].GridAmount = 2
+	setting2 := api.GetSetting(function, market, symbol)
+	fmt.Println(setting2.GridAmount)
+	setting3 := api.GetSetting(function, market, symbol)
+	settings[0] = setting3
+	//setting4 := api.GetSetting(function, market, symbol)
+	settings[0].GridAmount = 4
+	//setting4 = api.GetSetting(function, market, symbol)
+	fmt.Println(setting2.GridAmount)
 }

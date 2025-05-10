@@ -100,11 +100,11 @@ var ProcessCombineTurtle = func(settingCombine *model.Setting, tick *model.BidAs
 		dataCombine.TurtleTime.Month(), dataCombine.TurtleTime.Day(), time.Now().Hour(), time.Now().Minute(), msgKey,
 		dataCombine.NVolume, canOpen, int64(turtleSymbolNum), canStartTurtle, canStartCombine, int(turtleCoins),
 		int(settingCombine.AmountLimit), turtleCoins >= settingCombine.AmountLimit, tick.Bids[0].Price, tick.Asks[0].Price)
-	msg += fmt.Sprintf("海龟:仓数/持仓量/开仓价%d 主流仓%d of %d/%e/%e 平过%v 数量 %e %s%v big:%d 日:%e-%e %d日:%e-%e N:%e\n",
+	msg += fmt.Sprintf("海龟:仓数/持仓量/开仓价%d 主流仓%d of %d/%e/%e 平过%v 数量 %e %s big:%v %d日:%e-%e %d日:%e-%e N:%e\n",
 		settingNormal.Chance, commonTurtleChances, settingNormal.ChanceLimit, settingNormal.GridAmount, settingNormal.PriceX, dataNormal.Liquidated,
 		dataNormal.Amount*float64(settingNormal.ChanceLimit), dataNormal.GetIds(), dataNormal.IsBig, dataNormal.DaysFar,
 		dataNormal.LowFar, dataNormal.HighFar, dataNormal.DaysNear, dataNormal.LowNear, dataNormal.HighNear, dataNormal.N)
-	msg += fmt.Sprintf("龟汤:仓数/持仓量/开仓价 %d of %d/%e/%e 平过%v 数量 %e %s%v big:%d 日:%e-%e %d日:%e-%e N:%e",
+	msg += fmt.Sprintf("龟汤:仓数/持仓量/开仓价 %d of %d/%e/%e 平过%v 数量 %e %s big:%v %d日:%e-%e %d日:%e-%e N:%e",
 		settingCombine.Chance, settingCombine.ChanceLimit, settingCombine.GridAmount, settingCombine.PriceX, dataCombine.Liquidated,
 		dataCombine.Amount*float64(settingCombine.ChanceLimit), dataCombine.GetIds(), dataCombine.IsBig, dataCombine.DaysFar,
 		dataCombine.LowFar, dataCombine.HighFar, dataCombine.DaysNear, dataCombine.LowNear, dataCombine.HighNear, dataCombine.N)

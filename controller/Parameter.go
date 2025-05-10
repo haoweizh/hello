@@ -49,6 +49,7 @@ func ParameterServe() {
 	router.GET(`code`, MailCode)
 	router.GET(`set_frequency`, SetFrInterval)
 	router.GET(`get_frequency`, GetFrInterval)
+	router.GET(`announcement`, SetAnnouncement)
 	router.GET(`simulate`, simulate)
 	router.GET(`simulateGrid`, simulateGrid)
 	router.GET(`cross`, crossPage)
