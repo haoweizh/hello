@@ -139,10 +139,17 @@ func appendSpotMarketsGate(key, secret string, marketInfos map[string]*model.Mar
 func setLeverageGate(account *model.Account) (success bool) {
 	symbols := GetMarketSymbols(model.Gate)
 	for symbol := range symbols {
-		_, marketType, _, _ := model.GetFromStandard(model.Gate, symbol)
+		_, marketType, coin, _ := model.GetFromStandard(model.Gate, symbol)
 		if marketType == model.MarketTypePerp {
 			setSymbolLeverageGate(account, symbol)
 			time.Sleep(time.Millisecond * 200)
+		} else {
+			client, ctx := getClientGate(account.Key, account.Secret)
+			_, err := client.UnifiedApi.SetUserLeverageCurrencySetting(ctx,
+				gateApi.UnifiedLeverageSetting{Currency: coin, Leverage: "5"})
+			if err != nil {
+				panicGateError(account.Key, "SetUserLeverageCurrencySetting", err)
+			}
 		}
 	}
 	return true
@@ -158,7 +165,8 @@ type Tier struct {
 func setSymbolLeverageGate(account *model.Account, symbol string) (success bool) {
 	_, _, _, dialectSymbol := model.GetFromStandard(model.Gate, symbol)
 	client, ctx := getClientGate(account.Key, account.Secret)
-	tiers, _, errTiers := client.FuturesApi.ListRiskLimitTiers(ctx, `usdt`, dialectSymbol)
+	tiers, _, errTiers := client.FuturesApi.ListFuturesRiskLimitTiers(ctx, `usdt`,
+		&gateApi.ListFuturesRiskLimitTiersOpts{Contract: optional.NewString(dialectSymbol)})
 	if errTiers != nil {
 		return false
 	}
@@ -943,8 +951,9 @@ func cancelAllGate(key, secret string) {
 		panicGateError(key, `queryOpenOrdersGate spot`, err)
 	}
 	for _, order := range spotOrders {
-		cancelOrders, _, errSpot := client.SpotApi.CancelOrders(ctx, order.CurrencyPair,
-			&gateApi.CancelOrdersOpts{Account: optional.NewString("spot")})
+		cancelOrders, _, errSpot := client.SpotApi.CancelOrders(ctx,
+			&gateApi.CancelOrdersOpts{Account: optional.NewString("spot"),
+				CurrencyPair: optional.NewString(order.CurrencyPair)})
 		if errSpot != nil {
 			panicGateError(key, fmt.Sprintf("cancelAllGate %#v", cancelOrders), errSpot)
 		} else {
@@ -1107,7 +1116,7 @@ func cancelOrderGate(key, secret, symbol, orderId string) (result bool) {
 		util.Log(util.LogLevelInfo, fmt.Sprintf(`fail to cancel order gate spot response: %s`, marshal))
 		return true
 	} else if success && marketType == model.MarketTypePerp {
-		order, _, err := client.FuturesApi.CancelFuturesOrder(ctx, `usdt`, orderId)
+		order, _, err := client.FuturesApi.CancelFuturesOrder(ctx, `usdt`, orderId, nil)
 		if err != nil {
 			panicGateError(key, fmt.Sprintf(`cancelFutureOrderGate %#v`, order), err)
 			return false
@@ -1124,8 +1133,9 @@ func cancelOrdersGate(key string, secret string, symbol string) (result bool) {
 	client, ctx := getClientGate(key, secret)
 	success, marketType, _, dialectSymbol := model.GetFromStandard(model.Gate, symbol)
 	if success && marketType == model.MarketTypeSpot {
-		param := &gateApi.CancelOrdersOpts{Account: optional.NewString("spot")}
-		orders, _, err := client.SpotApi.CancelOrders(ctx, dialectSymbol, param)
+		orders, _, err := client.SpotApi.CancelOrders(ctx,
+			&gateApi.CancelOrdersOpts{Account: optional.NewString("spot"),
+				CurrencyPair: optional.NewString(dialectSymbol)})
 		if err != nil {
 			panicGateError(key, fmt.Sprintf("cancelOrdersGate %#v", orders), err)
 			return false
@@ -1194,7 +1204,7 @@ func placeOrderGate(account *model.Account, isWs bool, order *model.Order, order
 				HandleWsOrderConnFail(account, model.Gate, order)
 			}
 		} else {
-			createOrder, _, err := client.SpotApi.CreateOrder(ctx, relatedOrder)
+			createOrder, _, err := client.SpotApi.CreateOrder(ctx, relatedOrder, nil)
 			if err != nil {
 				panicGateError(account.Key, "placeSpotOrderGate", err)
 				order.Status = model.CarryStatusFail
@@ -1253,7 +1263,7 @@ func placeOrderGate(account *model.Account, isWs bool, order *model.Order, order
 				HandleWsOrderConnFail(account, model.Gate, order)
 			}
 		} else {
-			createFuturesOrder, _, err := client.FuturesApi.CreateFuturesOrder(ctx, `usdt`, futuresOrder)
+			createFuturesOrder, _, err := client.FuturesApi.CreateFuturesOrder(ctx, `usdt`, futuresOrder, nil)
 			if err != nil {
 				panicGateError(account.Key, "placeFutureOrderGate", err)
 				order.Status = model.CarryStatusFail
