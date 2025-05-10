@@ -181,6 +181,7 @@ func AdjustPosHolding(account *model.Account, setting *model.Setting, data *mode
 		//	util.Notice(`present %s %s %e`, s, position.Currency, position.Holding)
 		//}
 	}
+	SetSetting(setting.Function, setting.Market, setting.Symbol, setting)
 	model.AppDB.Save(setting)
 }
 
@@ -230,6 +231,7 @@ func CheckActiveTrail(account *model.Account, setting *model.Setting, data *mode
 		setting.GridAmount = 0
 		setting.Liquidated = true
 		data.Liquidated = true
+		SetSetting(setting.Function, setting.Market, setting.Symbol, setting)
 		model.AppDB.Save(setting)
 	}
 	return trailed
@@ -479,6 +481,7 @@ func GetTurtleData(account *model.Account, setting *model.Setting, removed bool)
 	}
 	if lastHandled {
 		setting.Liquidated = false
+		SetSetting(setting.Function, setting.Market, setting.Symbol, setting)
 		go model.AppDB.Save(setting)
 		data.CheckTimeOpen = time.Now()
 		if trailOrders != nil {

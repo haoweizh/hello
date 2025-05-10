@@ -997,3 +997,24 @@ func Test_TradingStatus(t *testing.T) {
 	}
 	//api.GetTradingStatusBinancePerp(account)
 }
+
+func Test_SetSettings(t *testing.T) {
+	model.NewConfig()
+	market := model.BinancePerp
+	symbol := `OM_USDT`
+	function := model.FunctionCross
+	setting := &model.Setting{Market: market, Symbol: symbol, GridAmount: 1}
+	api.SetSetting(function, market, symbol, setting)
+	settings := make([]*model.Setting, 1)
+	setting1 := api.GetSetting(function, market, symbol)
+	settings[0] = setting1
+	settings[0].GridAmount = 2
+	setting2 := api.GetSetting(function, market, symbol)
+	fmt.Println(setting2.GridAmount)
+	setting3 := api.GetSetting(function, market, symbol)
+	settings[0] = setting3
+	//setting4 := api.GetSetting(function, market, symbol)
+	settings[0].GridAmount = 4
+	//setting4 = api.GetSetting(function, market, symbol)
+	fmt.Println(setting2.GridAmount)
+}
