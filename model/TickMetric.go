@@ -50,10 +50,16 @@ type MetricManager struct {
 	//index       sync.Map // market*symbol - index
 }
 
+var carryClearTime time.Time
+
 func (metricManager *MetricManager) AddCarry(mark string, carryOpen, carryClose float64) {
 	current := util.GetNow()
 	key := fmt.Sprintf(`%s*%d/%d_%d`, mark, current.Month(), current.Day(), current.Hour())
 	value, ok := metricManager.carryHour.Load(key)
+	if current.Unix()-carryClearTime.Unix() > 3600 {
+		metricManager.carryHour.Clear()
+		carryClearTime = current
+	}
 	var carryMetric *CarryMetric
 	if !ok || value == nil {
 		carryMetric = &CarryMetric{carryHighest: math.NaN(), carryLowest: math.NaN()}
