@@ -139,18 +139,18 @@ func appendSpotMarketsGate(key, secret string, marketInfos map[string]*model.Mar
 func setLeverageGate(account *model.Account) (success bool) {
 	symbols := GetMarketSymbols(model.Gate)
 	for symbol := range symbols {
-		_, marketType, coin, _ := model.GetFromStandard(model.Gate, symbol)
+		_, marketType, _, _ := model.GetFromStandard(model.Gate, symbol)
 		if marketType == model.MarketTypePerp {
 			setSymbolLeverageGate(account, symbol)
 		} else {
-			client, ctx := getClientGate(account.Key, account.Secret)
-			go func() {
-				_, err := client.UnifiedApi.SetUserLeverageCurrencySetting(ctx,
-					gateApi.UnifiedLeverageSetting{Currency: coin, Leverage: "5"})
-				if err != nil {
-					panicGateError(account.Key, "SetUserLeverageCurrencySetting", err)
-				}
-			}()
+			//client, ctx := getClientGate(account.Key, account.Secret)
+			//go func() {
+			//	_, err := client.UnifiedApi.SetUserLeverageCurrencySetting(ctx,
+			//		gateApi.UnifiedLeverageSetting{Currency: coin, Leverage: "5"})
+			//	if err != nil {
+			//		panicGateError(account.Key, "SetUserLeverageCurrencySetting", err)
+			//	}
+			//}()
 		}
 		time.Sleep(time.Millisecond * 200)
 	}
