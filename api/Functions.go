@@ -529,9 +529,7 @@ func GetBalances(account *model.Account, market string) (
 		if balance.Amount <= 0 {
 			continue
 		}
-		if USDs[balance.Coin] {
-			totalLong += balance.Amount
-		} else {
+		if !USDs[balance.Coin] {
 			symbolStandard := balance.Coin + model.UniStandardTail[model.MarketTypeSpot]
 			_, price := GetPriceForce(market, symbolStandard, false)
 			totalLong += balance.Amount * price
@@ -540,7 +538,7 @@ func GetBalances(account *model.Account, market string) (
 	accounts := model.AppConfig.GetAccounts(market)
 	if len(accounts) > 0 && !accounts[0].IsUnified && totalInUsd == 0 {
 		for _, balance := range balances {
-			if USDs[balance.Coin] {
+			if !USDs[balance.Coin] {
 				totalInUsd += balance.Amount
 			} else {
 				symbolStandard := balance.Coin + model.UniStandardTail[model.MarketTypeSpot]
