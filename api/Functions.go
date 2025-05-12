@@ -538,7 +538,7 @@ func GetBalances(account *model.Account, market string) (
 	accounts := model.AppConfig.GetAccounts(market)
 	if len(accounts) > 0 && !accounts[0].IsUnified && totalInUsd == 0 {
 		for _, balance := range balances {
-			if !USDs[balance.Coin] {
+			if USDs[balance.Coin] {
 				totalInUsd += balance.Amount
 			} else {
 				symbolStandard := balance.Coin + model.UniStandardTail[model.MarketTypeSpot]
