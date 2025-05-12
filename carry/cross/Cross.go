@@ -355,33 +355,26 @@ func initTradeLine(account *model.Account, setting *model.Setting, status *model
 	//} else {
 	//	util.Notice(fmt.Sprintf(`fatal error fail to get trade line extra %s`, setting.Coin))
 	//}
-	if status.DoRevert || account.CarryClose {
-		if status.Holding > 0 {
-			status.TradeLineBuy = 1
-			status.LimitBuy = 0
-			status.AvailableBuy = 0
-			//status.TradeLineSell = math.Min(status.TradeLineSell, 0.0004)
-		} else if status.Holding < 0 {
-			status.TradeLineSell = 1
-			status.LimitSell = 0
-			status.AvailableSell = 0
-			//status.TradeLineBuy = math.Min(status.TradeLineBuy, 0.0004)
-		} else if status.Holding == 0 {
-			status.TradeLineBuy = 1
-			status.TradeLineSell = 1
-			status.LimitBuy = 0
-			status.LimitSell = 0
-			status.AvailableBuy = 0
-			status.AvailableSell = 0
-		}
-	}
-	if setting.Chance == -2 {
+	if setting.Chance == -2 || price == 0 {
 		status.TradeLineBuy = 1
 		status.TradeLineSell = 1
 		status.LimitBuy = 0
 		status.LimitSell = 0
 		status.AvailableBuy = 0
 		status.AvailableSell = 0
+	} else if status.DoRevert || account.CarryClose {
+		if status.Holding > -SmallInU/price {
+			status.TradeLineBuy = 1
+			status.LimitBuy = 0
+			status.AvailableBuy = 0
+			//status.TradeLineSell = math.Min(status.TradeLineSell, 0.0004)
+		}
+		if status.Holding < SmallInU/price {
+			status.TradeLineSell = 1
+			status.LimitSell = 0
+			status.AvailableSell = 0
+			//status.TradeLineBuy = math.Min(status.TradeLineBuy, 0.0004)
+		}
 	}
 }
 
