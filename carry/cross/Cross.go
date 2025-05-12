@@ -257,7 +257,7 @@ func createFromBalance(account *model.Account, setting *model.Setting) (carrySta
 		//(sm.collateral.Available-sm.collateral.Occupied)/sm.collateral.Available < 0.1) {
 		carryStatus.DoRevert = true
 	} else if setting.Market == model.Gate && ((sm.collateral != nil && sm.collateral.Rate < 1.5) ||
-		sm.totalLong/sm.accountValueInU < 0.4) {
+		sm.totalLong/sm.accountValueInU > 0.4) {
 		carryStatus.DoRevert = true
 	}
 	if carryStatus.DoRevert {
