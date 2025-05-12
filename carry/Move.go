@@ -26,7 +26,7 @@ func initPos(account *model.Account, market string) {
 }
 
 func initBalances(account *model.Account, market string) {
-	success, bal, _, _ := api.GetBalances(account, market)
+	success, bal, _, _, _ := api.GetBalances(account, market)
 	if success {
 		balances.Clear()
 		for _, balance := range bal {

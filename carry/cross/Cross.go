@@ -47,9 +47,9 @@ func createContractMarket(account *model.Account, market string) (cm *contractMa
 }
 
 func createSpotMarket(account *model.Account, market string) (sm *spotMarket) {
-	success, balances, totalInUsd, collateral := api.GetBalances(account, market)
+	success, balances, totalInUsd, totalLong, collateral := api.GetBalances(account, market)
 	if success {
-		sm = &spotMarket{key: account.Key, market: market}
+		sm = &spotMarket{key: account.Key, market: market, totalLong: totalLong}
 		sm.balances = make(map[string]*model.Balance)
 		sm.accountValueInU = totalInUsd
 		sm.collateral = collateral
@@ -184,7 +184,7 @@ func createFromPosition(account *model.Account, setting *model.Setting) (carrySt
 		usdLowLine = math.Min(MarginULowLimit, 0.07*cm.accountValueInU)
 	}
 	if cm.contractValueInU/handledActValueInU > rateLimitPosition || valueInUsd/handledActValueInU > rateLimitHolding ||
-		(cm.collateralsAvailable < usdLowLine && cm.collateralsAvailable/handledActValueInU < 0.05) ||
+		(cm.collateralsAvailable < usdLowLine && cm.collateralsAvailable/handledActValueInU < 0.07) ||
 		(setting.Market == model.BitgetPerp && (len(cm.positions) > model.BitgetPosLimit && carryStatus.Holding == 0)) {
 		util.Log(util.LogLevelError, fmt.Sprintf(`do revert true %d %s %s value big %f %f %f %f %f margin u %f pos len %d status %#v`,
 			account.Index, setting.Market, setting.Symbol, cm.contractValueInU, handledActValueInU, rateLimitPosition,
@@ -256,7 +256,8 @@ func createFromBalance(account *model.Account, setting *model.Setting) (carrySta
 	} else if setting.Market == model.OKEX && sm.collateral != nil && sm.collateral.Rate < 1.5 {
 		//(sm.collateral.Available-sm.collateral.Occupied)/sm.collateral.Available < 0.1) {
 		carryStatus.DoRevert = true
-	} else if setting.Market == model.Gate && sm.collateral != nil && sm.collateral.Rate < 1.5 {
+	} else if setting.Market == model.Gate && ((sm.collateral != nil && sm.collateral.Rate < 1.5) ||
+		sm.totalLong/sm.accountValueInU < 0.4) {
 		carryStatus.DoRevert = true
 	}
 	if carryStatus.DoRevert {

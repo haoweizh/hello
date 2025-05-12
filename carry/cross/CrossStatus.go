@@ -64,6 +64,7 @@ type contractMarket struct {
 type spotMarket struct {
 	key, market     string
 	availableU      float64
+	totalLong       float64
 	accountValueInU float64
 	balances        map[string]*model.Balance // symbol/balance
 	collateral      *model.Collateral

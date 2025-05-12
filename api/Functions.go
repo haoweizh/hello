@@ -474,7 +474,7 @@ func GetMarketEquity(index int) (msg string) {
 			continue
 		}
 		//util.Notice(fmt.Sprintf(`try to get value for %s account %s`, market, accounts[market].Key[:5]))
-		_, _, equity, _ := GetBalances(accounts[market], market)
+		_, _, equity, _, _ := GetBalances(accounts[market], market)
 		if equity == 0 && !accounts[market].IsUnified {
 			_, _, equity, _, _ = GetPositions(accounts[market], market)
 		}
@@ -491,7 +491,7 @@ func GetMarketEquity(index int) (msg string) {
 // GetBalances 本方法用于搬砖过程中获取现货，由于某些交易所在有持仓的情况下可能返回现货持仓为0且接口显示正确返回，故判断所有持仓为0时为接口错误
 // 如果是新账户，需要手动下单产生持仓
 func GetBalances(account *model.Account, market string) (
-	success bool, balances []*model.Balance, totalInUsd float64, collateral *model.Collateral) {
+	success bool, balances []*model.Balance, totalInUsd, totalLong float64, collateral *model.Collateral) {
 	lock, _ := balanceLock.Load(account.Key)
 	if lock == nil {
 		lock = &sync.Mutex{}
@@ -525,6 +525,18 @@ func GetBalances(account *model.Account, market string) (
 	default:
 		ignore = true
 	}
+	for _, balance := range balances {
+		if balance.Amount <= 0 {
+			continue
+		}
+		if USDs[balance.Coin] {
+			totalLong += balance.Amount
+		} else {
+			symbolStandard := balance.Coin + model.UniStandardTail[model.MarketTypeSpot]
+			_, price := GetPriceForce(market, symbolStandard, false)
+			totalLong += balance.Amount * price
+		}
+	}
 	accounts := model.AppConfig.GetAccounts(market)
 	if len(accounts) > 0 && !accounts[0].IsUnified && totalInUsd == 0 {
 		for _, balance := range balances {
@@ -554,7 +566,7 @@ func GetBalances(account *model.Account, market string) (
 		lock.(*sync.Mutex).Lock()
 		return GetBalances(account, market)
 	}
-	return success, balances, totalInUsd, collateral
+	return success, balances, totalInUsd, totalLong, collateral
 }
 
 func GetTransfers(account *model.Account, market string) (balances []*model.Balance) {

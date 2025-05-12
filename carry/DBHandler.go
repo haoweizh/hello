@@ -31,7 +31,7 @@ func _(account *model.Account) {
 				balances = append(balances, api.GetTransfers(account, market)...)
 				balanceMaintainDay = util.GetNow()
 			}
-			_, balance, _, _ := api.GetBalances(account, market)
+			_, balance, _, _, _ := api.GetBalances(account, market)
 			balances = append(balances, balance...)
 			//for _, item := range balance {
 			//	key := fmt.Sprintf(`[balance]%s_%s`, item.Market, item.Coin)

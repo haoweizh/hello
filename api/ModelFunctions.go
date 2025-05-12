@@ -272,7 +272,7 @@ func handleCombineSettings(mumSetting *model.Setting, topMarketInfos map[string]
 func handleMoveMarkets(setting *model.Setting) {
 	account := model.AppConfig.GetAccounts(setting.Market)[0]
 	_, positions, _, _, _ := GetPositions(account, setting.Market)
-	_, balances, _, _ := GetBalances(account, setting.Market)
+	_, balances, _, _, _ := GetBalances(account, setting.Market)
 	for _, position := range positions {
 		settingNew := &model.Setting{Valid: true, Function: model.FunctionMove, Market: setting.Market, Symbol: position.Currency}
 		model.AppDB.Save(settingNew)

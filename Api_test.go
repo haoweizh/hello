@@ -461,7 +461,7 @@ func Test_initTurtleN(t *testing.T) {
 	market := model.Bybit
 	account := model.AppConfig.GetAccounts(market)[0]
 	api.GetPositions(account, model.Bybit)
-	suc, bals, inU, cor := api.GetBalances(account, model.Bybit)
+	suc, bals, inU, _, cor := api.GetBalances(account, model.Bybit)
 	api.InitMarketInfos(model.BinanceSpot)
 	//now := time.Now()
 	//nowPeriod1, _ := model.GetNowPeriod(market, 86400, now)
@@ -485,7 +485,7 @@ func Test_initTurtleN(t *testing.T) {
 	//	DB:       0,
 	//})
 	api.InitMarketInfos(model.Bybit)
-	suc, bals, inU, cor = api.GetBalances(account, model.Bybit)
+	suc, bals, inU, _, cor = api.GetBalances(account, model.Bybit)
 	fmt.Println(fmt.Sprintf(`%#v %f %#v`, suc, inU, cor))
 	for _, bal := range bals {
 		fmt.Println(bal.Coin)
@@ -511,7 +511,7 @@ func Test_initTurtleN(t *testing.T) {
 	//today, _ := model.GetMarketToday(model.BinancePerp)
 	//candle := api.CalcCandleN(model.AppConfig.BinanceKey, model.AppConfig.BinanceSecret, model.BinancePerp,
 	//	`BTC_PERP`, 86400, day)
-	_, balances, total, collateral := api.GetBalances(account, model.Gate)
+	_, balances, total, _, collateral := api.GetBalances(account, model.Gate)
 	fmt.Println(collateral)
 	fmt.Println(total)
 	for _, balance := range balances {
@@ -683,7 +683,7 @@ func Test_transferInner(t *testing.T) {
 	model.NewConfig()
 	market := model.OKEX
 	account := model.AppConfig.GetAccounts(market)[0]
-	suc, bals, total, _ := api.GetBalances(account, market)
+	suc, bals, total, _, _ := api.GetBalances(account, market)
 	fmt.Println(fmt.Sprintf(`%#v total %f`, suc, total))
 	for _, bal := range bals {
 		api.TransferGate(model.AppConfig.GateKey, model.AppConfig.GateSecret, `MAIN_UMFUTURE`, bal.Coin, bal.Amount)
