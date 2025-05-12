@@ -261,8 +261,8 @@ func createFromBalance(account *model.Account, setting *model.Setting) (carrySta
 		carryStatus.DoRevert = true
 	}
 	if carryStatus.DoRevert {
-		util.Log(util.LogLevelError, fmt.Sprintf(`do revert true %d %s %s value big balance u %f<%f || %f>0.2`,
-			account.Index, setting.Market, setting.Symbol, sm.availableU, usdLowLine, carryStatus.RateInAll))
+		util.Log(util.LogLevelError, fmt.Sprintf(`do revert true %d %s %s value big balance u %f<%f || %f>0.2 %#v`,
+			account.Index, setting.Market, setting.Symbol, sm.availableU, usdLowLine, carryStatus.RateInAll, sm))
 	}
 	return carryStatus
 }
