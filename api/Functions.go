@@ -975,7 +975,7 @@ func InitCrossMarketInfos(markets []string, clear bool) {
 	doneNum := 0
 	for _, market := range markets {
 		go func() {
-			InitMarketInfos(market)
+			InitMarketInfos(market, false)
 			util.Log(util.LogLevelInfo, fmt.Sprintf("finish init cross market infos %#v", market))
 			doneNum++
 		}()
@@ -1085,7 +1085,7 @@ func InitCrossMarketInfos(markets []string, clear bool) {
 var marketInfoInit = sync.Map{}
 
 // InitMarketInfos 只支持现货SPOT和永续PERP SWAP
-func InitMarketInfos(market string) (success bool) {
+func InitMarketInfos(market string, withVolume bool) (success bool) {
 	initializing, _ := marketInfoInit.Load(market)
 	if initializing != nil && initializing.(bool) {
 		return
@@ -1119,10 +1119,19 @@ func InitMarketInfos(market string) (success bool) {
 	//	deprecated.setFutureAutoDeposit()
 	case model.Bybit:
 		marketInfos = getMarketsBybit(accounts[0])
-		//case model.BitgetSpot:
-		//	marketInfos = deprecated.getMarketsBitgetSpot()
-		//case model.BitgetPerp:
-		//	marketInfos = deprecated.getMarketsBitgetPerp()
+		if withVolume {
+			nowPeriod, _ := model.GetMarketToday(market)
+			for symbol, marketInfo := range marketInfos {
+				_, marketType, _, _ := model.GetFromStandard(market, symbol)
+				if marketType == model.MarketTypePerp {
+					candles := CombineCandles(accounts[0], market, symbol, 86400, nowPeriod.Add(time.Second*time.Duration(-86400)), nowPeriod)
+					if len(candles) > 0 {
+						marketInfo.TradeAmount = candles[0].Volume
+					}
+					time.Sleep(time.Millisecond * 10)
+				}
+			}
+		}
 	}
 	util.Log(util.LogLevelInfo, fmt.Sprintf(`begin to init market infos %s %d`, market, len(marketInfos)))
 	for _, setting := range model.AppEnvironment.Settings {

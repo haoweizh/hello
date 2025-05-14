@@ -171,7 +171,7 @@ func Test_WsAndOrderApi(t *testing.T) {
 	model.NewConfig()
 	api.SendMails(`test`, `code`)
 	//model.AppDB, _ = gorm.Open(postgres.Open(model.AppConfig.DBConnection), &gorm.Config{})
-	api.InitMarketInfos(market)
+	api.InitMarketInfos(market, false)
 	account := model.AppConfig.GetAccounts(market)[0]
 	api.CreateWSTick(model.AppEnvironment, market)
 	for _, symbol := range symbols {
@@ -266,8 +266,8 @@ func Test_Sync(t *testing.T) {
 
 func Test_BalAndPos(t *testing.T) {
 	model.NewConfig()
-	market := model.Gate
-	api.InitMarketInfos(market)
+	market := model.Bybit
+	api.InitMarketInfos(market, true)
 	account := model.AppConfig.GetAccounts(market)[0]
 	api.GetPositions(account, market)
 	markets := []string{`okex`, `binancespot`, `gate`, `binanceperp`, `bybit`}
@@ -461,9 +461,9 @@ func Test_initTurtleN(t *testing.T) {
 	market := model.Bybit
 	account := model.AppConfig.GetAccounts(market)[0]
 	nowPeriod, _ := model.GetMarketToday(market)
-	seconds := 14400
+	seconds := 86400
 	candles := api.CombineCandles(account, market, `BTC_PERP`, seconds,
-		nowPeriod.Add(time.Second*time.Duration(seconds*-1*30)), nowPeriod)
+		nowPeriod.Add(time.Second*time.Duration(seconds*-1)), nowPeriod)
 	fmt.Println(len(candles))
 	model.AppDB, _ = gorm.Open(postgres.Open(model.AppConfig.DBConnection), &gorm.Config{})
 	//day := today.Add(time.Hour * -24)
@@ -577,7 +577,7 @@ func Test_ClearActs(t *testing.T) {
 	}
 	model.NewConfig()
 	market := model.OKEX
-	api.InitMarketInfos(market)
+	api.InitMarketInfos(market, false)
 	//account := model.AppConfig.GetAccounts(market)[0]
 	//_, bals, _, _ := api.GetBalances(account.Key, account.Secret, market)
 	//for _, bal := range bals {
@@ -790,7 +790,7 @@ func Test_wallet(t *testing.T) {
 		model.OrderTypeLimit, `d490a639-a5f7-499a-9248-142a93ddaf13`)
 	fmt.Println(orderBybit1.OrderId)
 	model.AppDB, _ = gorm.Open(postgres.Open(model.AppConfig.DBConnection), &gorm.Config{})
-	api.InitMarketInfos(model.Gate)
+	api.InitMarketInfos(model.Gate, false)
 	orderQuery := api.QueryOrderById(account, model.Gate, `CFX_PERP`, model.OrderTypeLimit, `79852794326`)
 	fmt.Println(orderQuery.OrderSide)
 	//order1 := api.PlaceOrder(model.AppConfig.GateKey, model.AppConfig.GateSecret, model.OrderSideBuy, model.OrderTypeLimit,
@@ -798,7 +798,7 @@ func Test_wallet(t *testing.T) {
 	//fmt.Println(order1.OrderId)
 	api.CancelOrders(account, model.Gate, `ETH_USDT`)
 	model.AppDB, _ = gorm.Open(postgres.Open(model.AppConfig.DBConnection), &gorm.Config{})
-	api.InitMarketInfos(model.OKEX)
+	api.InitMarketInfos(model.OKEX, false)
 	model.AppDB, _ = gorm.Open(postgres.Open(model.AppConfig.DBConnection), &gorm.Config{})
 }
 

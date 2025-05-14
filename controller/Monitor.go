@@ -35,7 +35,7 @@ func InitFullMonitors(c *gin.Context) {
 		c.JSON(http.StatusOK, map[string]interface{}{`status`: `fail`, `msg`: `wrong seconds ` + err.Error(), `data`: map[string]interface{}{}})
 		return
 	}
-	api.InitMarketInfos(model.BinanceSpot)
+	api.InitMarketInfos(model.BinanceSpot, false)
 	addresses := strings.Split(str, `,`)
 	model.MarketInfos.Range(func(key, value any) bool {
 		for _, address := range addresses {
@@ -105,7 +105,7 @@ func addSettingMonitor(c *gin.Context) {
 				return true
 			})
 			if !marketInit {
-				api.InitMarketInfos(value[`Market`])
+				api.InitMarketInfos(value[`Market`], false)
 				marketInfo, _ = util.LoadSyncMap(model.MarketInfos, value[`Market`], value[`Symbol`])
 			}
 			if marketInfo == nil {

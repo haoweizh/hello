@@ -77,7 +77,7 @@ func Test_fullMonitors(t *testing.T) {
 	model.AppDB, _ = gorm.Open(postgres.Open(model.AppConfig.DBConnection), &gorm.Config{})
 	_ = model.AppDB.AutoMigrate(&model.SettingMonitor{})
 	//account := model.AppConfig.GetAccounts(model.BinanceSpot)[0]
-	api.InitMarketInfos(model.BinanceSpot)
+	api.InitMarketInfos(model.BinanceSpot, false)
 	addresses := []string{`haoweizh@qq.com`, `57059329@qq.com`, `158553808@qq.com`, `148392942@qq.com`, `759775226@qq.com`}
 	model.MarketInfos.Range(func(key, value any) bool {
 		for _, address := range addresses {

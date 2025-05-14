@@ -1303,6 +1303,9 @@ func getCandlesBybit(account *model.Account, market, symbol string, begin, end t
 		interval = `D`
 	}
 	_, marketType, _, dialectSymbol := model.GetFromStandard(market, symbol)
+	if limit < 200 {
+		limit += 1
+	}
 	param := map[string]interface{}{`category`: `linear`, `symbol`: dialectSymbol, `interval`: interval, `start`: begin.UnixMilli(), `end`: end.UnixMilli(), `limit`: limit}
 	if marketType == model.MarketTypeSpot {
 		param[`category`] = `spot`

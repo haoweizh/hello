@@ -421,7 +421,7 @@ func handleMarketDynamic(market string) (handled bool) {
 		}
 		return true
 	})
-	InitMarketInfos(market)
+	InitMarketInfos(market, true)
 	topLen := 70
 	if settingDynamicCombine != nil {
 		topMarketInfos := getDynamicMarketInfos(settingDynamicCombine, accounts, settingDynamicCombine.Function, topLen, int(settingDynamicCombine.OpenShortMargin))
@@ -451,7 +451,7 @@ func InitApp() bool {
 			handled = true
 		}
 		if !handled {
-			InitMarketInfos(market)
+			InitMarketInfos(market, false)
 		}
 	}
 	if handled {
