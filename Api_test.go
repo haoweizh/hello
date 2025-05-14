@@ -460,37 +460,12 @@ func Test_initTurtleN(t *testing.T) {
 	model.NewConfig()
 	market := model.Bybit
 	account := model.AppConfig.GetAccounts(market)[0]
-	api.GetPositions(account, model.Bybit)
-	suc, bals, inU, _, cor := api.GetBalances(account, model.Bybit)
-	api.InitMarketInfos(model.BinanceSpot)
-	//now := time.Now()
-	//nowPeriod1, _ := model.GetNowPeriod(market, 86400, now)
-	model.AppDB, _ = gorm.Open(postgres.Open(model.AppConfig.DBConnection), &gorm.Config{})
-	settings := map[string]*model.Setting{`SHIB_PERP`: {Market: market, Symbol: `SHIB_PERP`}}
-	api.GetMultiCandle(account, model.OKEX, 3600, time.Now().Add(time.Duration(-220)*time.Hour), time.Now(), settings, false)
-	//api.CalcTurtleData(account, market, `GAS_PERP`, model.FunctionCombineTurtle, 18, 9, 86400,
-	//	5, 3, 0.1, nowPeriod1)
-	//fmt.Println(model.AppConfig.OKPhase)
-	//orders := api.QueryOpenOrders(account.Key, account.Secret, market, `ARB_PERP`)
-	//fmt.Println(len(orders))
 	nowPeriod, _ := model.GetMarketToday(market)
 	seconds := 14400
 	candles := api.CombineCandles(account, market, `BTC_PERP`, seconds,
 		nowPeriod.Add(time.Second*time.Duration(seconds*-1*30)), nowPeriod)
 	fmt.Println(len(candles))
 	model.AppDB, _ = gorm.Open(postgres.Open(model.AppConfig.DBConnection), &gorm.Config{})
-	//model.AppRedis = redis.NewClient(&redis.Options{
-	//	Addr:     model.AppConfig.RedisAddr,
-	//	Password: model.AppConfig.RedisPassword,
-	//	DB:       0,
-	//})
-	api.InitMarketInfos(model.Bybit)
-	suc, bals, inU, _, cor = api.GetBalances(account, model.Bybit)
-	fmt.Println(fmt.Sprintf(`%#v %f %#v`, suc, inU, cor))
-	for _, bal := range bals {
-		fmt.Println(bal.Coin)
-		fmt.Println(bal.Amount)
-	}
 	//day := today.Add(time.Hour * -24)
 	//candles := api.CalcCandleN(model.AppConfig.BinanceKey, model.AppConfig.BinanceSecret, model.BinancePerp, `BNX_PERP`, 86400, day)
 	//fmt.Println(candles)

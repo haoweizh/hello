@@ -460,6 +460,10 @@ func GetTurtleData(account *model.Account, setting *model.Setting, removed bool)
 	} else if strings.ToLower(setting.Symbol) == `eth_perp` || strings.ToLower(setting.Symbol) == `sol_perp` {
 		activationRate = 1.3
 	}
+	// bybit 不开追踪单
+	if setting.Market == model.Bybit {
+		activationRate = 0
+	}
 	data = &model.TurtleData{TurtleTime: nowPeriod, Expire: nowPeriod.Add(time.Second * time.Duration(setting.Seconds)),
 		IsBig: true, Symbol: setting.Symbol, DaysFar: int(setting.Far), DaysNear: int(setting.Near), DaysAdjust: 5,
 		OrderAdjust: make(map[string]*model.Order), OrderCleared: lastHandled, CallBackRatio: 0.05, ActivationRate: activationRate}
@@ -892,6 +896,12 @@ func CanOpenCombine(settingCombine, settingNormal *model.Setting, dataTurtle *mo
 	}
 	if dataTurtle.HighFar < settingCombine.CloseShortMargin*dataTurtle.LowFar {
 		canStartCombine = false
+	}
+	if settingCombine.HighLowRate > 0 && dataTurtle.HighFar/dataTurtle.LowFar > settingCombine.HighLowRate {
+		canStartCombine = false
+	}
+	if settingNormal.HighLowRate > 0 && dataTurtle.HighFar/dataTurtle.LowFar > settingNormal.HighLowRate {
+		canStartTurtle = false
 	}
 	return canOpen, canStartCombine, canStartTurtle, turtleSymbolNum, inAll, commonTurtleChances
 }

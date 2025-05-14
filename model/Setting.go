@@ -25,7 +25,8 @@ type Setting struct {
 	PriceX, GridAmount                         float64
 	OpenShortMargin, CloseShortMargin          float64
 	AmountLimit, AmountRate, AmountRateCombine float64
-	ID                                         uint `gorm:"primary_key"`
+	HighLowRate                                float64 // 海龟、龟汤高低价格差的比，在一定范围内才开仓
+	ID                                         uint    `gorm:"primary_key"`
 	CreatedAt                                  time.Time
 	UpdatedAt                                  time.Time
 }

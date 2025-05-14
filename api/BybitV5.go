@@ -1,6 +1,7 @@
 package api
 
 import (
+	"context"
 	"crypto/hmac"
 	"crypto/sha256"
 	"encoding/hex"
@@ -1289,6 +1290,79 @@ func GetAvailAbleBybit(key, secret, coin string) (canMargin bool, availableWithB
 		}
 	}
 	time.Sleep(time.Millisecond * 20)
+	return
+}
+
+// interval	true	string	時間粒度. 1,3,5,15,30,60,120,240,360,720,D,M,W
+func getCandlesBybit(account *model.Account, market, symbol string, begin, end time.Time, limit, slotSeconds int) (
+	candles []*model.Candle, isCache bool) {
+	minutes := slotSeconds / 60
+	interval := strconv.Itoa(minutes)
+	switch minutes {
+	case 1440:
+		interval = `D`
+	}
+	_, marketType, _, dialectSymbol := model.GetFromStandard(market, symbol)
+	param := map[string]interface{}{`category`: `linear`, `symbol`: dialectSymbol, `interval`: interval, `start`: begin.UnixMilli(), `end`: end.UnixMilli(), `limit`: limit}
+	if marketType == model.MarketTypeSpot {
+		param[`category`] = `spot`
+	}
+	redisKey := fmt.Sprintf(`%s_%s_%s_%d_%d_%d`, market, symbol, interval, begin.UnixMilli(), end.UnixMilli(), limit)
+	var responseBody []byte
+	if model.AppRedis != nil {
+		temp, redisErr := model.AppRedis.Get(context.Background(), redisKey).Result()
+		if redisErr == nil {
+			responseBody = util.UnGzip([]byte(temp))
+			isCache = true
+			//util.Notice(fmt.Sprintf(`get candles from key %s %d`, redisKey, len(temp)))
+		}
+	}
+	if responseBody == nil {
+		isCache = false
+		responseBody, _ = SignedRequestBybit(account.Key, account.Secret, http.MethodGet, bybitRestUrl, "/v5/market/kline", param)
+	}
+	candleJson, err := util.NewJSON(responseBody)
+	errMsg := ``
+	if err != nil || candleJson == nil {
+		if err != nil {
+			errMsg = err.Error()
+		}
+		util.Log(util.LogLevelError, fmt.Sprintf(`getCandlesBinance fail to get binance kline %s %s %s %d %s`,
+			symbol, begin.String(), end.String(), slotSeconds, errMsg))
+		return
+	}
+	items := candleJson.GetPath(`result`, `list`).MustArray()
+	category := candleJson.GetPath(`result`, `category`).MustString()
+	if len(items) == 0 {
+		if model.AppRedis != nil {
+			model.AppRedis.Del(context.Background(), redisKey)
+			util.Log(util.LogLevelError, fmt.Sprintf(`del redis key %s`, redisKey))
+		}
+		util.Log(util.LogLevelError, fmt.Sprintf(`fail to get binance kline %s %s %s %d %s`,
+			symbol, begin.String(), end.String(), slotSeconds, errMsg))
+		return
+	} else if !isCache && model.AppRedis != nil {
+		val := util.Compress(responseBody)
+		util.Log(util.LogLevelError, fmt.Sprintf(`set candles to cache %s len %d compress %d`, redisKey, len(responseBody), len(val)))
+		model.AppRedis.Set(context.Background(), redisKey, val, 0)
+	}
+	candles = make([]*model.Candle, 0)
+	for i := len(items) - 1; i >= 0; i-- {
+		candle := &model.Candle{Market: market, Symbol: symbol, Seconds: slotSeconds}
+		value := items[i].([]interface{})
+		beginMilli, _ := strconv.ParseInt(value[0].(string), 10, 64)
+		candle.Begin = time.Unix(beginMilli/1000, 0).In(begin.Location())
+		candle.PriceOpen, _ = strconv.ParseFloat(value[1].(string), 64)
+		candle.PriceClose, _ = strconv.ParseFloat(value[4].(string), 64)
+		candle.PriceHigh, _ = strconv.ParseFloat(value[2].(string), 64)
+		candle.PriceLow, _ = strconv.ParseFloat(value[3].(string), 64)
+		if category == `inverse` {
+			candle.Volume, _ = strconv.ParseFloat(value[5].(string), 64)
+		} else {
+			candle.Volume, _ = strconv.ParseFloat(value[6].(string), 64)
+		}
+		candles = append(candles, candle)
+	}
 	return
 }
 

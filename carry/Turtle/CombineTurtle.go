@@ -23,6 +23,7 @@ import (
 // setting.PriceX 上一次开仓的价格
 // setting.ChanceLimit 该单币种最多开仓个数
 // setting.AmountLimit 总开仓上限
+// Setting.HighLowRate 海龟、龟汤高低价格差的比，在一定范围内才开仓
 // Order.GridPos 存储turtleData 的 isBig
 var ProcessCombineTurtle = func(settingCombine *model.Setting, tick *model.BidAsk) {
 	market := settingCombine.Market
