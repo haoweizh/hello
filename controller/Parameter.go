@@ -58,7 +58,6 @@ func ParameterServe() {
 	//router.GET(`cross_refresh`, crossRefresh)
 	//router.GET(`debug`, debug)
 	router.GET(`candles`, getCandles)
-	router.GET(`mine`, mindZeroAddr)
 	router.GET(`monitor`, MonitorTrade)
 	router.GET(`entry`, monitorEntry)
 	router.GET(`init`, InitFullMonitors)
@@ -184,16 +183,6 @@ func simulateGrid(c *gin.Context) {
 	}
 	util.Log(util.LogLevelInfo, fmt.Sprintf(`done simulate grid %s %#v`, market, coins))
 	c.String(http.StatusOK, `done`)
-}
-
-func mindZeroAddr(c *gin.Context) {
-	session := sessions.Default(c)
-	sessionValue := session.Get(`user`)
-	if sessionValue != `haoweizh@qq.com` {
-		c.String(http.StatusForbidden, `no right`)
-		return
-	}
-	c.String(http.StatusOK, util.RunMindZeroAddr(6, 11, 4))
 }
 
 func getWithdraws(c *gin.Context) {
