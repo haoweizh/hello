@@ -259,6 +259,7 @@ func HandleOrders(account *model.Account, market, symbol string, settings []*mod
 	}
 	turtleData[0].CheckTimeOpen = util.GetNow()
 	ClearExtraOrders(account, market, symbol, turtleData)
+	util.Log(util.LogLevelInfo, fmt.Sprintf("HandleOrders ClearExtraOrders %v %v", turtleData[0].CheckTimeOpen, util.GetNow()))
 	return true
 }
 
@@ -718,6 +719,7 @@ func CheckBreak(account *model.Account, market, symbol string, settings []*model
 		return false
 	}
 	if turtleData[0].CheckUseApi.Add(time.Minute * 10).Before(util.GetNow()) {
+		util.Log(util.LogLevelError, fmt.Sprintf(`check break turtle failed %v %v`, turtleData[0].CheckUseApi, util.GetNow()))
 		useApi = true
 	}
 	for i, setting := range settings {
