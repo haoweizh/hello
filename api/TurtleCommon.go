@@ -37,7 +37,7 @@ func CalcTurtleAmount(account *model.Account, n, amountRate float64, candle *mod
 		switch candle.Market {
 		case model.BinancePerp:
 			_, _, accountValue, _, _ = GetPositions(account, candle.Market)
-		case model.Ftx, model.OKEX:
+		case model.Bybit, model.OKEX:
 			_, _, accountValue, _, _ = GetBalances(account, candle.Market)
 		}
 		util.StoreSyncMap(accountValues, accountValue, candle.Market)
