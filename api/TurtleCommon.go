@@ -509,11 +509,12 @@ func GetTurtleData(account *model.Account, setting *model.Setting, removed bool)
 			return nil, false
 		}
 		util.StoreSyncMap(&TurtleDataSet, data, setting.Function, setting.Market, setting.Symbol, nowStr)
-		util.Log(util.LogLevelInfo, fmt.Sprintf(`set turtle %s %s %s %s Amount:%e N:%e %d:%e-%e %d:%e-%e %#v`,
-			setting.Function, setting.Market, setting.Symbol, nowStr, data.Amount, data.N, data.DaysNear, data.LowNear, data.HighNear, data.DaysFar, data.LowFar, data.HighFar, data))
-		util.Log(util.LogLevelInfo, fmt.Sprintf(`set data %s %s %s %f %f`, setting.Market, setting.Symbol, setting.Function, data.N, data.Amount))
+		util.Log(util.LogLevelInfo, fmt.Sprintf(`set turtle value %s %s %s %s Amount:%e N:%e %d:%e-%e %d:%e-%e %e %e %#v`,
+			setting.Function, setting.Market, setting.Symbol, nowStr, data.Amount, data.N, data.DaysNear, data.LowNear,
+			data.HighNear, data.DaysFar, data.LowFar, data.HighFar, data.N, data.Amount, data))
 		return data, true
 	} else {
+		util.Log(util.LogLevelInfo, fmt.Sprintf(`set data no amount %s %s %s %f %f`, setting.Market, setting.Symbol, setting.Function, data.N, data.Amount))
 		return nil, false
 	}
 }
