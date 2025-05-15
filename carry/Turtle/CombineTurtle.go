@@ -92,10 +92,10 @@ var ProcessCombineTurtle = func(settingCombine *model.Setting, tick *model.BidAs
 	if api.HandleOrders(account, market, symbol, settings, turtleData, tick) ||
 		api.CheckBreak(account, market, symbol, settings, turtleData, tick) ||
 		api.CheckActiveTrail(account, settingNormal, dataNormal, tick, commonTurtleChances) {
-		util.Log(util.LogLevelInfo, fmt.Sprintf(`combine return handle or break %s %s`, market, symbol))
+		util.Log(util.LogLevelLocal, fmt.Sprintf(`combine return handle or break %s %s`, market, symbol))
 		return
 	}
-	util.Log(util.LogLevelInfo, fmt.Sprintf("can open 1 %s %s %v %v %v",
+	util.Log(util.LogLevelLocal, fmt.Sprintf("can open 1 %s %s %v %v %v",
 		settingNormal.Market, settingNormal.Symbol, canOpen, canStartTurtle, canStartCombine))
 	model.ResetBig(dataCombine, dataNormal)
 	msgKey := model.GetMsgKey(model.FunctionCombineTurtle, market, symbol)
@@ -111,10 +111,10 @@ var ProcessCombineTurtle = func(settingCombine *model.Setting, tick *model.BidAs
 		settingCombine.Chance, settingCombine.ChanceLimit, settingCombine.GridAmount, settingCombine.PriceX, dataCombine.Liquidated,
 		dataCombine.Amount*float64(settingCombine.ChanceLimit), dataCombine.GetIds(), dataCombine.IsBig, dataCombine.DaysFar,
 		dataCombine.LowFar, dataCombine.HighFar, dataCombine.DaysNear, dataCombine.LowNear, dataCombine.HighNear, dataCombine.N)
-	util.Log(util.LogLevelInfo, fmt.Sprintf("can open 2 %s %s %v %v %v",
+	util.Log(util.LogLevelLocal, fmt.Sprintf("can open 2 %s %s %v %v %v",
 		settingNormal.Market, settingNormal.Symbol, canOpen, canStartTurtle, canStartCombine))
 	util.StoreSyncMap(&model.CarryInfo, msg, account.Key, msgKey)
-	util.Log(util.LogLevelInfo, fmt.Sprintf("can open 3 %s %s %v %v %v",
+	util.Log(util.LogLevelLocal, fmt.Sprintf("can open 3 %s %s %v %v %v",
 		settingNormal.Market, settingNormal.Symbol, canOpen, canStartTurtle, canStartCombine))
 	placeCombineOrders(account, dataNormal, dataCombine, settingNormal, settingCombine, tick, canOpen, canStartTurtle, canStartCombine)
 	needClear := false
@@ -240,7 +240,7 @@ func handleBreak(setting *model.Setting, data *model.TurtleData, orders []*model
 // 海龟有持仓: 龟汤的平仓单数量：龟汤仓数*大单
 func placeTurtleLong(account *model.Account, orderType string, data *model.TurtleData, setting *model.Setting,
 	tick *model.BidAsk, canOpen, isBig bool) {
-	util.Log(util.LogLevelInfo, fmt.Sprintf("placing turtle long %s %s %s %#v", setting.Market, setting.Symbol, orderType, data))
+	util.Log(util.LogLevelLocal, fmt.Sprintf("placing turtle long %s %s %s %#v", setting.Market, setting.Symbol, orderType, data))
 	amount := data.Amount
 	function := model.Open
 	if setting.Chance < 0 {
@@ -345,7 +345,7 @@ func placeTurtleLong(account *model.Account, orderType string, data *model.Turtl
 // 海龟有持仓: 龟汤的平仓单数量：龟汤仓数*大单
 func placeTurtleShort(account *model.Account, orderType string, data *model.TurtleData, setting *model.Setting,
 	tick *model.BidAsk, canOpen, isBig bool) {
-	util.Log(util.LogLevelInfo, fmt.Sprintf("placing turtle short %s %s %s %#v", setting.Market, setting.Symbol, orderType, data))
+	util.Log(util.LogLevelLocal, fmt.Sprintf("placing turtle short %s %s %s %#v", setting.Market, setting.Symbol, orderType, data))
 	amount := data.Amount
 	function := model.Open
 	if setting.Chance > 0 {
