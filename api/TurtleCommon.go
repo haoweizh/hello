@@ -259,7 +259,6 @@ func HandleOrders(account *model.Account, market, symbol string, settings []*mod
 	}
 	turtleData[0].CheckTimeOpen = util.GetNow()
 	ClearExtraOrders(account, market, symbol, turtleData)
-	util.Log(util.LogLevelInfo, fmt.Sprintf("HandleOrders ClearExtraOrders %v %v", turtleData[0].CheckTimeOpen, util.GetNow()))
 	return true
 }
 

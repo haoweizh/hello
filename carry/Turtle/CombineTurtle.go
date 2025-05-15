@@ -89,7 +89,6 @@ var ProcessCombineTurtle = func(settingCombine *model.Setting, tick *model.BidAs
 	//	checkFulled = false
 	//}
 	canOpen, canStartCombine, canStartTurtle, turtleSymbolNum, turtleCoins, commonTurtleChances := api.CanOpenCombine(settingCombine, settingNormal, dataNormal)
-	util.Log(util.LogLevelInfo, fmt.Sprintf("can open %v %v %v", canOpen, canStartTurtle, canStartCombine))
 	if api.HandleOrders(account, market, symbol, settings, turtleData, tick) ||
 		api.CheckBreak(account, market, symbol, settings, turtleData, tick) ||
 		api.CheckActiveTrail(account, settingNormal, dataNormal, tick, commonTurtleChances) {
@@ -130,6 +129,8 @@ var ProcessCombineTurtle = func(settingCombine *model.Setting, tick *model.BidAs
 func placeCombineOrders(account *model.Account, dataNormal, dataCombine *model.TurtleData, settingNormal,
 	settingCombine *model.Setting, tick *model.BidAsk, canOpen, canStartTurtle, canStartCombine bool) {
 	if canOpen {
+		util.Log(util.LogLevelInfo, fmt.Sprintf("can open %s %s %v %v %v",
+			settingNormal.Market, settingNormal.Symbol, canOpen, canStartTurtle, canStartCombine))
 		placeTurtleLong(account, model.OrderTypeLimit, dataCombine, settingCombine, tick, canStartCombine, true)
 		placeTurtleShort(account, model.OrderTypeLimit, dataCombine, settingCombine, tick, canStartCombine, true)
 		placeTurtleLong(account, model.OrderTypeStop, dataNormal, settingNormal, tick, canStartTurtle, true)
@@ -235,6 +236,7 @@ func handleBreak(setting *model.Setting, data *model.TurtleData, orders []*model
 // 海龟有持仓: 龟汤的平仓单数量：龟汤仓数*大单
 func placeTurtleLong(account *model.Account, orderType string, data *model.TurtleData, setting *model.Setting,
 	tick *model.BidAsk, canOpen, isBig bool) {
+	util.Log(util.LogLevelInfo, fmt.Sprintf("placing turtle long %s %s %s %#v", setting.Market, setting.Symbol, orderType, data))
 	amount := data.Amount
 	function := model.Open
 	if setting.Chance < 0 {
@@ -339,6 +341,7 @@ func placeTurtleLong(account *model.Account, orderType string, data *model.Turtl
 // 海龟有持仓: 龟汤的平仓单数量：龟汤仓数*大单
 func placeTurtleShort(account *model.Account, orderType string, data *model.TurtleData, setting *model.Setting,
 	tick *model.BidAsk, canOpen, isBig bool) {
+	util.Log(util.LogLevelInfo, fmt.Sprintf("placing turtle short %s %s %s %#v", setting.Market, setting.Symbol, orderType, data))
 	amount := data.Amount
 	function := model.Open
 	if setting.Chance > 0 {
