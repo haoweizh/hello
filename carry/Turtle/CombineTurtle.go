@@ -89,10 +89,11 @@ var ProcessCombineTurtle = func(settingCombine *model.Setting, tick *model.BidAs
 	//	checkFulled = false
 	//}
 	canOpen, canStartCombine, canStartTurtle, turtleSymbolNum, turtleCoins, commonTurtleChances := api.CanOpenCombine(settingCombine, settingNormal, dataNormal)
+	util.Log(util.LogLevelInfo, fmt.Sprintf("can open %v %v %v", canOpen, canStartTurtle, canStartCombine))
 	if api.HandleOrders(account, market, symbol, settings, turtleData, tick) ||
 		api.CheckBreak(account, market, symbol, settings, turtleData, tick) ||
 		api.CheckActiveTrail(account, settingNormal, dataNormal, tick, commonTurtleChances) {
-		//util.Notice(fmt.Sprintf(`combine return handle or break %s %s`, market, symbol))
+		util.Log(util.LogLevelInfo, fmt.Sprintf(`combine return handle or break %s %s`, market, symbol))
 		return
 	}
 	model.ResetBig(dataCombine, dataNormal)
@@ -128,7 +129,6 @@ var ProcessCombineTurtle = func(settingCombine *model.Setting, tick *model.BidAs
 
 func placeCombineOrders(account *model.Account, dataNormal, dataCombine *model.TurtleData, settingNormal,
 	settingCombine *model.Setting, tick *model.BidAsk, canOpen, canStartTurtle, canStartCombine bool) {
-	util.Log(util.LogLevelInfo, fmt.Sprintf("can open %v %v %v", canOpen, canStartTurtle, canStartCombine))
 	if canOpen {
 		placeTurtleLong(account, model.OrderTypeLimit, dataCombine, settingCombine, tick, canStartCombine, true)
 		placeTurtleShort(account, model.OrderTypeLimit, dataCombine, settingCombine, tick, canStartCombine, true)
