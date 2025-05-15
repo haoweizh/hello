@@ -39,6 +39,7 @@ func CalcTurtleAmount(account *model.Account, n, amountRate float64, candle *mod
 			_, _, accountValue, _, _ = GetPositions(account, candle.Market)
 		case model.Bybit, model.OKEX:
 			_, _, accountValue, _, _ = GetBalances(account, candle.Market)
+			util.Log(util.LogLevelInfo, fmt.Sprintf("Get balance for bybit %f", accountValue))
 		}
 		util.StoreSyncMap(accountValues, accountValue, candle.Market)
 		util.StoreSyncMap(accountValueTime, time.Now(), candle.Market)
