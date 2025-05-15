@@ -44,7 +44,6 @@ func CalcTurtleAmount(account *model.Account, n, amountRate float64, candle *mod
 		util.StoreSyncMap(accountValueTime, time.Now(), candle.Market)
 	}
 	amount = 0.02 * accountValue * amountRate / n
-	util.Log(util.LogLevelInfo, fmt.Sprintf("get amount for %s %f %f", candle.Market, accountValue, amount))
 	return amount
 }
 
