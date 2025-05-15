@@ -95,6 +95,8 @@ var ProcessCombineTurtle = func(settingCombine *model.Setting, tick *model.BidAs
 		util.Log(util.LogLevelInfo, fmt.Sprintf(`combine return handle or break %s %s`, market, symbol))
 		return
 	}
+	util.Log(util.LogLevelInfo, fmt.Sprintf("can open 1 %s %s %v %v %v",
+		settingNormal.Market, settingNormal.Symbol, canOpen, canStartTurtle, canStartCombine))
 	model.ResetBig(dataCombine, dataNormal)
 	msgKey := model.GetMsgKey(model.FunctionCombineTurtle, market, symbol)
 	msg := fmt.Sprintf("[%d-%d %d:%d]%s N-Volume %f 可开%v龟仓数%d(海龟%v 龟汤%v) 币种数:%d/%d满币%v bid-ask %e %e \n",
@@ -109,7 +111,11 @@ var ProcessCombineTurtle = func(settingCombine *model.Setting, tick *model.BidAs
 		settingCombine.Chance, settingCombine.ChanceLimit, settingCombine.GridAmount, settingCombine.PriceX, dataCombine.Liquidated,
 		dataCombine.Amount*float64(settingCombine.ChanceLimit), dataCombine.GetIds(), dataCombine.IsBig, dataCombine.DaysFar,
 		dataCombine.LowFar, dataCombine.HighFar, dataCombine.DaysNear, dataCombine.LowNear, dataCombine.HighNear, dataCombine.N)
+	util.Log(util.LogLevelInfo, fmt.Sprintf("can open 2 %s %s %v %v %v",
+		settingNormal.Market, settingNormal.Symbol, canOpen, canStartTurtle, canStartCombine))
 	util.StoreSyncMap(&model.CarryInfo, msg, account.Key, msgKey)
+	util.Log(util.LogLevelInfo, fmt.Sprintf("can open 3 %s %s %v %v %v",
+		settingNormal.Market, settingNormal.Symbol, canOpen, canStartTurtle, canStartCombine))
 	placeCombineOrders(account, dataNormal, dataCombine, settingNormal, settingCombine, tick, canOpen, canStartTurtle, canStartCombine)
 	needClear := false
 	for i, setting := range settings {
@@ -129,8 +135,6 @@ var ProcessCombineTurtle = func(settingCombine *model.Setting, tick *model.BidAs
 func placeCombineOrders(account *model.Account, dataNormal, dataCombine *model.TurtleData, settingNormal,
 	settingCombine *model.Setting, tick *model.BidAsk, canOpen, canStartTurtle, canStartCombine bool) {
 	if canOpen {
-		util.Log(util.LogLevelInfo, fmt.Sprintf("can open %s %s %v %v %v",
-			settingNormal.Market, settingNormal.Symbol, canOpen, canStartTurtle, canStartCombine))
 		placeTurtleLong(account, model.OrderTypeLimit, dataCombine, settingCombine, tick, canStartCombine, true)
 		placeTurtleShort(account, model.OrderTypeLimit, dataCombine, settingCombine, tick, canStartCombine, true)
 		placeTurtleLong(account, model.OrderTypeStop, dataNormal, settingNormal, tick, canStartTurtle, true)
