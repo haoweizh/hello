@@ -736,7 +736,7 @@ func GetPositions(account *model.Account, market string) (success bool, position
 	default:
 		ignore = true
 	}
-	if !ignore && (positions == nil || len(positions) == 0) {
+	if !ignore && positions == nil {
 		util.Log(util.LogLevelLocal, fmt.Sprintf(`get empty positions %s %s %v %v`, market, account.Key, positions, success))
 		time.Sleep(time.Second * 5)
 		lock.(*sync.Mutex).Unlock()
