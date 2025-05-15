@@ -916,6 +916,7 @@ func PlaceOrder(account *model.Account, orderSide, orderType, market, symbol, co
 		order.CoinPrice = order.Price / setting.GridAmount
 		order.CoinAmount = order.Amount * setting.GridAmount
 	}
+	util.Log(util.LogLevelInfo, fmt.Sprintf(`store order %#v`, order))
 	model.AppDB.Save(order)
 	return order
 }
