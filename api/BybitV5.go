@@ -895,7 +895,7 @@ func placeOrderBybit(account *model.Account, isWs bool, order *model.Order, orde
 	} else {
 		tradeSide = "Sell"
 	}
-	if order.OrderType == model.OrderTypeLimit {
+	if order.OrderType == model.OrderTypeLimit || order.OrderType == model.OrderTypeStop {
 		tradeOrderType = "Limit"
 	} else if order.OrderType == model.OrderTypeMarket {
 		tradeOrderType = "Market"
@@ -916,6 +916,20 @@ func placeOrderBybit(account *model.Account, isWs bool, order *model.Order, orde
 		param["category"] = "linear"
 	} else {
 		param["category"] = "spot"
+	}
+	if order.OrderType == model.OrderTypeStop {
+		priceTrigger, decimalTrigger := model.FormatPrice(model.Bybit, order.Symbol, order.TriggerPrice)
+		priceTriggerStr := util.CutTailZero(strconv.FormatFloat(priceTrigger, 'f', decimalTrigger, 64))
+		param[`tpslMode`] = `Partial`
+		param[`tpOrderType`] = `Limit`
+		param["triggerPrice"] = priceTriggerStr
+		param["stopLoss"] = priceStr
+		param["takeProfit"] = priceStr
+		if order.OrderSide == model.OrderSideBuy {
+			param["triggerDirection"] = "1"
+		} else if order.OrderSide == model.OrderSideSell {
+			param["triggerDirection"] = "2"
+		}
 	}
 	connKey := getPrivateConnKey(model.Bybit, account.Key, ``)
 	value, _ := model.AppEnvironment.ConnOrder.Load(connKey)
