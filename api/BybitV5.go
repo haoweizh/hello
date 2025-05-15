@@ -923,8 +923,7 @@ func placeOrderBybit(account *model.Account, isWs bool, order *model.Order, orde
 		param[`tpslMode`] = `Partial`
 		param[`tpOrderType`] = `Limit`
 		param["triggerPrice"] = priceTriggerStr
-		param["stopLoss"] = priceStr
-		param["takeProfit"] = priceStr
+		param["tpLimitPrice"] = priceStr
 		if order.OrderSide == model.OrderSideBuy {
 			param["triggerDirection"] = "1"
 		} else if order.OrderSide == model.OrderSideSell {
