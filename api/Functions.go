@@ -913,7 +913,9 @@ func PlaceOrder(account *model.Account, orderSide, orderType, market, symbol, co
 	}
 	setting := GetSetting(refreshType, market, symbol)
 	if setting != nil {
-		order.CoinPrice = order.Price / setting.GridAmount
+		if setting.GridAmount > 0 {
+			order.CoinPrice = order.Price / setting.GridAmount
+		}
 		order.CoinAmount = order.Amount * setting.GridAmount
 	}
 	util.Log(util.LogLevelInfo, fmt.Sprintf(`store order %#v`, order))
