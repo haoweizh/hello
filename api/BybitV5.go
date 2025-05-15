@@ -701,11 +701,11 @@ func getPositionsBybit(key, secret string) (success bool, positions []*model.Pos
 		}
 		cursor = positionResp.Result.NextPageCursor
 		if cursor == "" {
-			if len(positions) == 0 {
-				util.Log(util.LogLevelError, fmt.Sprintf("fail to refresh perp position bybit positions len 0 resp %s httpErr: %#v, jsonErr: %#v",
-					positionHttpResp, positionHttpErr, positionJsonErr))
-				return getPositionsBybit(key, secret)
-			}
+			//if len(positions) == 0 {
+			//	util.Log(util.LogLevelError, fmt.Sprintf("fail to refresh perp position bybit positions len 0 resp %s httpErr: %#v, jsonErr: %#v",
+			//		positionHttpResp, positionHttpErr, positionJsonErr))
+			//	return getPositionsBybit(key, secret)
+			//}
 			return true, positions, 0
 		}
 	}
