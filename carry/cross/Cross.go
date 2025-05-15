@@ -311,12 +311,12 @@ func initStatus(account *model.Account, setting *model.Setting) (status *model.C
 			status.AvailableSell = math.Min(status.AvailableSell, maxSell)
 		}
 	}
+	if setting.Market == model.BinanceSpot {
+		status.DoRevert = true
+	}
 	status.LimitBuy = math.Min(status.LimitBuy, status.AvailableBuy)
 	status.LimitSell = math.Min(status.LimitSell, status.AvailableSell)
 	initTradeLine(account, setting, status)
-	if status.Account.Index == 0 {
-		util.Log(util.LogLevelInfo, fmt.Sprintf(`init status %s %s %#v`, setting.Market, setting.Symbol, status))
-	}
 	util.StoreSyncMap(carryStatusMap, status, setting.Coin, setting.Market, setting.Symbol, account.Key)
 	return
 }
