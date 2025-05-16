@@ -1307,8 +1307,10 @@ func GetAvailAbleBybit(key, secret, coin string) (canMargin bool, availableWithB
 }
 
 // interval	true	string	時間粒度. 1,3,5,15,30,60,120,240,360,720,D,M,W
+// end 向前减少一个周期
 func getCandlesBybit(account *model.Account, market, symbol string, begin, end time.Time, limit, slotSeconds int) (
 	candles []*model.Candle, isCache bool) {
+	end = end.Add(time.Duration(slotSeconds) * -time.Second)
 	minutes := slotSeconds / 60
 	interval := strconv.Itoa(minutes)
 	switch minutes {
