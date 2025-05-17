@@ -248,6 +248,9 @@ func NewConfig() {
 }
 
 func GetNowPeriod(market string, periodInSecond int64, periodTime time.Time) (nowPeriod time.Time, nowStr string) {
+	if market == Bybit {
+		periodTime = periodTime.Add(2 * time.Minute)
+	}
 	remainder := periodTime.Unix() % periodInSecond
 	if market == OKEX {
 		remainder = (periodTime.Unix() + 28800) % periodInSecond
@@ -261,6 +264,9 @@ func GetMarketToday(market string) (today time.Time, strToday string) {
 	today = time.Now().In(time.UTC)
 	if market == OKEX {
 		today = util.GetNow()
+	}
+	if market == Bybit {
+		today = today.Add(2 * time.Minute)
 	}
 	today = time.Date(today.Year(), today.Month(), today.Day(), 0, 0, 0, 0, today.Location())
 	return today, today.String()[0:10]
