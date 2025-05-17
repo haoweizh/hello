@@ -1063,7 +1063,7 @@ var ProcessCross = func(setting *model.Setting, tick *model.BidAsk) {
 			if status == nil || statusRelate == nil || status == statusRelate || carryCoin == nil || !getStatus || !getRelate || !getCoin {
 				continue
 			}
-			delay, statusBuy, statusSell, amount, priceBuy, priceSell, closeType, scoreMsg :=
+			delay, statusBuy, statusSell, amount, priceBuy, priceSell, closeType, _ :=
 				calcAmount(i, setting.Coin, status.(*model.CarryStatus), statusRelate.(*model.CarryStatus), carryCoin.(*model.CarryCoin), tick, tickRelate)
 			if delay {
 				return
@@ -1073,9 +1073,9 @@ var ProcessCross = func(setting *model.Setting, tick *model.BidAsk) {
 				placeCross(carryCoin.(*model.CarryCoin), statusBuy, statusSell, priceBuy, priceSell, amount, tick, tickRelate, closeType)
 				//util.Log(util.LogLevelInfo, fmt.Sprintf(`time mark coin %s %s %s <- %s %s amt %f ts %d %d %d %d`,
 				//	setting.Coin, statusBuy.Symbol, statusBuy.Market, statusSell.Symbol, statusSell.Market, amount, tsMark, tsDis1, tsDis2, time.Now().UnixMicro()-tsMark))
-				if account.Index == 0 {
-					util.Log(util.LogLevelLocal, fmt.Sprintf(`%s %f buy at %f sell at %f`, scoreMsg, amount, priceBuy, priceSell))
-				}
+				//if account.Index == 0 {
+				//	util.Log(util.LogLevelLocal, fmt.Sprintf(`%s %f buy at %f sell at %f`, scoreMsg, amount, priceBuy, priceSell))
+				//}
 				time.Sleep(time.Duration(100) * time.Millisecond)
 				return
 			}
