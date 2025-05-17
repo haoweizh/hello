@@ -165,13 +165,6 @@ func ManageConnTicks(market string) (reset bool) {
 
 func Maintain() {
 	util.Log(util.LogLevelInfo, "start carrying")
-	f, _ := os.OpenFile("mem.profile", os.O_CREATE|os.O_RDWR, 0644)
-	defer func(f *os.File) {
-		err := f.Close()
-		if err != nil {
-			fmt.Println(fmt.Sprintf(`fail to close mem pprof file %v`, err))
-		}
-	}(f)
 	sigs := make(chan os.Signal, 1)
 	signal.Notify(sigs, syscall.SIGINT, syscall.SIGTERM)
 	model.TickHandlers[model.FunctionTurtle] = Turtle.ProcessTurtle
@@ -234,12 +227,19 @@ func Maintain() {
 		util.Terminal = true
 	}()
 	go ManageMarketConnTicks()
+	var pprofTime time.Time
 	for !util.Terminal {
 		time.Sleep(time.Second * 10)
-	}
-	err := pprof.Lookup("heap").WriteTo(f, 0)
-	if err != nil {
-		fmt.Println(time.Now().String() + "fail to lookup heap" + err.Error())
+		if time.Now().Sub(pprofTime) > time.Second*3600 {
+			pprofTime = time.Now()
+			fileName := fmt.Sprintf(`mem%d%d%d%d%d.profile`, pprofTime.Year(), pprofTime.Month(), pprofTime.Day(), pprofTime.Hour(), pprofTime.Minute())
+			f, _ := os.OpenFile(fileName, os.O_CREATE|os.O_RDWR, 0644)
+			err := pprof.Lookup("heap").WriteTo(f, 0)
+			if err != nil {
+				fmt.Println(time.Now().String() + "fail to lookup heap" + err.Error())
+			}
+			err = f.Close()
+		}
 	}
 	fmt.Println(time.Now().String() + "Cleanup done. Exiting.")
 }
