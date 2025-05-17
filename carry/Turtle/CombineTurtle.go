@@ -17,13 +17,13 @@ import (
 //}
 
 // ProcessCombineTurtle
-// setting.CloseShortMargin 是否下单的价格倍率限制
+// setting.CloseShortMargin 龟汤：是否下单的价格倍率限制，在一定范围内才开仓
+// Setting.HighLowRate 海龟：是否下单的价格倍率限制，在一定范围内才开仓
 // setting.GridAmount 当前已经持仓数量
 // setting.Chance 当前开仓的个数
 // setting.PriceX 上一次开仓的价格
 // setting.ChanceLimit 该单币种最多开仓个数
 // setting.AmountLimit 总开仓上限
-// Setting.HighLowRate 海龟、龟汤高低价格差的比，在一定范围内才开仓
 // Order.GridPos 存储turtleData 的 isBig
 var ProcessCombineTurtle = func(settingCombine *model.Setting, tick *model.BidAsk) {
 	market := settingCombine.Market
