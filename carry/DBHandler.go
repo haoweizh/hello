@@ -11,6 +11,7 @@ import (
 	"hello/util"
 	"os"
 	"os/signal"
+	"runtime/pprof"
 	"syscall"
 	"time"
 )
@@ -164,6 +165,13 @@ func ManageConnTicks(market string) (reset bool) {
 
 func Maintain() {
 	util.Log(util.LogLevelInfo, "start carrying")
+	f, _ := os.OpenFile("mem.profile", os.O_CREATE|os.O_RDWR, 0644)
+	defer func(f *os.File) {
+		err := f.Close()
+		if err != nil {
+			fmt.Println(fmt.Sprintf(`fail to close mem pprof file %v`, err))
+		}
+	}(f)
 	sigs := make(chan os.Signal, 1)
 	signal.Notify(sigs, syscall.SIGINT, syscall.SIGTERM)
 	model.TickHandlers[model.FunctionTurtle] = Turtle.ProcessTurtle
@@ -229,7 +237,10 @@ func Maintain() {
 	for !util.Terminal {
 		time.Sleep(time.Second * 10)
 	}
-	time.Sleep(30 * time.Second)
+	err := pprof.Lookup("heap").WriteTo(f, 0)
+	if err != nil {
+		fmt.Println(time.Now().String() + "fail to lookup heap" + err.Error())
+	}
 	fmt.Println(time.Now().String() + "Cleanup done. Exiting.")
 }
 
