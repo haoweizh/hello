@@ -267,6 +267,9 @@ func publicHandler(market, url string, connection *WSConn, subHandler SubscribeH
 	for !util.Terminal {
 		if connection.WSType == ChanTypeWS {
 			//msgType, message, err := connection.conn.Read(context.Background())
+			if connection.conn.SetReadDeadline(time.Now().Add(time.Minute*5)) != nil {
+				return
+			}
 			msgType, message, err := connection.conn.ReadMessage()
 			if err != nil {
 				util.Log(util.LogLevelError, fmt.Sprintf(`%s can not read from websocket: %s`, market, err.Error()))
@@ -324,6 +327,9 @@ func WsPrivateClient(account *Account, connMap *sync.Map, connKey, market, url s
 		}()
 		for {
 			if connection.WSType == ChanTypeWS {
+				if connection.conn.SetReadDeadline(time.Now().Add(time.Minute*30)) != nil {
+					return
+				}
 				_, message, readErr := connection.conn.ReadMessage()
 				if readErr != nil {
 					value, _ := connMap.Load(connKey)
