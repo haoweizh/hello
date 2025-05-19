@@ -247,15 +247,16 @@ func NewConfig() {
 	}
 }
 
-func GetNowPeriod(market string, periodInSecond int64, periodTime time.Time) (nowPeriod time.Time, nowStr string) {
+func GetNowPeriod(market string, periodInSecond, moveSeconds int64) (nowPeriod time.Time, nowStr string) {
+	nowPeriod = time.Now().Add(time.Duration(moveSeconds) * time.Second)
 	if market == Bybit {
-		periodTime = periodTime.Add(2 * time.Minute)
+		nowPeriod = nowPeriod.Add(2 * time.Minute)
 	}
-	remainder := periodTime.Unix() % periodInSecond
+	remainder := nowPeriod.Unix() % periodInSecond
 	if market == OKEX {
-		remainder = (periodTime.Unix() + 28800) % periodInSecond
+		remainder = (nowPeriod.Unix() + 28800) % periodInSecond
 	}
-	seconds := periodTime.Unix() - remainder
+	seconds := nowPeriod.Unix() - remainder
 	nowPeriod = time.Unix(seconds, 0)
 	return nowPeriod, fmt.Sprintf(`%d`, nowPeriod.Unix())
 }

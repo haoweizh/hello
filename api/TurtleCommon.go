@@ -369,8 +369,7 @@ func handleLastTurtleData(account *model.Account, function, market, symbol, last
 }
 
 func GetRankTurtleData(account *model.Account, symbol string, setting *model.Setting) (data *model.TurtleData, dataValid bool) {
-	now := time.Now()
-	nowPeriod, nowStr := model.GetNowPeriod(setting.Market, setting.Seconds, now)
+	nowPeriod, nowStr := model.GetNowPeriod(setting.Market, setting.Seconds, 0)
 	data = &model.TurtleData{TurtleTime: nowPeriod, Expire: nowPeriod.Add(time.Second * time.Duration(setting.Seconds)),
 		IsBig: true, Symbol: symbol, DaysFar: int(setting.Far), DaysNear: int(setting.Near), DaysAdjust: 5,
 		OrderAdjust: make(map[string]*model.Order), CallBackRatio: 0.05, ActivationRate: 1.6}
@@ -414,16 +413,14 @@ func GetTurtleData(account *model.Account, setting *model.Setting, removed bool)
 	}
 	defer lock.Unlock()
 	lock.Lock()
-	now := time.Now()
-	nowPeriod, nowStr := model.GetNowPeriod(setting.Market, setting.Seconds, now)
+	nowPeriod, nowStr := model.GetNowPeriod(setting.Market, setting.Seconds, 0)
 	value, ok := util.LoadSyncMap(&TurtleDataSet, setting.Function, setting.Market, setting.Symbol, nowStr)
 	lastHandled := false
 	var trailOrders []*model.Order
 	if ok && value != nil {
 		return value.(*model.TurtleData), true
 	} else {
-		lastTime := time.Unix(now.Unix()-setting.Seconds, 0)
-		_, lastStr := model.GetNowPeriod(setting.Market, setting.Seconds, lastTime)
+		_, lastStr := model.GetNowPeriod(setting.Market, setting.Seconds, -setting.Seconds)
 		lastHandled, trailOrders = handleLastTurtleData(account, setting.Function, setting.Market, setting.Symbol, lastStr)
 	}
 	if !model.CommonSymbols[setting.Symbol] {
@@ -690,7 +687,7 @@ func SetTurtleOrderStatus(function, market, symbol, orderId, status string) {
 		return
 	}
 	var nowStr string
-	_, nowStr = model.GetNowPeriod(setting.Market, setting.Seconds, time.Now())
+	_, nowStr = model.GetNowPeriod(setting.Market, setting.Seconds, 0)
 	value, ok := util.LoadSyncMap(&TurtleDataSet, function, market, symbol, nowStr)
 	if ok && value != nil {
 		turtleData := value.(*model.TurtleData)
