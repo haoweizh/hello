@@ -434,7 +434,6 @@ func handleMarketDynamic(market string) (handled bool) {
 	if settingMoveMarket != nil {
 		handleMoveMarkets(settingMoveMarket)
 	}
-	DynamicHandleTime.Store(market, time.Now())
 	util.Log(util.LogLevelInfo, fmt.Sprintf(`handle Dynamic settings %s`, market))
 	return true
 }
@@ -449,6 +448,7 @@ func InitApp() bool {
 	for _, market := range model.AppEnvironment.Markets {
 		if handleMarketDynamic(market) {
 			handled = true
+			DynamicHandleTime.Store(market, time.Now())
 		}
 		if !handled {
 			InitMarketInfos(market, false)

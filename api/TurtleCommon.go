@@ -427,6 +427,7 @@ func GetTurtleData(account *model.Account, setting *model.Setting, removed bool)
 		refreshValue, refreshOk := DynamicHandleTime.Load(setting.Market)
 		if !refreshOk || refreshValue == nil || refreshValue.(time.Time).Before(nowPeriod) {
 			if handleMarketDynamic(setting.Market) {
+				DynamicHandleTime.Store(setting.Market, nowPeriod)
 				PrepareSettings()
 				success, positions, _, _, _ := GetPositions(account, setting.Market)
 				if success {
