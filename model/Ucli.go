@@ -182,6 +182,7 @@ func (mr *MarketReceiver) ReceiveMarket(buf []byte) uint {
 	cBuf := (*C.char)(unsafe.Pointer(&buf[0]))
 	return uint(C.receive_market(mr.mReceiver, cBuf))
 }
+
 func (or *OrderReceiver) ReceiveOrder(buf []byte) uint {
 	cBuf := (*C.char)(unsafe.Pointer(&buf[0]))
 	return uint(C.receive_order(or.oReceiver, cBuf))

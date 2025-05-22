@@ -33,8 +33,8 @@ func NewOkexAgentService(conn *model.WSConn, okexConn *model.WSConn) *OkexAgentS
 func (s *OkexAgentService) HandleClientPublicMessages() {
 	defer close(s.doneCh)
 	go func() {
+		buf := make([]byte, 4096)
 		for !util.Terminal {
-			buf := make([]byte, 4096)
 			msgSize := s.ClientConn.MarketReceiver.ReceiveMarket(buf)
 			if msgSize > 0 {
 				util.Log(util.LogLevelInfo, "ClientConn rev msg :"+string(buf[:msgSize]))
@@ -47,8 +47,8 @@ func (s *OkexAgentService) HandleClientPublicMessages() {
 		}
 	}()
 	go func() {
+		buf := make([]byte, 4096)
 		for !util.Terminal {
-			buf := make([]byte, 4096)
 			msgSize := s.OkexConn.MarketReceiver.ReceiveMarket(buf)
 			if msgSize > 0 {
 				util.Log(util.LogLevelInfo, "OkexConn rev msg :"+string(buf[:msgSize]))
@@ -67,8 +67,8 @@ func (s *OkexAgentService) HandleClientPublicMessages() {
 func (s *OkexAgentService) HandleClientPrivateMessages() {
 	defer close(s.doneCh)
 	go func() {
+		buf := make([]byte, 4096)
 		for !util.Terminal {
-			buf := make([]byte, 4096)
 			msgSize := s.ClientConn.OrderReceiver.ReceiveOrder(buf)
 			if msgSize > 0 {
 				// 将消息放入通道
@@ -81,8 +81,8 @@ func (s *OkexAgentService) HandleClientPrivateMessages() {
 		}
 	}()
 	go func() {
+		buf := make([]byte, 4096)
 		for !util.Terminal {
-			buf := make([]byte, 4096)
 			msgSize := s.OkexConn.OrderReceiver.ReceiveOrder(buf)
 			if msgSize > 0 {
 				// 将消息放入通道

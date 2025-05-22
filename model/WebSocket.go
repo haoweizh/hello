@@ -265,6 +265,7 @@ func publicHandler(market, url string, connection *WSConn, subHandler SubscribeH
 		connection.Close()
 	}()
 	for !util.Terminal {
+		buf := make([]byte, 4096)
 		if connection.WSType == ChanTypeWS {
 			//msgType, message, err := connection.conn.Read(context.Background())
 			if connection.conn.SetReadDeadline(time.Now().Add(time.Minute*5)) != nil {
@@ -280,7 +281,6 @@ func publicHandler(market, url string, connection *WSConn, subHandler SubscribeH
 				go msgHandler(market, connection, message)
 			}
 		} else if connection.WSType == ChanTypeMarket {
-			buf := make([]byte, 4096)
 			msgSize := connection.MarketReceiver.ReceiveMarket(buf)
 			if msgSize > 0 {
 				if NeedReconnection(buf[:msgSize]) {
@@ -326,6 +326,7 @@ func WsPrivateClient(account *Account, connMap *sync.Map, connKey, market, url s
 			connection.Close()
 		}()
 		for {
+			buf := make([]byte, 8192)
 			if connection.WSType == ChanTypeWS {
 				if connection.conn.SetReadDeadline(time.Now().Add(time.Minute*30)) != nil {
 					return
@@ -344,7 +345,6 @@ func WsPrivateClient(account *Account, connMap *sync.Map, connKey, market, url s
 					go accountMsgHandler(market, account.Key, message)
 				}
 			} else if connection.WSType == ChanTypeOrder {
-				buf := make([]byte, 8192)
 				msgSize := connection.OrderReceiver.ReceiveOrder(buf)
 				if msgSize > 0 {
 					if NeedReconnection(buf[:msgSize]) {
