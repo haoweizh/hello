@@ -230,9 +230,9 @@ func Maintain() {
 	var pprofTime time.Time
 	for !util.Terminal {
 		time.Sleep(time.Second * 10)
-		if time.Now().Sub(pprofTime) > time.Second*3600 {
+		if time.Now().Sub(pprofTime) > time.Minute {
 			pprofTime = time.Now()
-			fileName := fmt.Sprintf(`mem%d%d%d%d%d.profile`, pprofTime.Year(), pprofTime.Month(), pprofTime.Day(), pprofTime.Hour(), pprofTime.Minute())
+			fileName := fmt.Sprintf(`mem.profile`)
 			f, _ := os.OpenFile(fileName, os.O_CREATE|os.O_RDWR, 0644)
 			err := pprof.Lookup("heap").WriteTo(f, 0)
 			if err != nil {
