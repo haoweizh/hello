@@ -181,6 +181,12 @@ func (op *OrderPublisher) PublishOrder(msg string) error {
 func (mr *MarketReceiver) ReceiveMarket(buf []byte) uint {
 	cBuf := (*C.char)(unsafe.Pointer(&buf[0]))
 	return uint(C.receive_market(mr.mReceiver, cBuf))
+	//ptr := C.malloc(C.size_t(len(buf)))
+	//defer C.free(ptr)
+	//cBuf := (*C.char)(unsafe.Pointer(ptr))
+	//msgLen := uint(C.receive_market(mr.mReceiver, cBuf))
+	//buf = C.GoBytes(ptr, C.int(msgLen))
+	//return msgLen
 }
 
 func (or *OrderReceiver) ReceiveOrder(buf []byte) uint {
