@@ -301,7 +301,9 @@ func publicHandler(market, url string, connection *WSConn, subHandler SubscribeH
 						}
 					}
 				} else if msgHandler != nil {
-					go msgHandler(market, connection, buf[:msgSize])
+					msg := make([]byte, msgSize)
+					copy(msg, buf[:msgSize])
+					go msgHandler(market, connection, msg)
 				}
 			}
 		}
@@ -351,7 +353,9 @@ func WsPrivateClient(account *Account, connMap *sync.Map, connKey, market, url s
 						util.Log(util.LogLevelLocal, fmt.Sprintf(`order channel reconnect %s %s `, market, buf[:msgSize]))
 					}
 					if accountMsgHandler != nil {
-						go accountMsgHandler(market, account.Key, buf[:msgSize])
+						msg := make([]byte, msgSize)
+						copy(msg, buf[:msgSize])
+						go accountMsgHandler(market, account.Key, msg)
 					}
 				}
 			}
