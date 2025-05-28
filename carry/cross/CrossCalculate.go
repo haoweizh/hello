@@ -465,7 +465,7 @@ func calcScores(statusBuy, statusSell *model.CarryStatus, marketInfoBuy, marketI
 		scoreSwitch = scoreBase + rateDelta/2
 	}
 	if statusBuy.Setting.Coin == `LAI` {
-		scoreClose = 1
+		scoreOpen = 1
 		scoreSwitch = 1
 		scoreClose += 0.05
 	}
