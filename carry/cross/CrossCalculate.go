@@ -467,7 +467,7 @@ func calcScores(statusBuy, statusSell *model.CarryStatus, marketInfoBuy, marketI
 	if statusBuy.Setting.Coin == `LAI` {
 		scoreOpen = 1
 		scoreSwitch = 1
-		scoreClose += 0.05
+		scoreClose += 0.08
 		//util.LogLess(util.LogLevelLocal, fmt.Sprintf(`lai score %s %s %f %f %f`, statusBuy.Market, statusBuy.Symbol, scoreOpen, scoreSwitch, scoreClose))
 	}
 	scoreMsg += fmt.Sprintf(`after handled open %f close %f buyAsk0 %f sellBid0 %f`, scoreOpen, scoreClose, tickBuy.Asks[0].Price, tickSell.Bids[0].Price)
