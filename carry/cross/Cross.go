@@ -834,7 +834,7 @@ func equalCoin(index int, coin string, statuses []*model.CarryStatus) (isEqual b
 			}
 		}
 		api.SendMails(`too big to equal`, fmt.Sprintf(`%s holding in money %f`, coin, holding*holdingPrice))
-		//return false, holding, fmt.Sprintf(`too big comp %s %f`, coin, holding)
+		return false, holding, fmt.Sprintf(`too big comp %s %f`, coin, holding)
 	} else if math.Abs(holding) < CompLineInMoney/holdingPrice {
 		return true, holding, ``
 	}
