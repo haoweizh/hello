@@ -422,7 +422,7 @@ func handleMarketDynamic(market string) (handled bool) {
 		return true
 	})
 	InitMarketInfos(market, true)
-	topLen := 70
+	topLen := 100
 	if settingDynamicCombine != nil {
 		topMarketInfos := getDynamicMarketInfos(settingDynamicCombine, accounts, settingDynamicCombine.Function, topLen, int(settingDynamicCombine.OpenShortMargin))
 		handleCombineSettings(settingDynamicCombine, topMarketInfos)
