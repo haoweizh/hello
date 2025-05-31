@@ -232,7 +232,7 @@ func Maintain() {
 		time.Sleep(time.Second * 10)
 		if time.Now().Sub(pprofTime) > time.Minute {
 			pprofTime = time.Now()
-			fileName := fmt.Sprintf(`mem.profile`)
+			fileName := fmt.Sprintf(`mem%d.profile`, time.Now().Minute())
 			f, _ := os.OpenFile(fileName, os.O_CREATE|os.O_RDWR, 0644)
 			err := pprof.Lookup("heap").WriteTo(f, 0)
 			if err != nil {
