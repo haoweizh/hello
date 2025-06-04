@@ -476,7 +476,6 @@ func calcAmount(index int, coin string, carryStatus, carryStatusRelate *model.Ca
 	delay bool, statusBuy, statusSell *model.CarryStatus, amount, priceBuy, priceSell float64, closeType, logMsg string) {
 	marketInfo := model.GetMarketInfo(carryStatus.Market, carryStatus.Symbol)
 	marketInfoR := model.GetMarketInfo(carryStatusRelate.Market, carryStatusRelate.Symbol)
-	util.Log(util.LogLevelInfo, fmt.Sprintf(`%s %s %s %s`, carryStatus.Market, carryStatus.Symbol, carryStatusRelate.Market, carryStatusRelate.Symbol))
 	if marketInfo == nil || marketInfoR == nil {
 		return false, nil, nil, 0, 0, 0, ``, ``
 	}
