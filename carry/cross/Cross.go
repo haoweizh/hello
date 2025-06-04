@@ -1062,7 +1062,8 @@ var ProcessCross = func(setting *model.Setting, tick *model.BidAsk) {
 			statusRelate, getRelate := util.LoadSyncMap(carryStatusMap, settingRelate.Coin, settingRelate.Market, settingRelate.Symbol, accountRelate.Key)
 			carryCoin, getCoin := util.LoadSyncMap(carryCoinMap, setting.Coin, `0`)
 			if status == nil || statusRelate == nil || status == statusRelate || carryCoin == nil || !getStatus || !getRelate || !getCoin {
-				util.LogLess(util.LogLevelInfo, fmt.Sprintf(`can not get status %#v %#v`, status, getStatus))
+				util.LogLess(util.LogLevelInfo, fmt.Sprintf(`can not get status %s %s %#v %s %s %#v`,
+					setting.Market, setting.Symbol, status, settingRelate.Market, settingRelate.Symbol, statusRelate))
 				continue
 			}
 			delay, statusBuy, statusSell, amount, priceBuy, priceSell, closeType, _ :=
