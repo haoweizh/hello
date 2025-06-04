@@ -443,8 +443,11 @@ func calcScores(statusBuy, statusSell *model.CarryStatus, marketInfoBuy, marketI
 	gotFrBuy, useRestBuy, rateBuy, handledRateBuy := handledFRate(statusBuy, marketInfoBuy, tickBuy.Bids[0].Price, model.OrderSideBuy)
 	gotFrSell, useRestSell, rateSell, handledRateSell := handledFRate(statusSell, marketInfoSell, tickSell.Bids[0].Price, model.OrderSideSell)
 	if !gotFrBuy || !gotFrSell || useRestBuy || useRestSell {
+		util.Log(util.LogLevelInfo, fmt.Sprintf(`fail to get frate %s %s %s %s %v %v %v %v`,
+			statusBuy.Market, statusBuy.Symbol, statusSell.Market, statusSell.Symbol, gotFrBuy, gotFrSell, useRestBuy, useRestSell))
 		return false, 0, 0, 0, 0, nil, nil, ``
 	}
+	util.Log(util.LogLevelInfo, `gotfr`)
 	rateDelta := handledRateSell - handledRateBuy
 	priceBuy := tickBuy.Asks[0].Price
 	priceSell := tickSell.Bids[0].Price
