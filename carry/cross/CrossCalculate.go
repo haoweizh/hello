@@ -465,7 +465,7 @@ func calcScores(statusBuy, statusSell *model.CarryStatus, marketInfoBuy, marketI
 		scoreSwitch = scoreBase + rateDelta/2
 	}
 	scoreMsg += fmt.Sprintf(`after handled open %f close %f buyAsk0 %f sellBid0 %f`, scoreOpen, scoreClose, tickBuy.Asks[0].Price, tickSell.Bids[0].Price)
-	return true, scoreBase, scoreOpen, scoreSwitch, scoreClose + 0.15, rateBuy, rateSell, scoreMsg
+	return true, scoreBase, scoreOpen, scoreSwitch, scoreClose + 0.5, rateBuy, rateSell, scoreMsg
 }
 
 // calcAmount
