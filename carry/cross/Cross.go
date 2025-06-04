@@ -272,7 +272,6 @@ func initStatus(account *model.Account, setting *model.Setting) (status *model.C
 	if setting == nil {
 		return
 	}
-	util.Log(util.LogLevelInfo, fmt.Sprintf(`start to init status %s %s %s`, setting.Coin, setting.Market, setting.Symbol))
 	_, marketType, _, _ := model.GetFromStandard(setting.Market, setting.Symbol)
 	if marketType == model.MarketTypeSpot {
 		status = createFromBalance(account, setting)
@@ -317,7 +316,6 @@ func initStatus(account *model.Account, setting *model.Setting) (status *model.C
 	status.LimitBuy = math.Min(status.LimitBuy, status.AvailableBuy)
 	status.LimitSell = math.Min(status.LimitSell, status.AvailableSell)
 	initTradeLine(account, setting, status)
-	util.Log(util.LogLevelInfo, fmt.Sprintf(`init status done %s %s %s %#v`, setting.Market, setting.Symbol, setting.Coin, status))
 	util.StoreSyncMap(carryStatusMap, status, setting.Coin, setting.Market, setting.Symbol, account.Key)
 	return
 }
@@ -1060,20 +1058,25 @@ var ProcessCross = func(setting *model.Setting, tick *model.BidAsk) {
 			}
 			status, getStatus := util.LoadSyncMap(carryStatusMap, setting.Coin, setting.Market, setting.Symbol, account.Key)
 			statusRelate, getRelate := util.LoadSyncMap(carryStatusMap, settingRelate.Coin, settingRelate.Market, settingRelate.Symbol, accountRelate.Key)
-			carryCoin, getCoin := util.LoadSyncMap(carryCoinMap, setting.Coin, `0`)
-			if status == nil || statusRelate == nil || status == statusRelate || carryCoin == nil || !getStatus || !getRelate || !getCoin {
-				util.LogLess(util.LogLevelInfo, fmt.Sprintf(`can not get status %s %s %#v %s %s %#v`,
-					setting.Market, setting.Symbol, status, settingRelate.Market, settingRelate.Symbol, statusRelate))
+			if status == nil || statusRelate == nil || status == statusRelate || !getStatus || !getRelate {
 				continue
 			}
+			var carryCoin *model.CarryCoin
+			if model.AppConfig.GetCrossStyles()[i] == crossGrid {
+				carryCoinValue, getCoin := util.LoadSyncMap(carryCoinMap, setting.Coin, `0`)
+				if carryCoinValue == nil || !getCoin {
+					continue
+				}
+				carryCoin = carryCoinValue.(*model.CarryCoin)
+			}
 			delay, statusBuy, statusSell, amount, priceBuy, priceSell, closeType, _ :=
-				calcAmount(i, setting.Coin, status.(*model.CarryStatus), statusRelate.(*model.CarryStatus), carryCoin.(*model.CarryCoin), tick, tickRelate)
+				calcAmount(i, setting.Coin, status.(*model.CarryStatus), statusRelate.(*model.CarryStatus), carryCoin, tick, tickRelate)
 			if delay {
 				return
 			}
 			if amount > 0 {
 				//tsDis2 := time.Now().UnixMicro() - tsMark
-				placeCross(carryCoin.(*model.CarryCoin), statusBuy, statusSell, priceBuy, priceSell, amount, tick, tickRelate, closeType)
+				placeCross(carryCoin, statusBuy, statusSell, priceBuy, priceSell, amount, tick, tickRelate, closeType)
 				//util.Log(util.LogLevelInfo, fmt.Sprintf(`time mark coin %s %s %s <- %s %s amt %f ts %d %d %d %d`,
 				//	setting.Coin, statusBuy.Symbol, statusBuy.Market, statusSell.Symbol, statusSell.Market, amount, tsMark, tsDis1, tsDis2, time.Now().UnixMicro()-tsMark))
 				//if account.Index == 0 {
