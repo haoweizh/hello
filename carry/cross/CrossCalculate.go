@@ -411,10 +411,10 @@ func checkTradeLine(statusBuy, statusSell *model.CarryStatus, carryCoin *model.C
 			statusBuy.TradeLineBuy, statusSell.TradeLineSell = closeScore, closeScore
 			return scoreClose > closeScore, math.Min(limit, closeLimit), scoreClose, model.Close
 		} else {
-			if scoreClose > statusBuy.TradeLineBuy {
+			if scoreClose+0.05 > statusBuy.TradeLineBuy {
 				return true, math.Min(math.Abs(statusBuy.Holding)*statusBuy.Setting.GridAmount, crossLimit), scoreClose, model.Close
 			}
-			if scoreClose > statusSell.TradeLineSell {
+			if scoreClose+0.05 > statusSell.TradeLineSell {
 				return true, math.Min(statusSell.Holding*statusSell.Setting.GridAmount, crossLimit), scoreClose, model.Close
 			}
 			return false, 0, scoreClose, model.Close
@@ -465,7 +465,7 @@ func calcScores(statusBuy, statusSell *model.CarryStatus, marketInfoBuy, marketI
 		scoreSwitch = scoreBase + rateDelta/2
 	}
 	scoreMsg += fmt.Sprintf(`after handled open %f close %f buyAsk0 %f sellBid0 %f`, scoreOpen, scoreClose, tickBuy.Asks[0].Price, tickSell.Bids[0].Price)
-	return true, scoreBase, scoreOpen, scoreSwitch, scoreClose + 0.5, rateBuy, rateSell, scoreMsg
+	return true, scoreBase, scoreOpen, scoreSwitch, scoreClose, rateBuy, rateSell, scoreMsg
 }
 
 // calcAmount
