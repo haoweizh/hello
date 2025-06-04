@@ -1022,6 +1022,7 @@ var ProcessCross = func(setting *model.Setting, tick *model.BidAsk) {
 	defer func() {
 		coinCrossing.Store(setting.Coin, false)
 	}()
+	util.Log(util.LogLevelInfo, fmt.Sprintf("log place 1"))
 	tickLimit := 50
 	switch tick.Bids[0].Market {
 	case model.Gate:
@@ -1057,12 +1058,14 @@ var ProcessCross = func(setting *model.Setting, tick *model.BidAsk) {
 			if account == nil || accountRelate == nil {
 				continue
 			}
+			util.Log(util.LogLevelInfo, fmt.Sprintf("log place 2"))
 			status, getStatus := util.LoadSyncMap(carryStatusMap, setting.Coin, setting.Market, setting.Symbol, account.Key)
 			statusRelate, getRelate := util.LoadSyncMap(carryStatusMap, settingRelate.Coin, settingRelate.Market, settingRelate.Symbol, accountRelate.Key)
 			carryCoin, getCoin := util.LoadSyncMap(carryCoinMap, setting.Coin, `0`)
 			if status == nil || statusRelate == nil || status == statusRelate || carryCoin == nil || !getStatus || !getRelate || !getCoin {
 				continue
 			}
+			util.Log(util.LogLevelInfo, fmt.Sprintf("log place 3"))
 			delay, statusBuy, statusSell, amount, priceBuy, priceSell, closeType, _ :=
 				calcAmount(i, setting.Coin, status.(*model.CarryStatus), statusRelate.(*model.CarryStatus), carryCoin.(*model.CarryCoin), tick, tickRelate)
 			if delay {
