@@ -272,7 +272,7 @@ func initStatus(account *model.Account, setting *model.Setting) (status *model.C
 	if setting == nil {
 		return
 	}
-	//util.Log(util.LogLevelInfo, fmt.Sprintf(`start to init status %s %s %s`, setting.Coin, setting.Market, setting.Symbol))
+	util.Log(util.LogLevelInfo, fmt.Sprintf(`start to init status %s %s %s`, setting.Coin, setting.Market, setting.Symbol))
 	_, marketType, _, _ := model.GetFromStandard(setting.Market, setting.Symbol)
 	if marketType == model.MarketTypeSpot {
 		status = createFromBalance(account, setting)
@@ -317,6 +317,7 @@ func initStatus(account *model.Account, setting *model.Setting) (status *model.C
 	status.LimitBuy = math.Min(status.LimitBuy, status.AvailableBuy)
 	status.LimitSell = math.Min(status.LimitSell, status.AvailableSell)
 	initTradeLine(account, setting, status)
+	util.Log(util.LogLevelInfo, fmt.Sprintf(`init status done %s %s %s %#v`, setting.Market, setting.Symbol, setting.Coin, status))
 	util.StoreSyncMap(carryStatusMap, status, setting.Coin, setting.Market, setting.Symbol, account.Key)
 	return
 }
@@ -1022,7 +1023,6 @@ var ProcessCross = func(setting *model.Setting, tick *model.BidAsk) {
 	defer func() {
 		coinCrossing.Store(setting.Coin, false)
 	}()
-	util.Log(util.LogLevelInfo, fmt.Sprintf("log place 1"))
 	tickLimit := 50
 	switch tick.Bids[0].Market {
 	case model.Gate:
@@ -1058,14 +1058,13 @@ var ProcessCross = func(setting *model.Setting, tick *model.BidAsk) {
 			if account == nil || accountRelate == nil {
 				continue
 			}
-			util.Log(util.LogLevelInfo, fmt.Sprintf("log place 2"))
 			status, getStatus := util.LoadSyncMap(carryStatusMap, setting.Coin, setting.Market, setting.Symbol, account.Key)
 			statusRelate, getRelate := util.LoadSyncMap(carryStatusMap, settingRelate.Coin, settingRelate.Market, settingRelate.Symbol, accountRelate.Key)
 			carryCoin, getCoin := util.LoadSyncMap(carryCoinMap, setting.Coin, `0`)
 			if status == nil || statusRelate == nil || status == statusRelate || carryCoin == nil || !getStatus || !getRelate || !getCoin {
+				util.LogLess(util.LogLevelInfo, fmt.Sprintf(`can not get status %#v %#v`, status, getStatus))
 				continue
 			}
-			util.Log(util.LogLevelInfo, fmt.Sprintf("log place 3"))
 			delay, statusBuy, statusSell, amount, priceBuy, priceSell, closeType, _ :=
 				calcAmount(i, setting.Coin, status.(*model.CarryStatus), statusRelate.(*model.CarryStatus), carryCoin.(*model.CarryCoin), tick, tickRelate)
 			if delay {
