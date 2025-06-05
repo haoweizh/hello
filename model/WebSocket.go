@@ -265,10 +265,9 @@ func publicHandler(market, url string, connection *WSConn, subHandler SubscribeH
 		connection.Close()
 	}()
 	for !util.Terminal {
-		buf := make([]byte, 4096)
 		if connection.WSType == ChanTypeWS {
 			//msgType, message, err := connection.conn.Read(context.Background())
-			if connection.conn.SetReadDeadline(time.Now().Add(time.Minute*5)) != nil {
+			if connection.conn.SetReadDeadline(time.Now().Add(time.Minute*2)) != nil {
 				return
 			}
 			msgType, message, err := connection.conn.ReadMessage()
@@ -281,6 +280,7 @@ func publicHandler(market, url string, connection *WSConn, subHandler SubscribeH
 				go msgHandler(market, connection, message)
 			}
 		} else if connection.WSType == ChanTypeMarket {
+			buf := make([]byte, 4096)
 			msgSize := connection.MarketReceiver.ReceiveMarket(buf)
 			if msgSize > 0 {
 				if NeedReconnection(buf[:msgSize]) {
