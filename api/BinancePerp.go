@@ -833,8 +833,8 @@ func setSymbolLeverageBinancePerp(account *model.Account, symbol string) (succes
 	}
 	_, err := client.NewChangeLeverageService().Symbol(dialectSymbol).Leverage(leverage).Do(context.Background())
 	if err != nil {
-		util.Log(util.LogLevelError, fmt.Sprintf(`setSymbolLeverageBinancePerp fail to set binanceperp leverage %s %d %s`,
-			symbol, model.DefaultLeverage, err.Error()))
+		//util.Log(util.LogLevelError, fmt.Sprintf(`setSymbolLeverageBinancePerp fail to set binanceperp leverage %s %d %s`,
+		//	symbol, model.DefaultLeverage, err.Error()))
 		return false
 	}
 	return true
@@ -857,8 +857,8 @@ func setLeverageBinancePerp(key, secret string) (success bool) {
 		}
 		_, err := client.NewChangeLeverageService().Symbol(dialectSymbol).Leverage(leverage).Do(context.Background())
 		if err != nil {
-			util.Log(util.LogLevelError, fmt.Sprintf(`setLeverageBinancePerp fail to set binanceperp leverage %s %s %d %s`,
-				key, symbol, model.DefaultLeverage, err.Error()))
+			//util.Log(util.LogLevelError, fmt.Sprintf(`setLeverageBinancePerp fail to set binanceperp leverage %s %s %d %s`,
+			//	key, symbol, model.DefaultLeverage, err.Error()))
 			continue
 		}
 		time.Sleep(time.Millisecond * 200)

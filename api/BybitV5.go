@@ -838,7 +838,7 @@ func setSymbolLeverageBybit(account *model.Account, symbol string) (setSuc bool)
 		if jsonData != nil {
 			code, codeErr := jsonData.Get("retCode").Int()
 			if code != 0 || codeErr != nil || jsonData.Get(`retMsg`).MustString() != `OK` {
-				util.Log(util.LogLevelError, fmt.Sprintf("fail to set bybit perp leverage , resp: %s codeErr: %#v", httpResp, codeErr))
+				//util.Log(util.LogLevelError, fmt.Sprintf("fail to set bybit perp leverage , resp: %s codeErr: %#v", httpResp, codeErr))
 				return false
 			} else {
 				return true
@@ -871,10 +871,10 @@ func setBybitPerpLeverage(key, secret string) {
 			if jsonData != nil {
 				code, codeErr := jsonData.Get("retCode").Int()
 				if code != 0 || codeErr != nil || jsonData.Get(`retMsg`).MustString() != `OK` {
-					util.Log(util.LogLevelError, fmt.Sprintf("fail to set bybit perp leverage , resp: %s codeErr: %#v", httpResp, codeErr))
+					//util.Log(util.LogLevelError, fmt.Sprintf("fail to set bybit perp leverage , resp: %s codeErr: %#v", httpResp, codeErr))
 				}
 			}
-			time.Sleep(time.Millisecond * 200)
+			time.Sleep(time.Second * 10)
 		}
 	}
 }
