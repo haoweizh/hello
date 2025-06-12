@@ -11,7 +11,6 @@ import (
 	"hello/util"
 	"os"
 	"os/signal"
-	"runtime/pprof"
 	"syscall"
 	"time"
 )
@@ -227,19 +226,19 @@ func Maintain() {
 		util.Terminal = true
 	}()
 	go ManageMarketConnTicks()
-	var pprofTime time.Time
+	//var pprofTime time.Time
 	for !util.Terminal {
-		time.Sleep(time.Second * 10)
-		if time.Now().Sub(pprofTime) > time.Minute {
-			pprofTime = time.Now()
-			fileName := fmt.Sprintf(`mem%d.profile`, time.Now().Minute())
-			f, _ := os.OpenFile(fileName, os.O_CREATE|os.O_RDWR, 0644)
-			err := pprof.Lookup("heap").WriteTo(f, 0)
-			if err != nil {
-				fmt.Println(time.Now().String() + "fail to lookup heap" + err.Error())
-			}
-			err = f.Close()
-		}
+		time.Sleep(time.Second * 60)
+		//if time.Now().Sub(pprofTime) > time.Minute {
+		//	pprofTime = time.Now()
+		//	fileName := fmt.Sprintf(`mem%d.profile`, time.Now().Minute())
+		//	f, _ := os.OpenFile(fileName, os.O_CREATE|os.O_RDWR, 0644)
+		//	err := pprof.Lookup("heap").WriteTo(f, 0)
+		//	if err != nil {
+		//		fmt.Println(time.Now().String() + "fail to lookup heap" + err.Error())
+		//	}
+		//	err = f.Close()
+		//}
 	}
 	fmt.Println(time.Now().String() + "Cleanup done. Exiting.")
 }
