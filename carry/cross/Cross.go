@@ -1024,15 +1024,15 @@ var ProcessCross = func(setting *model.Setting, tick *model.BidAsk) {
 	tickLimit := 50
 	switch tick.Bids[0].Market {
 	case model.Gate:
-		tickLimit = 25
+		tickLimit = 125
 	case model.BitgetSpot, model.BitgetPerp:
-		tickLimit = 25
+		tickLimit = 125
 	case model.BinanceSpot, model.BinancePerp:
-		tickLimit = 15
+		tickLimit = 115
 	case model.OKEX:
 		tickLimit = 60
 	case model.Bybit:
-		tickLimit = 60
+		tickLimit = 160
 	}
 	if int(ts1)-tick.Ts > tickLimit {
 		//util.LogLess(util.LogLevelError, fmt.Sprintf(`abandon tick limit %s %s %s limit %d %v`,
