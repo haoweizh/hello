@@ -25,7 +25,6 @@ const lowestScore = -0.02
 const standardScoreOpen = 0.002 // 开仓标准利润,不得小于0
 const lastOrderLength = 8
 const compTooBig = 20000.0
-const SmallInU = 20
 const CompLineInMoney = 50
 const crossSlideSpot = 0.0015
 const crossSlidePerp = 0.0015
@@ -77,8 +76,8 @@ type spotMarket struct {
 func handledFRate(status *model.CarryStatus, marketInfo *model.MarketInfo, price float64, orderSide string) (
 	got, delayed bool, fundingRate *model.FundingRate, handledFr float64) {
 	if status.IsSpot { // [-50和50之间时，买入没利息，卖出有利息][<-50都有，>50都没有]
-		if (orderSide == model.OrderSideBuy && status.Holding*price > -model.SmallHolding) ||
-			(orderSide == model.OrderSideSell && status.Holding*price > model.SmallHolding) {
+		if (orderSide == model.OrderSideBuy && status.Holding*price > -model.SmallInU) ||
+			(orderSide == model.OrderSideSell && status.Holding*price > model.SmallInU) {
 			return true, false, &model.FundingRate{Rate: 0, UpdateTime: time.Now()}, 0
 		} else {
 			// 24/6=4小时利息
@@ -568,7 +567,7 @@ func liquidateSmallContracts(account *model.Account, market string) {
 			if holding <= 0 {
 				continue
 			}
-			if position.EntryPrice*holding < SmallInU {
+			if position.EntryPrice*holding < model.SmallInU {
 				orderSide := model.OrderSideBuy
 				if position.Holding > 0 {
 					orderSide = model.OrderSideSell
@@ -593,6 +592,7 @@ func saveCross(order *model.Order, lineBuy, lineSell, holding float64) {
 	if order != nil {
 		order.LineBuy = lineBuy
 		order.LineSell = lineSell
+		order.UnfilledQuantity = holding
 		order.Function = model.Open
 		if math.Abs(holding) >= order.Amount {
 			if (holding > 0 && order.OrderSide == model.OrderSideSell) || (holding < 0 && order.OrderSide == model.OrderSideBuy) {

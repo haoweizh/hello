@@ -334,12 +334,12 @@ func initTradeLine(account *model.Account, setting *model.Setting, status *model
 	jumpClose := -20.0
 	jumpBuy := jumpOpen
 	jumpSell := jumpOpen
-	if status.Holding*price < -model.SmallHolding {
+	if status.Holding*price < -model.SmallInU {
 		jumpBuy = jumpClose
 		jumpSell = jumpOpen
 		standardScoreBuy = setting.CloseShortMargin
 		status.LimitBuy = math.Min(status.LimitBuy, math.Abs(status.Holding))
-	} else if status.Holding*price > model.SmallHolding {
+	} else if status.Holding*price > model.SmallInU {
 		jumpBuy = jumpOpen
 		jumpSell = jumpClose
 		standardScoreSell = setting.CloseShortMargin
@@ -362,13 +362,13 @@ func initTradeLine(account *model.Account, setting *model.Setting, status *model
 		status.AvailableBuy = 0
 		status.AvailableSell = 0
 	} else if status.DoRevert || account.CarryClose {
-		if status.Holding > -SmallInU/price {
+		if status.Holding > -model.SmallInU/price {
 			status.TradeLineBuy = 1
 			status.LimitBuy = 0
 			status.AvailableBuy = 0
 			//status.TradeLineSell = math.Min(status.TradeLineSell, 0.0004)
 		}
-		if status.Holding < SmallInU/price {
+		if status.Holding < model.SmallInU/price {
 			status.TradeLineSell = 1
 			status.LimitSell = 0
 			status.AvailableSell = 0
@@ -623,7 +623,7 @@ func syncGridHoldings() {
 		moneyInAll := coinHolding * price
 		carryCoin := valueCarryCoin.(*model.CarryCoin)
 		logMsg := fmt.Sprintf(`add trade deal money price %f sync %v`, price, carryCoin)
-		if carryCoin.CurrentStep == 0 && carryCoin.MoneyCurStep < model.SmallHolding {
+		if carryCoin.CurrentStep == 0 && carryCoin.MoneyCurStep < model.SmallInU {
 			carryCoin.MoneyCurStep = math.Min(moneyInAll, carryCoin.MoneyPerStep)
 			carryCoin.Holding = coinHolding
 			logMsg += fmt.Sprintf(`curStep %d`, carryCoin.CurrentStep)
@@ -778,10 +778,10 @@ func getHolding(statuses []*model.CarryStatus) (success bool, bids, asks model.T
 		priceBid := tick.Bids[0].Price * (1 + handledRate)
 		priceAsk := tick.Asks[0].Price * (1 + handledRate)
 		if status.IsSpot { // 买入且是增仓和卖出且是减仓，不计利息
-			if status.Holding*price > -model.SmallHolding {
+			if status.Holding*price > -model.SmallInU {
 				priceAsk = tick.Asks[0].Price
 			}
-			if status.Holding*price > model.SmallHolding {
+			if status.Holding*price > model.SmallInU {
 				priceBid = tick.Bids[0].Price
 			}
 		}
@@ -863,7 +863,7 @@ func equalCoin(index int, coin string, statuses []*model.CarryStatus) (isEqual b
 				amount = math.Abs(holding) / status.Setting.GridAmount
 			} else {
 				checkAmount, _ = model.GetAmountInMarket(status.Market, status.Symbol, status.AvailableSell, price, status.ReduceOnlySell)
-				if checkAmount > 0 && status.AvailableSell*price > SmallInU {
+				if checkAmount > 0 && status.AvailableSell*price > model.SmallInU {
 					equalStatus = status
 					//holding = status.AvailableSell
 					amount = status.AvailableSell
@@ -904,7 +904,7 @@ func equalCoin(index int, coin string, statuses []*model.CarryStatus) (isEqual b
 				amount = math.Abs(holding) / status.Setting.GridAmount
 			} else if !math.IsNaN(status.AvailableBuy) {
 				checkAmount, _ = model.GetAmountInMarket(status.Market, status.Symbol, status.AvailableBuy, price, status.ReduceOnlyBuy)
-				if checkAmount > 0 && status.AvailableBuy*price > SmallInU {
+				if checkAmount > 0 && status.AvailableBuy*price > model.SmallInU {
 					equalStatus = status
 					//holding = status.AvailableBuy
 					amount = status.AvailableBuy

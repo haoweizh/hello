@@ -370,14 +370,14 @@ func checkTradeLine(statusBuy, statusSell *model.CarryStatus, carryCoin *model.C
 		return false, 0, 1, `nilCoin`
 	}
 	crossLimit := openValueLimit / priceBuy * statusBuy.Setting.GridAmount
-	if statusBuy.Holding*priceBuy >= -1*model.SmallHolding && statusSell.Holding*priceSell <= model.SmallHolding { // 开仓
+	if statusBuy.Holding*priceBuy >= -1*model.SmallInU && statusSell.Holding*priceSell <= model.SmallInU { // 开仓
 		if buyCrossStyle == crossGrid {
 			if carryCoin.CurrentStep < 0 || carryCoin.CurrentStep >= len(stepScores)-GridGap {
 				return false, 0, scoreOpen, model.Open
 			}
 			currentStep := carryCoin.CurrentStep
 			leftCurStep := carryCoin.MoneyPerStep - carryCoin.MoneyCurStep
-			if leftCurStep < model.SmallHolding && carryCoin.CurrentStep < len(stepScores)-GridGap {
+			if leftCurStep < model.SmallInU && carryCoin.CurrentStep < len(stepScores)-GridGap {
 				leftCurStep += carryCoin.MoneyPerStep
 				currentStep++
 			}
@@ -388,12 +388,12 @@ func checkTradeLine(statusBuy, statusSell *model.CarryStatus, carryCoin *model.C
 		} else {
 			return scoreOpen > statusBuy.TradeLineBuy && scoreOpen > statusSell.TradeLineSell, crossLimit, scoreOpen, model.Open
 		}
-	} else if statusBuy.Holding*priceBuy < -1*model.SmallHolding && statusSell.Holding*priceSell > model.SmallHolding { // 平仓
+	} else if statusBuy.Holding*priceBuy < -1*model.SmallInU && statusSell.Holding*priceSell > model.SmallInU { // 平仓
 		if buyCrossStyle == crossGrid {
 			limit = math.Min(math.Abs(statusBuy.Holding)*statusBuy.Setting.GridAmount, statusSell.Holding*statusSell.Setting.GridAmount)
 			var closeLimit float64
 			currentStep := carryCoin.CurrentStep
-			if carryCoin.MoneyCurStep > model.SmallHolding {
+			if carryCoin.MoneyCurStep > model.SmallInU {
 				closeLimit = carryCoin.MoneyCurStep / priceBuy * statusBuy.Setting.GridAmount
 			} else if carryCoin.CurrentStep >= 1 {
 				currentStep--
@@ -411,18 +411,18 @@ func checkTradeLine(statusBuy, statusSell *model.CarryStatus, carryCoin *model.C
 			statusBuy.TradeLineBuy, statusSell.TradeLineSell = closeScore, closeScore
 			return scoreClose > closeScore, math.Min(limit, closeLimit), scoreClose, model.Close
 		} else {
-			if scoreClose+0.05 > statusBuy.TradeLineBuy {
+			if scoreClose > statusBuy.TradeLineBuy {
 				return true, math.Min(math.Abs(statusBuy.Holding)*statusBuy.Setting.GridAmount, crossLimit), scoreClose, model.Close
 			}
-			if scoreClose+0.05 > statusSell.TradeLineSell {
+			if scoreClose > statusSell.TradeLineSell {
 				return true, math.Min(statusSell.Holding*statusSell.Setting.GridAmount, crossLimit), scoreClose, model.Close
 			}
 			return false, 0, scoreClose, model.Close
 		}
 	} else { // 换仓
-		if statusBuy.Holding*priceBuy < -1*model.SmallHolding {
+		if statusBuy.Holding*priceBuy < -1*model.SmallInU {
 			limit = math.Abs(statusBuy.Holding) * statusBuy.Setting.GridAmount
-		} else if statusSell.Holding*priceSell > model.SmallHolding {
+		} else if statusSell.Holding*priceSell > model.SmallInU {
 			limit = statusSell.Holding * statusSell.Setting.GridAmount
 		}
 		if buyCrossStyle == crossGrid {
@@ -464,6 +464,7 @@ func calcScores(statusBuy, statusSell *model.CarryStatus, marketInfoBuy, marketI
 		scoreOpen = scoreBase + rateDelta/2
 		scoreSwitch = scoreBase + rateDelta/2
 	}
+	scoreClose += 0.09
 	scoreMsg += fmt.Sprintf(`after handled open %f close %f buyAsk0 %f sellBid0 %f`, scoreOpen, scoreClose, tickBuy.Asks[0].Price, tickSell.Bids[0].Price)
 	return true, scoreBase, scoreOpen, scoreSwitch, scoreClose, rateBuy, rateSell, scoreMsg
 }
@@ -548,7 +549,7 @@ func calcAmount(index int, coin string, carryStatus, carryStatusRelate *model.Ca
 				carryStatus.Market, carryStatus.Symbol, int(1000*scoreBase), int(1000*scoreBaseR), time.Now().Format("2006-01-02 15:04:05"),
 				tick.Bids[0].Market, tick.Bids[0].Price, tick.Asks[0].Price, tickRelate.Bids[0].Market, tickRelate.Bids[0].Price, tickRelate.Asks[0].Price)
 		}
-		if statusBuy.Holding*priceBuy > -model.SmallHolding && statusSell.Holding*priceSell < model.SmallHolding {
+		if statusBuy.Holding*priceBuy > -model.SmallInU && statusSell.Holding*priceSell < model.SmallInU {
 			return false, nil, nil, 0, 0, 0, ``, ``
 		}
 	}
