@@ -138,10 +138,6 @@ func PrepareSettings() {
 			settingArray = make([]*model.Setting, 0)
 		}
 		settingArray = append(settingArray.([]*model.Setting), setting)
-		if setting.Coin == `FIRE` || setting.MarketRelated != `` || !setting.Valid {
-			util.Log(util.LogLevelInfo, fmt.Sprintf(`add setting array under monitor %s %s %s %v %d %s`,
-				setting.Coin, setting.Market, setting.Symbol, setting.Valid, len(settingArray.([]*model.Setting)), setting.MarketRelated))
-		}
 		settings.Store(setting.Coin, settingArray)
 		var functionMarketSettings *sync.Map
 		value, ok = util.LoadSyncMap(symbolSettings, setting.Function, setting.Market)
