@@ -516,10 +516,12 @@ func calcAmount(index int, coin string, carryStatus, carryStatusRelate *model.Ca
 	if statusBuy == nil {
 		return false, nil, nil, 0, 0, 0, ``, ``
 	}
+	util.LogLess(util.LogLevelInfo, fmt.Sprintf(`valid %s`, scoreMsg))
 	if breakMarkPrice(statusBuy.Account, statusBuy.Setting, priceBuy, model.OrderSideBuy) ||
 		breakMarkPrice(statusSell.Account, statusSell.Setting, priceSell, model.OrderSideSell) {
 		return false, nil, nil, 0, 0, 0, ``, ``
 	}
+	util.LogLess(util.LogLevelInfo, fmt.Sprintf(`valid r %s`, scoreMsg))
 	if statusSell.Market == model.Gate {
 		_, marketType, _, _ := model.GetFromStandard(statusSell.Market, statusSell.Symbol)
 		if marketType == model.MarketTypeSpot {
@@ -537,6 +539,7 @@ func calcAmount(index int, coin string, carryStatus, carryStatusRelate *model.Ca
 		}
 	}
 	amount = FormatCrossPair(statusBuy, statusSell, bidAmount, askAmount, tradeLimit, priceBuy, priceSell)
+	util.LogLess(util.LogLevelInfo, fmt.Sprintf(`valid amount %f %s %s`, amount, scoreMsg, scoreMsgR))
 	if scoreBase > 0.1 || scoreBaseR > 0.1 {
 		if (carryStatus.Setting.Valid || carryStatusRelate.Setting.Valid) && (scoreBase > 0.4 || scoreBaseR > 0.4) {
 			util.LogLess(util.LogLevelInfo, fmt.Sprintf(`possible mismatch coin %s %s %s %s score %f %f price %s %f-%f %s %f-%f`,
