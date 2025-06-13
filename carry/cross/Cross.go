@@ -1468,9 +1468,7 @@ func FormatCrossPair(statusBuy, statusSell *model.CarryStatus, bidAmount, askAmo
 	//	statusBuy.Account.Index, amountLimit, statusBuy.Market, statusBuy.Symbol, statusBuy.LimitBuy, bidAmount, priceBuy, statusSell.Market, statusSell.Symbol, statusSell.LimitSell, askAmount)
 	formattedAmount = math.Min(math.Min(statusBuy.LimitBuy, bidAmount)*statusBuy.Setting.GridAmount,
 		math.Min(statusSell.LimitSell, askAmount)*statusSell.Setting.GridAmount)
-	logMsg = fmt.Sprintf(`format amt 1. %f`, formattedAmount)
 	formattedAmount = math.Min(formattedAmount, statusBuy.Setting.GridAmount*openValueLimit/priceBuy)
-	logMsg += fmt.Sprintf(`format amt 2. %f`, formattedAmount)
 	if amountLimit > 0 {
 		formattedAmount = math.Min(formattedAmount, amountLimit)
 	}
@@ -1486,9 +1484,13 @@ func FormatCrossPair(statusBuy, statusSell *model.CarryStatus, bidAmount, askAmo
 		minSell = math.Max(minSell, marketInfoSell.MoneyMin/priceSell*statusSell.Setting.GridAmount)
 	}
 	amountBuy, _ := model.GetAmountInMarket(statusBuy.Market, statusBuy.Symbol, formattedAmount/statusBuy.Setting.GridAmount, priceBuy, false)
+	logMsg = fmt.Sprintf(`format amt buy 1. %f`, amountBuy)
 	_, amountBuy = model.ParseRealAmount(statusBuy.Market, statusBuy.Symbol, amountBuy)
+	logMsg = fmt.Sprintf(`format amt buy 2. %f`, amountBuy)
 	amountSell, _ := model.GetAmountInMarket(statusSell.Market, statusSell.Symbol, formattedAmount/statusSell.Setting.GridAmount, priceSell, false)
+	logMsg += fmt.Sprintf(`format amt sell 1. %f`, amountSell)
 	_, amountSell = model.ParseRealAmount(statusSell.Market, statusSell.Symbol, amountSell)
+	logMsg += fmt.Sprintf(`format amt sell 2. %f`, amountSell)
 	formattedAmount = math.Min(amountBuy*statusBuy.Setting.GridAmount, amountSell*statusSell.Setting.GridAmount)
 	//if statusBuy.Account.Index == 0 {
 	//	util.LogLess(util.LogLevelError, fmt.Sprintf(`%s min buy %f %f min sell %f %f = %f`,
