@@ -1464,10 +1464,6 @@ func FormatCrossPair(statusBuy, statusSell *model.CarryStatus, bidAmount, askAmo
 			`format %s %s %s %s %#v %#v`, statusBuy.Market, statusSell.Market, statusBuy.Symbol, statusSell.Symbol, marketInfoBuy, marketInfoSell))
 		return
 	}
-	if statusSell.Market == model.Gate && statusSell.Symbol == `PEPE_PERP` {
-		util.Log(util.LogLevelInfo, fmt.Sprintf(`format limit buy %f sell %f bid %f ask %f grid %f %f price %f %f`,
-			statusBuy.LimitBuy, statusSell.LimitSell, bidAmount, askAmount, statusBuy.Setting.GridAmount, statusSell.Setting.GridAmount, priceBuy, priceSell))
-	}
 	//logMsg := fmt.Sprintf(`format amt 0 index %d amt %f %s %s limit buy %f bid amount %f price %f %s %s limit sell %f ask amount %f`,
 	//	statusBuy.Account.Index, amountLimit, statusBuy.Market, statusBuy.Symbol, statusBuy.LimitBuy, bidAmount, priceBuy, statusSell.Market, statusSell.Symbol, statusSell.LimitSell, askAmount)
 	formattedAmount = math.Min(math.Min(statusBuy.LimitBuy, bidAmount)*statusBuy.Setting.GridAmount,

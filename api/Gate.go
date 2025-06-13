@@ -43,8 +43,8 @@ func getClientGate(key, secret string) (apiClient *gateApi.APIClient, ctx contex
 
 func getMarketsGate(key, secret string) (success bool, marketInfos map[string]*model.MarketInfo) {
 	marketInfos = make(map[string]*model.MarketInfo)
-	appendSpotMarketsGate(key, secret, marketInfos)
 	appendFutureMarketGate(key, secret, marketInfos)
+	appendSpotMarketsGate(key, secret, marketInfos)
 	return true, marketInfos
 }
 
