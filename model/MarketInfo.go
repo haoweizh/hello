@@ -75,10 +75,6 @@ func ParseRealAmount(market, symbol string, amount float64) (success bool, realA
 // amount: 搬砖程序中使用的币数量
 func GetAmountInMarket(market, symbol string, amount, price float64, reduceOnly bool) (formattedAmount float64, format string) {
 	marketInfo := GetMarketInfo(market, symbol)
-	if marketInfo != nil && market == Gate && symbol == `PEPE_PERP` {
-		util.Log(util.LogLevelInfo, fmt.Sprintf("GetAmountInMarket ok no marketinfo %s %s amt %f inc %f min %f min in u%f",
-			market, symbol, amount, marketInfo.SizeIncrement, marketInfo.SizeMin, marketInfo.MoneyMin))
-	}
 	if marketInfo == nil || marketInfo.SizeIncrement == 0 || marketInfo.SizeMin == 0 || amount < marketInfo.SizeMin {
 		return 0, ``
 	}
@@ -86,6 +82,7 @@ func GetAmountInMarket(market, symbol string, amount, price float64, reduceOnly 
 	if success && marketInfo.CTValue > 0 && marketInfo.CTCurrency == coin {
 		amount = amount / marketInfo.CTValue
 	}
+	logMsg := fmt.Sprintf(`get amt in mkt %f`, amount)
 	decimal := util.NumDecPlaces(marketInfo.SizeIncrement)
 	format = `%.` + strconv.Itoa(decimal) + `f`
 	formattedAmount, _ = strconv.ParseFloat(fmt.Sprintf(format, amount), 64)
@@ -93,13 +90,19 @@ func GetAmountInMarket(market, symbol string, amount, price float64, reduceOnly 
 	if formattedAmount > amount {
 		formattedAmount -= marketInfo.SizeIncrement
 	}
+	logMsg += fmt.Sprintf(`1. %f`, formattedAmount)
 	formattedAmount, _ = strconv.ParseFloat(fmt.Sprintf(format, formattedAmount), 64)
+	logMsg += fmt.Sprintf(`2. %f`, formattedAmount)
 	// reduce的时候应该不受最小下单金额限制
 	if reduceOnly {
+		util.Log(util.LogLevelInfo, `reduce only`+logMsg)
 		return formattedAmount, format
 	}
 	if marketInfo.SizeMin == 0 || (marketInfo.MoneyMin > 0 && marketInfo.MoneyMin > price*formattedAmount) {
 		return 0, format
+	}
+	if market == Gate && symbol == `PEPE_PERP` {
+		util.Log(util.LogLevelInfo, logMsg)
 	}
 	return formattedAmount, format
 }
