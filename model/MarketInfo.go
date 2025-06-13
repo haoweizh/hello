@@ -75,6 +75,10 @@ func ParseRealAmount(market, symbol string, amount float64) (success bool, realA
 // amount: 搬砖程序中使用的币数量
 func GetAmountInMarket(market, symbol string, amount, price float64, reduceOnly bool) (formattedAmount float64, format string) {
 	marketInfo := GetMarketInfo(market, symbol)
+	if marketInfo != nil && market == Gate && symbol == `PEPE_PERP` {
+		util.Log(util.LogLevelInfo, fmt.Sprintf("GetAmountInMarket ok no marketinfo %s %s amt %f inc %f min %f min in u%f",
+			market, symbol, amount, marketInfo.SizeIncrement, marketInfo.SizeMin, marketInfo.MoneyMin))
+	}
 	if marketInfo == nil || marketInfo.SizeIncrement == 0 || marketInfo.SizeMin == 0 || amount < marketInfo.SizeMin {
 		return 0, ``
 	}
