@@ -512,11 +512,11 @@ func calcAmount(index int, coin string, carryStatus, carryStatusRelate *model.Ca
 		scoreMsgR += fmt.Sprintf(`score valid %s %s at %f %f use score %f %s line %f carry coin %f %f %f %#v`,
 			statusBuy.Market, statusBuy.Symbol, priceBuy, priceSell, scoreUseR, scoreTypeR, statusBuy.TradeLineBuy, tradeLimit, bidAmount, askAmount, carryCoin)
 	}
+	util.Log(util.LogLevelInfo, fmt.Sprintf(`calc valid %s`, scoreMsg))
 	generateMonitorMsg(index, coin, scoreType, scoreTypeR, scoreUse, scoreUseR, carryStatus, carryStatusRelate, marketInfo, marketInfoR, rate, rateR, valid || validR)
 	if statusBuy == nil {
 		return false, nil, nil, 0, 0, 0, ``, ``
 	}
-	util.LogLess(util.LogLevelInfo, fmt.Sprintf(`valid %s`, scoreMsg))
 	if breakMarkPrice(statusBuy.Account, statusBuy.Setting, priceBuy, model.OrderSideBuy) ||
 		breakMarkPrice(statusSell.Account, statusSell.Setting, priceSell, model.OrderSideSell) {
 		return false, nil, nil, 0, 0, 0, ``, ``
