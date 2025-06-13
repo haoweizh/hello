@@ -536,7 +536,7 @@ func calcAmount(index int, coin string, carryStatus, carryStatusRelate *model.Ca
 			}
 		}
 	}
-	amount = FormatCrossPair(statusBuy, statusSell, bidAmount, askAmount, tradeLimit, priceBuy, priceSell)
+	amount, logMsg = FormatCrossPair(statusBuy, statusSell, bidAmount, askAmount, tradeLimit, priceBuy, priceSell)
 	util.Log(util.LogLevelInfo, fmt.Sprintf(`valid amount %f=%f %f %f %s %s`, amount, bidAmount, askAmount, tradeLimit, scoreMsg, scoreMsgR))
 	if scoreBase > 0.1 || scoreBaseR > 0.1 {
 		if (carryStatus.Setting.Valid || carryStatusRelate.Setting.Valid) && (scoreBase > 0.4 || scoreBaseR > 0.4) {

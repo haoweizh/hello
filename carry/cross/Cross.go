@@ -1449,7 +1449,7 @@ func compOrder(account *model.Account, order *model.Order, leftAmt float64) {
 
 // FormatCrossPair 不支持以BTC或ETH计价的交易对，只支持USD类
 // amountLimit=0表示无限制
-func FormatCrossPair(statusBuy, statusSell *model.CarryStatus, bidAmount, askAmount, amountLimit, priceBuy, priceSell float64) (formattedAmount float64) {
+func FormatCrossPair(statusBuy, statusSell *model.CarryStatus, bidAmount, askAmount, amountLimit, priceBuy, priceSell float64) (formattedAmount float64, logMsg string) {
 	v, _ := util.LoadSyncMap(model.MarketInfos, statusBuy.Setting.Market, statusBuy.Setting.Symbol)
 	var marketInfoBuy, marketInfoSell *model.MarketInfo
 	if v != nil {
@@ -1468,7 +1468,9 @@ func FormatCrossPair(statusBuy, statusSell *model.CarryStatus, bidAmount, askAmo
 	//	statusBuy.Account.Index, amountLimit, statusBuy.Market, statusBuy.Symbol, statusBuy.LimitBuy, bidAmount, priceBuy, statusSell.Market, statusSell.Symbol, statusSell.LimitSell, askAmount)
 	formattedAmount = math.Min(math.Min(statusBuy.LimitBuy, bidAmount)*statusBuy.Setting.GridAmount,
 		math.Min(statusSell.LimitSell, askAmount)*statusSell.Setting.GridAmount)
+	logMsg = fmt.Sprintf(`format amt 1. %f`, formattedAmount)
 	formattedAmount = math.Min(formattedAmount, statusBuy.Setting.GridAmount*openValueLimit/priceBuy)
+	logMsg = fmt.Sprintf(`format amt 2. %f`, formattedAmount)
 	if amountLimit > 0 {
 		formattedAmount = math.Min(formattedAmount, amountLimit)
 	}
@@ -1493,7 +1495,8 @@ func FormatCrossPair(statusBuy, statusSell *model.CarryStatus, bidAmount, askAmo
 	//		logMsg, minBuy, amountBuy, minSell, amountSell, formattedAmount))
 	//}
 	if formattedAmount < math.Max(minBuy, minSell) {
-		return 0
+		logMsg = fmt.Sprintf(`format amt 3. %f < %f`, formattedAmount, math.Max(minBuy, minSell))
+		return 0, logMsg
 	}
-	return formattedAmount
+	return formattedAmount, logMsg
 }
